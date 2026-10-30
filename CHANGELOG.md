@@ -5,6 +5,21 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
+## [1.0.1] - 2026-10-30
+
+### Discoverability
+
+- Rewrote the display name, description and keyword list so search inside the editor and
+  on the Marketplace matches how people look for wireless Flutter debugging
+- Added screenshots, rendered from the shipped interface
+
+### Fixes
+
+- Draw the log checkboxes explicitly; the editor's own form styles hid them
+- Append incoming log rows instead of rebuilding the whole list on every batch
+- Removed a launch configuration pointing at a test folder that does not exist
+- Removed an unrelated framework recommendation from the editor extension list
+
 ## [1.0.0] - 2026-10-30
 
 First release of Air Flutter.
