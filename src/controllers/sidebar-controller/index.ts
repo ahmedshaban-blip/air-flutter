@@ -679,6 +679,7 @@ export class SidebarController {
         }
 
         function push(incoming) {
+            const wasAtBottom = logView.scrollHeight - logView.scrollTop - logView.clientHeight < 40;
             incoming.forEach(line => lines.push(line));
             if (lines.length > MAX_ROWS * 2) {
                 lines.splice(0, lines.length - MAX_ROWS * 2);
@@ -690,7 +691,35 @@ export class SidebarController {
                 }
                 return;
             }
-            render();
+            appendRows(incoming);
+            if (follow && wasAtBottom) {
+                logView.scrollTop = logView.scrollHeight;
+            }
+        }
+
+        /**
+         * Appends to the live view instead of rebuilding it. Rebuilding on every
+         * batch made the container look stale mid-frame at very high log rates.
+         */
+        function appendRows(incoming) {
+            const visible = incoming.filter(matches);
+            if (visible.length === 0) {
+                return;
+            }
+            const empty = logView.querySelector('.sf-log-empty');
+            if (empty) {
+                empty.remove();
+            }
+            const fragment = document.createDocumentFragment();
+            visible.slice(-MAX_ROWS).forEach(line => fragment.append(row(line)));
+            logView.append(fragment);
+
+            // Trim from the top so the DOM never grows past the window.
+            while (logView.childElementCount > MAX_ROWS) {
+                logView.removeChild(logView.firstElementChild);
+            }
+            logCount.textContent = logView.childElementCount +
+                (logView.childElementCount === 1 ? ' line' : ' lines');
         }
 
         // --- launcher buttons ---

@@ -43,6 +43,26 @@ No pairing codes. No scrcpy setup. No "where is adb again?".
 
 ---
 
+## Screenshots
+
+<div align="center">
+
+### The whole wireless loop, one panel
+
+<img src="screenshots/01-panel.png" alt="Air Flutter panel" width="880"/>
+
+### Live device, live log — from the sidebar
+
+<img src="screenshots/02-sidebar-and-log.png" alt="Air Flutter sidebar" width="880"/>
+
+### Log filtering, measured on a chatty phone
+
+<img src="screenshots/03-log-filter.png" alt="Default filter vs verbose" width="820"/>
+
+</div>
+
+---
+
 ## Why it is different
 
 Most wireless-debug workflows are a pile of shell commands you re-type every time the
