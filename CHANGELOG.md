@@ -5,6 +5,14 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
+## [1.0.2] - 2026-10-30
+
+### Fixes
+
+- README screenshots now load on the Marketplace page. The Marketplace rewrites relative
+  image paths to the GitHub repository, which has to be public for them to resolve; the
+  repository is now public.
+
 ## [1.0.1] - 2026-10-30
 
 ### Discoverability
