@@ -1,0 +1,289 @@
+{
+  "name": "air-flutter",
+  "displayName": "Air Flutter: Wireless Flutter Debug & Mirror",
+  "description": "Run, debug and mirror Flutter apps on a real Android phone without cables. Live device card, streamed device log, one-click screenshots and screen-off mirroring, all in one panel.",
+  "version": "1.0.0",
+  "publisher": "ahmedshaban",
+  "author": {
+    "name": "Ahmed Shaban",
+    "url": "https://ahmed-shaban-dev.vercel.app"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmedshaban-blip/air-flutter"
+  },
+  "homepage": "https://github.com/ahmedshaban-blip/air-flutter#readme",
+  "bugs": {
+    "url": "https://github.com/ahmedshaban-blip/air-flutter/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#14150F",
+    "theme": "dark"
+  },
+  "categories": [
+    "Debuggers",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "flutter",
+    "dart",
+    "android",
+    "wireless-debugging",
+    "wireless-adb",
+    "screen-mirroring",
+    "scrcpy",
+    "logcat",
+    "device-log",
+    "screenshot",
+    "apk",
+    "aab",
+    "hot-reload",
+    "device-management",
+    "mobile-development",
+    "flutter-doctor",
+    "flutter-build"
+  ],
+  "main": "./out/main.js",
+  "scripts": {
+    "vscode:prepublish": "npm run setup && npm run compile",
+    "setup": "npm install",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "npm run clean && npm run compile && npm run package",
+    "clean": "rimraf out dist",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "adm-zip": "^0.4.14",
+    "diff": ">=3.5.0",
+    "local-devices": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.32.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "contexts": [
+      {
+        "id": "workspaceHasAirFlutter",
+        "description": "True when the workspace contains a Flutter project",
+        "default": false
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "air-flutter-sidebar",
+          "title": "Air Flutter",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "air-flutter-sidebar": [
+        {
+          "id": "air-flutter-panel",
+          "name": "Air Flutter",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "airFlutter.openFlutterPanel",
+        "title": "Open Air Flutter Panel",
+        "category": "Air Flutter",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "airFlutter.connectWirelessDevice",
+        "title": "Connect Wireless Device",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.showConnectedDevices",
+        "title": "Show Connected Devices",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.showTroubleshootingGuide",
+        "title": "Device Setup Guide",
+        "category": "Air Flutter",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "airFlutter.runFlutterDoctor",
+        "title": "Flutter Doctor",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.getPackages",
+        "title": "Get Packages",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.upgradePackages",
+        "title": "Upgrade Packages",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.cleanProject",
+        "title": "Clean Project",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.runFlutterApp",
+        "title": "Run Flutter App",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.buildAPK",
+        "title": "Build APK",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.buildAppBundle",
+        "title": "Build App Bundle (AAB)",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.killserver",
+        "title": "Kill ADB Server",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.enableFirebaseDebug",
+        "title": "Enable Firebase Debug",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.disableFirebaseDebug",
+        "title": "Disable Firebase Debug",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.startScreenMirroring",
+        "title": "Start Screen Mirroring",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.mirrorWithScreenOff",
+        "title": "Mirror With Phone Screen Off",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.mirrorWithKeyboard",
+        "title": "Mirror With Phone Screen Off and Hardware Keyboard",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.mirrorWirelessDisplay",
+        "title": "Mirror Into Virtual Display (Phone Off)",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.setScrcpyPath",
+        "title": "Select scrcpy Executable",
+        "category": "Air Flutter"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "airFlutter.openFlutterPanel",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.connectWirelessDevice",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.showConnectedDevices",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.showTroubleshootingGuide",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.killserver",
+          "when": "workspaceHasAirFlutter"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "airFlutter.openFlutterPanel",
+          "when": "view == air-flutter-panel",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Air Flutter",
+      "properties": {
+        "airFlutter.adbPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to ADB executable"
+        },
+        "airFlutter.flutterPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to Flutter executable"
+        },
+        "airFlutter.defaultBuildMode": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "profile",
+            "release"
+          ],
+          "default": "debug",
+          "description": "Default build mode for APK/AAB builds"
+        },
+        "airFlutter.scrcpyPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the scrcpy executable used for screen mirroring"
+        },
+        "airFlutter.mirroringMaxSize": {
+          "type": "number",
+          "default": 1600,
+          "minimum": 640,
+          "maximum": 3840,
+          "description": "Maximum mirrored video dimension; lower values reduce wireless latency"
+        },
+        "airFlutter.mirroringMaxFps": {
+          "type": "number",
+          "default": 60,
+          "minimum": 15,
+          "maximum": 120,
+          "description": "Maximum screen mirroring frame rate"
+        },
+        "airFlutter.mirroringVideoBitRate": {
+          "type": "string",
+          "default": "6M",
+          "pattern": "^[1-9][0-9]*(K|M)?$",
+          "description": "scrcpy video bit rate, for example 4M or 8M"
+        },
+        "airFlutter.mirroringAudio": {
+          "type": "boolean",
+          "default": false,
+          "description": "Forward device audio while mirroring; disabled by default for lower latency"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,704 @@
+/* ==========================================================================
+   Air Flutter — sidebar launcher
+   Same identity as the panel: paper + ink, one ember accent, mono machine data.
+   The sidebar follows the editor theme through vscode-dark / vscode-light.
+   ========================================================================== */
+
+:root {
+    --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+
+    --paper: #F2EFE6;
+    --ink: #14150F;
+    --ink-soft: #3C3F33;
+    --muted: #565A4C;
+    --rule: #D5D0BF;
+    --rule-strong: #B9B4A2;
+    --accent: #B23B16;
+    --accent-ink: #FFF4EC;
+    --surface-2: #E4DFD0;
+    --ok: #2C6E49;
+    --warn: #8A5A06;
+    --err: #A3231C;
+}
+
+body.vscode-dark,
+body.vscode-high-contrast {
+    --paper: #0F110E;
+    --ink: #E9E5D8;
+    --ink-soft: #C6C2B4;
+    --muted: #A0A296;
+    --rule: #2A2E26;
+    --rule-strong: #3A3F35;
+    --accent: #F06A3C;
+    --accent-ink: #180C08;
+    --surface-2: #23261F;
+    --ok: #63C286;
+    --warn: #D9A94E;
+    --err: #E57663;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 18px 16px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+p {
+    margin: 0;
+}
+
+button {
+    font-family: inherit;
+    color: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--rule-strong);
+    border: 3px solid var(--paper);
+    border-radius: 999px;
+}
+
+/* --- Masthead ----------------------------------------------------------- */
+.sf-masthead {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ink);
+}
+
+.sf-mark {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    color: var(--ink);
+}
+
+.sf-brand {
+    min-width: 0;
+    flex: 1;
+}
+
+.sf-brand h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+}
+
+.sf-brand p {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.sf-version {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 2px 5px;
+    letter-spacing: 0.02em;
+}
+
+/* --- Top actions -------------------------------------------------------- */
+.sf-actions-top {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.sf-ghost {
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 130ms linear, color 130ms linear, background-color 130ms linear;
+}
+
+.sf-ghost:hover {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.sf-ghost-small {
+    height: 22px;
+    padding: 0 8px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.sf-ghost[data-running='true'] {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Paused is a calm state, not a warning: mark it with ink, not colour. */
+.sf-ghost[data-paused='true'] {
+    border-color: var(--ink-soft);
+    background: var(--ink-soft);
+    color: var(--paper);
+}
+
+#logHold {
+    color: var(--accent);
+}
+
+/* --- Section labels ----------------------------------------------------- */
+.sf-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.sf-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.sf-icon-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 130ms linear, color 130ms linear;
+}
+
+.sf-icon-btn:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+}
+
+/* --- Live device card --------------------------------------------------- */
+.sf-card {
+    margin-top: 18px;
+}
+
+.sf-empty {
+    padding: 12px 0 2px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.sf-device {
+    padding-top: 10px;
+}
+
+.sf-model {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.sf-serial {
+    margin-top: 2px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.sf-gauge {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 12px;
+}
+
+.sf-gauge-track {
+    position: relative;
+    flex: 1;
+    height: 6px;
+    background: var(--surface-2, rgba(128, 128, 128, 0.22));
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.sf-gauge-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sf-gauge-fill.is-low {
+    background: var(--err, #A3231C);
+}
+
+.sf-gauge-value {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.sf-meta {
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.sf-sep {
+    margin: 0 6px;
+    color: var(--rule-strong);
+}
+
+.sf-rows {
+    margin: 12px 0 0;
+    padding: 0;
+}
+
+.sf-rows > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 10px;
+    padding: 5px 0;
+    border-top: 1px solid var(--rule);
+}
+
+.sf-rows > div:first-child {
+    border-top: 0;
+}
+
+.sf-rows dt {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.sf-rows dd {
+    flex: 1 1 auto;
+    margin: 0;
+    min-width: 0;
+    font-size: 11.5px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* --- Tools -------------------------------------------------------------- */
+.sf-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.sf-tool {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 9px 10px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 130ms linear, color 130ms linear;
+}
+
+.sf-tool:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.sf-tool-wide {
+    grid-column: 1 / -1;
+}
+
+.sf-tool.is-busy {
+    border-color: var(--accent);
+    color: var(--accent);
+    animation: sf-pulse 1s ease-in-out infinite;
+}
+
+.sf-tool[disabled] {
+    cursor: progress;
+    opacity: 0.55;
+}
+
+.sf-tool[disabled]:hover {
+    border-color: var(--accent);
+    color: inherit;
+}
+
+/* A completed action leaves a short marker so a no-op result is still visible. */
+.sf-tool.is-done {
+    border-color: var(--ok, #2C6E49);
+}
+
+.sf-tool.is-done .sf-tool-note {
+    color: var(--ok, #2C6E49);
+}
+
+.sf-tool-name {
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.sf-tool-note {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.sf-tool-msg {
+    margin-top: 9px;
+    padding: 7px 9px;
+    border: 1px solid var(--rule-strong);
+    border-left-width: 2px;
+    border-left-color: var(--ok, #2C6E49);
+    border-radius: 2px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.sf-tool-msg.is-error {
+    border-left-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+}
+
+@keyframes sf-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+/* --- Logcat ------------------------------------------------------------- */
+.sf-log-section {
+    margin-top: 18px;
+}
+
+.sf-log-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sf-tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.sf-tab {
+    flex: 1;
+    padding: 4px 2px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 130ms linear, color 130ms linear;
+}
+
+.sf-tab:hover {
+    border-color: var(--ink-soft);
+    color: var(--ink);
+}
+
+.sf-tab.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.sf-log-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.sf-search {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    -webkit-text-fill-color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    appearance: none;
+}
+
+.sf-search::placeholder {
+    color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
+}
+
+.sf-search:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.sf-check {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 9.5px
+;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.sf-log {
+    margin-top: 6px;
+    height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: rgba(128, 128, 128, 0.06);
+    padding: 5px 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+body.vscode-dark .sf-log,
+body.vscode-high-contrast .sf-log {
+    background: rgba(0, 0, 0, 0.32);
+}
+
+.sf-log-line {
+    display: grid;
+    grid-template-columns: 60px 12px 74px minmax(0, 1fr);
+    column-gap: 6px;
+    row-gap: 0;
+    align-items: baseline;
+    padding: 2px 0;
+}
+
+.sf-log-line > span {
+    min-width: 0;
+}
+
+.sf-log-time {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.sf-log-level {
+    font-weight: 500;
+    text-align: center;
+}
+
+.lvl-verbose .sf-log-level { color: var(--muted); }
+.lvl-debug .sf-log-level { color: #6E93B8; }
+.lvl-info .sf-log-level { color: var(--ok, #2C6E49); }
+.lvl-warn .sf-log-level { color: var(--warn, #8A5A06); }
+.lvl-error .sf-log-level { color: var(--err, #A3231C); }
+
+.lvl-warn .sf-log-text { color: var(--warn, #8A5A06); }
+.lvl-error .sf-log-text { color: var(--err, #A3231C); }
+
+.sf-log-tag {
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sf-log-text {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.sf-log-empty {
+    padding: 6px 2px;
+    color: var(--muted);
+    font-size: 10.5px;
+}
+
+.sf-log-foot {
+    margin-top: 5px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+/* --- Lede --------------------------------------------------------------- */
+.sf-lede {
+    margin: 12px 0 14px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+}
+
+/* --- Primary action ----------------------------------------------------- */
+.sf-primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 130ms linear, border-color 130ms linear;
+}
+
+.sf-primary:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+}
+
+.sf-primary:active {
+    transform: translateY(1px);
+}
+
+/* --- Sections ----------------------------------------------------------- */
+section {
+    margin-top: 20px;
+}
+
+section h2 {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.sf-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: none;
+    text-align: left;
+    font-size: 12.5px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: color 130ms linear;
+}
+
+.sf-item:hover {
+    color: var(--accent);
+}
+
+.sf-arrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--rule-strong);
+    transition: color 130ms linear, transform 130ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.sf-item:hover .sf-arrow {
+    color: var(--accent);
+    transform: translateX(2px);
+}
+
+/* --- Footer ------------------------------------------------------------- */
+.sf-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ink);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.sf-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--rule-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+    }
+}

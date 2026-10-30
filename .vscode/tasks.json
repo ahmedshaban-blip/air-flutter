@@ -1,0 +1,37 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "compile",
+            "group": "build",
+            "label": "npm: compile",
+            "presentation": {
+                "panel": "shared",
+                "reveal": "silent"
+            },
+            "problemMatcher": "$tsc"
+        },
+        {
+            "type": "npm",
+            "script": "watch",
+            "group": "build",
+            "label": "npm: watch",
+            "presentation": {
+                "panel": "shared",
+                "reveal": "never"
+            },
+            "isBackground": true,
+            "problemMatcher": "$tsc-watch"
+        },
+        {
+            "type": "npm",
+            "script": "build",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "npm: build",
+            "detail": "npm run clean && npm run compile && npm run package"
+        }
+    ]
+}
+
