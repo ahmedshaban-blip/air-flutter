@@ -21,6 +21,13 @@ import { AgentScaffolder, AgentScaffoldOptions } from '../../domain/agent-scaffo
 import { CompatibilityModule } from '../../features/compatibility';
 import { CompatibilityEngine } from '../../features/compatibility/services/compatibilityEngine';
 import { StackDiffItem } from '../../features/compatibility/models/types';
+import { getPanelWebviewContent } from './views/panelHtml';
+import { getTroubleshootingContent } from './views/troubleshootingHtml';
+import { PanelCompatHandler, PanelHandlerContext } from './handlers/panelCompatHandler';
+import { PanelFlavorHandler } from './handlers/panelFlavorHandler';
+import { PanelNetworkHandler, PanelDeviceContext } from './handlers/panelNetworkHandler';
+import { PanelWorkflowHandler } from './handlers/panelWorkflowHandler';
+import { PanelAgentHandler } from './handlers/panelAgentHandler';
 
 interface Device {
   id: string;
@@ -42,7 +49,23 @@ export class FlutterPanelController extends ADBBaseController {
   private screenMirrorManager: ScreenMirrorManager;
   private screenRecorder = new ScreenRecorder();
   private recordingTimer?: NodeJS.Timeout;
+  private readonly _onRecordingStateChanged = new vscode.EventEmitter<{ isRecording: boolean; duration: number }>();
+  public readonly onRecordingStateChanged = this._onRecordingStateChanged.event;
+
+  public isRecording(): boolean {
+    return this.screenRecorder.isRecording();
+  }
+
+  public getRecordingDuration(): number {
+    return this.screenRecorder.getDurationSeconds();
+  }
   private readonly extensionVersion: string;
+  private readonly compatHandler: PanelCompatHandler;
+  private readonly flavorHandler: PanelFlavorHandler;
+  private readonly networkHandler: PanelNetworkHandler;
+  private readonly workflowHandler: PanelWorkflowHandler;
+  private readonly agentHandler: PanelAgentHandler;
+
 
   constructor(context: vscode.ExtensionContext) {
     super(context);
@@ -54,6 +77,23 @@ export class FlutterPanelController extends ADBBaseController {
     this.deviceManager = new AndroidDeviceManager(context.globalState);
     this.screenMirrorManager = new ScreenMirrorManager(context);
     this.extensionVersion = (context.extension.packageJSON.version as string) || 'unknown';
+
+    const handlerCtx: PanelDeviceContext = {
+      getPanel: () => this.currentPanel,
+      getInitialProjectPath: () => this.getInitialProjectPath(),
+      postStatus: (msg, type) => this.postStatus(msg, type),
+      showErrorMessage: msg => this.showErrorMessage(msg),
+      showSuccessMessage: msg => this.showSuccessMessage(msg),
+      openFlutterPanel: () => this.openFlutterPanel(),
+      getActiveDeviceSerial: () => this.getActiveDeviceSerial(),
+      getADBExecutable: () => this.deviceManager.getADBExecutable()
+    };
+
+    this.compatHandler = new PanelCompatHandler(handlerCtx);
+    this.flavorHandler = new PanelFlavorHandler(handlerCtx);
+    this.networkHandler = new PanelNetworkHandler(handlerCtx);
+    this.workflowHandler = new PanelWorkflowHandler(handlerCtx);
+    this.agentHandler = new PanelAgentHandler(handlerCtx);
   }
 
   async onInit() {
@@ -307,1078 +347,7 @@ export class FlutterPanelController extends ADBBaseController {
   }
 
   private getWebviewContent(panel: vscode.WebviewPanel): string {
-    // Get the absolute path to the media directory
-    const mediaPath = path.join(this.context.extensionPath, 'media');
-    console.log(`📂 Media directory path: ${mediaPath}`);
-    
-    // Create URIs for the CSS and JS files
-    const styleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.css')));
-    const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
-    
-    console.log(`🔗 Style URI: ${styleUri}`);
-    console.log(`🔗 Script URI: ${scriptUri}`);
-
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Air Flutter - Wireless Debug &amp; Run</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-        <link href="${styleUri}" rel="stylesheet">
-    </head>
-    <body>
-        <div class="ff-shell">
-            <header class="ff-masthead">
-                <div class="ff-brand">
-                    <svg class="ff-mark" viewBox="0 0 32 32" aria-hidden="true">
-                        <rect x="0.75" y="0.75" width="30.5" height="30.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
-                        <path d="M9 8.5 L17 16 L9 23.5" fill="none" stroke="var(--accent)" stroke-width="2.5"></path>
-                        <path d="M17 8.5 L23 13 L17 17.5" fill="none" stroke="currentColor" stroke-width="1.5"></path>
-                    </svg>
-                    <div>
-                        <div class="ff-wordmark">Air Flutter</div>
-                        <div class="ff-tagline">Wireless debug &amp; run</div>
-                    </div>
-                </div>
-                <div class="ff-masthead-actions">
-                    <span class="ff-version" title="Running extension version">v${this.extensionVersion}</span>
-                    <button class="btn btn-quiet" id="darkModeToggle" type="button" title="Toggle theme">
-                        <i class="fas fa-moon"></i> Dark
-                    </button>
-                </div>
-            </header>
-
-            <div class="ff-grid">
-                <!-- Devices -->
-                <section class="ff-col" aria-label="Devices">
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Devices</h2>
-                            <button class="link-btn" id="refreshDevicesBtn" type="button">Refresh</button>
-                        </div>
-
-                        <div class="ff-group">
-                            <div class="ff-subhead">
-                                <h3>Over USB</h3>
-                                <button class="icon-btn" id="refreshUsbDevicesBtn" type="button" title="Rescan USB" aria-label="Rescan USB">
-                                    <i class="fas fa-rotate"></i>
-                                </button>
-                            </div>
-                            <div class="devices-list" id="usbDevicesList">
-                                <p class="empty"><i class="fas fa-usb"></i><span>No USB device attached</span></p>
-                            </div>
-                        </div>
-
-                        <div class="ff-group">
-                            <div class="ff-subhead">
-                                <h3>On this network</h3>
-                            </div>
-                            <div class="devices-list" id="networkDevicesList">
-                                <p class="empty"><i class="fas fa-wifi"></i><span>No device answered on port 5555</span></p>
-                            </div>
-                        </div>
-
-                        <div class="ff-group">
-                            <div class="ff-subhead">
-                                <h3>Connected</h3>
-                            </div>
-                            <div class="devices-list" id="devicesList">
-                                <p class="empty"><i class="fas fa-mobile-screen"></i><span>No device connected</span></p>
-                            </div>
-                        </div>
-
-                        <div class="ff-group">
-                            <div class="ff-subhead">
-                                <h3>Mirroring</h3>
-                            </div>
-                            <button class="btn btn-quiet btn-block btn-danger-hover" id="stopMirrorBtn" type="button" onclick="airFlutter.stopMirroring()" title="Stop active screen mirroring session">
-                                <i class="fas fa-stop"></i> Stop mirroring
-                            </button>
-                            <button class="btn btn-quiet btn-block" id="setScrcpyPathBtn" type="button">
-                                <i class="fas fa-desktop"></i> Locate scrcpy
-                            </button>
-                            <button class="btn btn-quiet btn-block" type="button" onclick="showTroubleshootingGuide()">
-                                <i class="fas fa-tools"></i> Device setup guide
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Commands and activity -->
-                <section class="ff-col" aria-label="Flutter commands">
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Flutter commands</h2>
-                            <span class="ff-section-note">workspace</span>
-                        </div>
-                        <div class="cmd-list" id="flutterCommandsGrid">
-                            <button class="cmd" type="button" data-command="runApp" onclick="airFlutter.executeFlutterCommand('runApp')">
-                                <i class="cmd-icon fas fa-play"></i>
-                                <span><span class="cmd-label">Run app</span><span class="cmd-run">flutter run</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="runFlutterDoctor" onclick="airFlutter.executeFlutterCommand('runFlutterDoctor')">
-                                <i class="cmd-icon fas fa-stethoscope"></i>
-                                <span><span class="cmd-label">Flutter doctor</span><span class="cmd-run">flutter doctor</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="getPackages" onclick="airFlutter.executeFlutterCommand('getPackages')">
-                                <i class="cmd-icon fas fa-download"></i>
-                                <span><span class="cmd-label">Get packages</span><span class="cmd-run">flutter pub get</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="upgradePackages" onclick="airFlutter.executeFlutterCommand('upgradePackages')">
-                                <i class="cmd-icon fas fa-arrow-up"></i>
-                                <span><span class="cmd-label">Upgrade packages</span><span class="cmd-run">flutter pub upgrade</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="buildAPK" onclick="airFlutter.executeFlutterCommand('buildAPK')">
-                                <i class="cmd-icon fas fa-box"></i>
-                                <span><span class="cmd-label">Build APK</span><span class="cmd-run">flutter build apk</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="buildAAB" onclick="airFlutter.executeFlutterCommand('buildAAB')">
-                                <i class="cmd-icon fas fa-cubes"></i>
-                                <span><span class="cmd-label">Build app bundle</span><span class="cmd-run">flutter build appbundle</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="cleanProject" onclick="airFlutter.executeFlutterCommand('cleanProject')">
-                                <i class="cmd-icon fas fa-broom"></i>
-                                <span><span class="cmd-label">Clean project</span><span class="cmd-run">flutter clean</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="installApk" onclick="airFlutter.executeFlutterCommand('installApk')">
-                                <i class="cmd-icon fas fa-file-arrow-up"></i>
-                                <span><span class="cmd-label">Install APK</span><span class="cmd-run">adb install -r</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="sendText" onclick="airFlutter.executeFlutterCommand('sendText')">
-                                <i class="cmd-icon fas fa-keyboard"></i>
-                                <span><span class="cmd-label">Send text</span><span class="cmd-run">paste to phone</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="generateWorkflow" onclick="airFlutter.openWorkflowModal()">
-                                <i class="cmd-icon fab fa-github"></i>
-                                <span><span class="cmd-label">GitHub Workflow</span><span class="cmd-run">CI/CD APK Builder</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" id="screenRecordBtn" type="button" data-command="toggleRecording" onclick="airFlutter.toggleRecording()">
-                                <i class="cmd-icon fas fa-video"></i>
-                                <span><span class="cmd-label">Record Screen</span><span class="cmd-run">record phone MP4</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="flavorsModal" onclick="airFlutter.openFlavorsModal()">
-                                <i class="cmd-icon fas fa-layer-group"></i>
-                                <span><span class="cmd-label">Flutter Flavors</span><span class="cmd-run">manage, run &amp; build</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="proxyModal" onclick="airFlutter.openProxyModal()">
-                                <i class="cmd-icon fas fa-network-wired"></i>
-                                <span><span class="cmd-label">Proxy &amp; DNS</span><span class="cmd-run">network inspector</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="agentScaffoldModal" onclick="airFlutter.openAgentScaffoldModal()">
-                                <i class="cmd-icon fas fa-robot"></i>
-                                <span><span class="cmd-label">Agent Engine</span><span class="cmd-run">AI sub-agents &amp; teams</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="compatDoctorModal" onclick="airFlutter.openCompatDoctorModal()">
-                                <i class="cmd-icon fas fa-stethoscope"></i>
-                                <span><span class="cmd-label">Compat Doctor</span><span class="cmd-run">Gradle, AGP, Java &amp; iOS</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Activity</h2>
-                            <button class="link-btn" id="clearStatusBtn" type="button">Clear log</button>
-                        </div>
-                        <div class="log" id="statusMessages" role="log" aria-live="polite">
-                            <p class="log-empty">Waiting for the extension host…</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Quick actions -->
-                <aside class="ff-col" aria-label="Quick actions">
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Shortcuts</h2>
-                        </div>
-                        <div class="rail-list">
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('runFlutterDoctor')">
-                                <i class="fas fa-stethoscope"></i> Flutter doctor
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('getPackages')">
-                                <i class="fas fa-download"></i> Get packages
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('upgradePackages')">
-                                <i class="fas fa-arrow-up"></i> Upgrade packages
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('cleanProject')">
-                                <i class="fas fa-broom"></i> Clean project
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('installApk')">
-                                <i class="fas fa-file-arrow-up"></i> Install APK
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('sendText')">
-                                <i class="fas fa-keyboard"></i> Send text to phone
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openWorkflowModal()">
-                                <i class="fab fa-github"></i> GitHub CI/CD Workflow
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.toggleRecording()">
-                                <i class="fas fa-video"></i> Record Screen (MP4)
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openFlavorsModal()">
-                                <i class="fas fa-layer-group"></i> Manage Flavors
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openProxyModal()">
-                                <i class="fas fa-network-wired"></i> Network Proxy &amp; DNS
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openAgentScaffoldModal()">
-                                <i class="fas fa-robot"></i> AI Agent Architect
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openCompatDoctorModal()">
-                                <i class="fas fa-stethoscope"></i> Compat Doctor
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Keys</h2>
-                        </div>
-                        <div class="shortcut-row">
-                            <span>Refresh devices</span>
-                            <span><kbd>Ctrl</kbd> <kbd>R</kbd></span>
-                        </div>
-                    </div>
-
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Mirroring</h2>
-                        </div>
-                        <p class="rail-note">
-                            scrcpy ships with the extension. Streams start at H.264, 60 fps,
-                            1600 px, 6 Mbps, audio off — all configurable from Air Flutter settings.
-                        </p>
-                    </div>
-                </aside>
-            </div>
-
-            <footer class="ff-footer">
-                <span>Built by <a href="https://www.linkedin.com/in/ahmed-shaban-front-cross" target="_blank" rel="noreferrer">Ahmed Shaban</a></span>
-                <div class="ff-footer-links">
-                    <a href="https://www.linkedin.com/in/ahmed-shaban-front-cross" target="_blank" rel="noreferrer"><i class="fab fa-linkedin"></i> LinkedIn</a>
-                    <a href="https://ahmed-shaban-dev.vercel.app" target="_blank" rel="noreferrer"><i class="fas fa-globe"></i> Portfolio</a>
-                </div>
-            </footer>
-        </div>
-
-        <div class="toast-stack">
-            <div id="successToast" class="toast is-success" role="status">
-                <div class="toast-head">
-                    <span>Success</span>
-                    <button class="toast-close" type="button" aria-label="Dismiss"><i class="fas fa-xmark"></i></button>
-                </div>
-                <div class="toast-body" id="successToastBody"></div>
-            </div>
-            <div id="errorToast" class="toast is-error" role="alert">
-                <div class="toast-head">
-                    <span>Error</span>
-                    <button class="toast-close" type="button" aria-label="Dismiss"><i class="fas fa-xmark"></i></button>
-                </div>
-                <div class="toast-body" id="errorToastBody"></div>
-            </div>
-        </div>
-
-        <!-- GitHub Workflow Generator Modal -->
-        <div class="modal-backdrop" id="workflowModal" hidden>
-            <div class="modal-card">
-                <div class="modal-head">
-                    <h2><i class="fab fa-github"></i> GitHub Actions Workflow Builder</h2>
-                    <button class="modal-close" id="closeWorkflowModalBtn" type="button" aria-label="Close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <!-- Project Path -->
-                    <div class="modal-field">
-                        <label>Target Flutter Project</label>
-                        <div class="path-picker-row">
-                            <input type="text" id="workflowProjectPathInput" placeholder="Select Flutter project folder..." />
-                            <button class="btn btn-quiet" id="browseWorkflowProjectBtn" type="button">
-                                <i class="fas fa-folder-open"></i> Browse
-                            </button>
-                        </div>
-                        <span class="field-desc">Must contain a pubspec.yaml file</span>
-                    </div>
-
-                    <!-- Target Branch & Triggers -->
-                    <div class="modal-field">
-                        <label>Target Branch</label>
-                        <input type="text" id="workflowBranchInput" value="main" placeholder="e.g. main, master, release/*" />
-                    </div>
-
-                    <div class="modal-field">
-                        <label>Triggers</label>
-                        <div class="modal-options-grid">
-                            <label class="modal-option-card">
-                                <input type="checkbox" id="workflowTriggerPush" checked />
-                                <span>Push to branch</span>
-                            </label>
-                            <label class="modal-option-card">
-                                <input type="checkbox" id="workflowTriggerPr" />
-                                <span>Pull Request</span>
-                            </label>
-                            <label class="modal-option-card">
-                                <input type="checkbox" id="workflowTriggerManual" checked />
-                                <span>Manual Run (dispatch)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Build Target -->
-                    <div class="modal-field">
-                        <label>Build Target</label>
-                        <div class="modal-options-grid">
-                            <label class="modal-option-card">
-                                <input type="radio" name="workflowBuildTarget" value="universal_apk" checked />
-                                <span>Universal APK</span>
-                            </label>
-                            <label class="modal-option-card">
-                                <input type="radio" name="workflowBuildTarget" value="split_apk" />
-                                <span>Split-per-ABI APKs</span>
-                            </label>
-                            <label class="modal-option-card">
-                                <input type="radio" name="workflowBuildTarget" value="appbundle" />
-                                <span>App Bundle (AAB)</span>
-                            </label>
-                            <label class="modal-option-card">
-                                <input type="radio" name="workflowBuildTarget" value="both" />
-                                <span>Both (APK + AAB)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Build Mode -->
-                    <div class="modal-field">
-                        <label>Build Mode</label>
-                        <div class="modal-options-grid">
-                            <label class="modal-option-card">
-                                <input type="radio" name="workflowBuildMode" value="release" checked />
-                                <span>Release (Production)</span>
-                            </label>
-                            <label class="modal-option-card">
-                                <input type="radio" name="workflowBuildMode" value="debug" />
-                                <span>Debug (Testing)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- App Signing (Keystore) -->
-                    <div class="modal-field">
-                        <label class="modal-option-card" style="margin-top: 4px;">
-                            <input type="checkbox" id="workflowEnableSigning" checked />
-                            <strong>Configure App Signing (using GitHub Secrets)</strong>
-                        </label>
-                    </div>
-
-                    <!-- Secrets Instructions Notice Box (shown when signing is enabled) -->
-                    <div class="secrets-notice-box" id="workflowSecretsBox">
-                        <h4><i class="fas fa-key"></i> Required GitHub Secrets for Signing:</h4>
-                        <p style="margin: 0;">Add these 4 secrets in your GitHub Repo: <strong>Settings &gt; Secrets and variables &gt; Actions</strong></p>
-                        <ul style="margin: 0; padding-left: 20px;">
-                            <li><code>KEYSTORE_BASE64</code>: Base64 string of your <code>.jks</code> keystore.</li>
-                            <li><code>KEYSTORE_PASSWORD</code>: Master keystore password.</li>
-                            <li><code>KEY_ALIAS</code>: Key alias name (e.g. <code>upload</code>).</li>
-                            <li><code>KEY_PASSWORD</code>: Private key password.</li>
-                        </ul>
-                        <div style="font-weight: 600; margin-top: 4px;">Convert Keystore to Base64 (Windows PowerShell):</div>
-                        <div class="secrets-code-snippet">[Convert]::ToBase64String([IO.File]::ReadAllBytes("path\\to\\your-key.jks")) | Set-Clipboard</div>
-                        <span style="font-size: 11px; color: var(--muted);">A complete guide (<code>SECRETS_SETUP.md</code>) will be generated inside your <code>.github</code> folder automatically.</span>
-                    </div>
-
-                    <!-- Performance / Cache -->
-                    <div class="modal-field">
-                        <label class="modal-option-card">
-                            <input type="checkbox" id="workflowEnableCache" checked />
-                            <span>Enable Dependency Caching (Gradle &amp; Flutter Pub)</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-foot">
-                    <button class="btn btn-quiet" id="cancelWorkflowModalBtn" type="button">Cancel</button>
-                    <button class="btn btn-primary" id="generateWorkflowSubmitBtn" type="button">
-                        <i class="fas fa-magic"></i> Generate Workflow
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Flutter Flavors Modal -->
-        <div class="modal-backdrop" id="flavorsModal" hidden>
-            <div class="modal-card">
-                <div class="modal-head">
-                    <h2><i class="fas fa-layer-group"></i> Flutter Flavors Manager</h2>
-                    <button class="modal-close" id="closeFlavorsModalBtn" type="button" aria-label="Close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="modal-field">
-                        <label>Target Flutter Project</label>
-                        <div class="path-picker-row">
-                            <input type="text" id="flavorsProjectPathInput" placeholder="Select Flutter project folder..." />
-                            <button class="btn btn-quiet" id="browseFlavorsProjectBtn" type="button">
-                                <i class="fas fa-folder-open"></i> Browse
-                            </button>
-                        </div>
-                        <span class="field-desc">Choose current or external Flutter project with pubspec.yaml</span>
-                    </div>
-
-                    <div class="modal-field">
-                        <label>Flavors</label>
-                        <div id="flavorsListContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                    </div>
-
-                    <div id="flavorsEmptyState" class="secrets-notice-box" hidden>
-                        <h4><i class="fas fa-info-circle"></i> No Flavors Configured</h4>
-                        <p style="margin: 0 0 10px 0;">This project does not have productFlavors defined in android/app/build.gradle.</p>
-                        <button class="btn btn-primary" id="setupFlavorsBtn" type="button">
-                            <i class="fas fa-wand-magic-sparkles"></i> Setup Flavors (dev, staging, prod)
-                        </button>
-                    </div>
-                </div>
-                <div class="modal-foot">
-                    <button class="btn btn-quiet" id="cancelFlavorsModalBtn" type="button">Cancel</button>
-                    <div id="flavorsActionsRow" style="display: flex; gap: 8px;">
-                        <button class="btn btn-quiet" id="runFlavorBtn" type="button">
-                            <i class="fas fa-play"></i> Run
-                        </button>
-                        <button class="btn btn-primary" id="buildFlavorApkBtn" type="button">
-                            <i class="fas fa-box"></i> Build APK
-                        </button>
-                        <button class="btn btn-primary" id="buildAllFlavorsBtn" type="button">
-                            <i class="fas fa-boxes-stacked"></i> Build All Flavors
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Network Proxy & Private DNS Modal -->
-        <div class="modal-backdrop" id="proxyModal" hidden>
-            <div class="modal-card">
-                <div class="modal-head">
-                    <h2><i class="fas fa-network-wired"></i> Network Proxy &amp; Private DNS</h2>
-                    <button class="modal-close" id="closeProxyModalBtn" type="button" aria-label="Close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="modal-field" style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
-                        <div><span style="font-size: 11px; color: var(--muted); display: block;">HTTP Proxy:</span> <span id="currentProxyBadge" class="status-badge is-disabled">Disabled</span></div>
-                        <div><span style="font-size: 11px; color: var(--muted); display: block;">Private DNS:</span> <span id="currentDnsBadge" class="status-badge is-disabled">Default (Off)</span></div>
-                        <button class="btn btn-quiet" id="refreshNetworkBtn" type="button" style="margin-left: auto;">
-                            <i class="fas fa-rotate"></i> Refresh
-                        </button>
-                    </div>
-
-                    <div class="modal-field">
-                        <label><i class="fas fa-shield-halved"></i> HTTP Proxy Configuration</label>
-                        <div class="path-picker-row">
-                            <input type="text" id="proxyHostInput" placeholder="Proxy IP (e.g. 192.168.1.15)" style="flex: 2;" />
-                            <input type="text" id="proxyPortInput" placeholder="Port" value="8888" style="flex: 1;" />
-                        </div>
-                        <div class="preset-pill-group" style="margin-top: 6px;">
-                            <span style="font-size: 11px; color: var(--muted); margin-right: 4px;">Presets:</span>
-                            <button class="preset-pill port-preset-btn" type="button" data-port="8888">Charles (8888)</button>
-                            <button class="preset-pill port-preset-btn" type="button" data-port="9090">Proxyman (9090)</button>
-                            <button class="preset-pill port-preset-btn" type="button" data-port="8866">Fiddler (8866)</button>
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn btn-primary" id="applyProxyBtn" type="button"><i class="fas fa-check"></i> Set Proxy</button>
-                            <button class="btn btn-quiet" id="clearProxyBtn" type="button"><i class="fas fa-times"></i> Clear Proxy</button>
-                        </div>
-                    </div>
-
-                    <div class="modal-field" style="margin-top: 20px;">
-                        <label><i class="fas fa-globe"></i> Android Private DNS (DNS-over-TLS)</label>
-                        <div class="path-picker-row">
-                            <input type="text" id="dnsHostInput" placeholder="DNS Hostname (e.g. dns.google)" />
-                        </div>
-                        <div class="preset-pill-group" style="margin-top: 6px;">
-                            <span style="font-size: 11px; color: var(--muted); margin-right: 4px;">Presets:</span>
-                            <button class="preset-pill dns-preset-btn" type="button" data-dns="dns.google">Google</button>
-                            <button class="preset-pill dns-preset-btn" type="button" data-dns="1dot1dot1dot1.cloudflare-dns.com">Cloudflare</button>
-                            <button class="preset-pill dns-preset-btn" type="button" data-dns="dns.adguard-dns.com">AdGuard</button>
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn btn-primary" id="applyDnsBtn" type="button"><i class="fas fa-check"></i> Set Private DNS</button>
-                            <button class="btn btn-quiet" id="clearDnsBtn" type="button"><i class="fas fa-times"></i> Turn Off DNS</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-foot">
-                    <button class="btn btn-quiet" id="cancelProxyModalBtn" type="button">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Agent Architect & Scaffolding Stepper Modal -->
-        <div class="modal-backdrop" id="agentScaffoldModal" hidden>
-            <div class="modal-card" style="max-width: 680px;">
-                <div class="modal-head">
-                    <h2><i class="fas fa-robot"></i> AI Agent Architect &amp; Scaffolding Engine</h2>
-                    <button class="modal-close" id="closeAgentScaffoldModalBtn" type="button" aria-label="Close">&times;</button>
-                </div>
-
-                <!-- Stepper Progress Bar -->
-                <div class="stepper-header">
-                    <div class="stepper-step is-active" data-step="1">
-                        <span class="stepper-number">1</span>
-                        <span class="stepper-title">Scope</span>
-                    </div>
-                    <div class="stepper-divider"></div>
-                    <div class="stepper-step" data-step="2">
-                        <span class="stepper-number">2</span>
-                        <span class="stepper-title">Role</span>
-                    </div>
-                    <div class="stepper-divider"></div>
-                    <div class="stepper-step" data-step="3">
-                        <span class="stepper-number">3</span>
-                        <span class="stepper-title">Framework</span>
-                    </div>
-                    <div class="stepper-divider"></div>
-                    <div class="stepper-step" data-step="4">
-                        <span class="stepper-number">4</span>
-                        <span class="stepper-title">Tools</span>
-                    </div>
-                    <div class="stepper-divider"></div>
-                    <div class="stepper-step" data-step="5">
-                        <span class="stepper-number">5</span>
-                        <span class="stepper-title">Mode</span>
-                    </div>
-                </div>
-
-                <div class="modal-body" style="padding-top: 4px;">
-                    <!-- STEP 1: Target Location & Scope -->
-                    <div class="stepper-pane is-active" data-step="1">
-                        <div class="modal-field">
-                            <label>Target Location &amp; Scope</label>
-                            <span class="field-desc">Where should the agent specifications be scaffolded?</span>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr; gap: 8px; margin-top: 8px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldLocation" value="workspace" checked />
-                                    <span><strong>Current Project Workspace</strong> (Scaffold into <code>./.agents/agents/</code> in the active project)</span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldLocation" value="external" />
-                                    <span><strong>External Project Directory</strong> (Specify an absolute path to another project on your machine)</span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldLocation" value="global" />
-                                    <span><strong>Global Machine Scope</strong> (Scaffold into <code>~/.gemini/config/agents/</code> for system-wide Antigravity discovery)</span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldLocation" value="custom" />
-                                    <span><strong>Custom Target Directory Path</strong></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="modal-field" id="scaffoldExternalPathRow" hidden>
-                            <label>Directory Path</label>
-                            <div class="path-picker-row">
-                                <input type="text" id="scaffoldExternalPathInput" placeholder="e.g. C:\Projects\MyProject or D:\Workspace" />
-                                <button class="btn btn-quiet" id="browseScaffoldProjectBtn" type="button">
-                                    <i class="fas fa-folder-open"></i> Browse
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="stepper-nav">
-                            <button class="btn btn-quiet" id="cancelAgentScaffoldModalBtn" type="button">Cancel</button>
-                            <button class="btn btn-primary" type="button" data-stepper-next>
-                                Next: Role Archetype <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 2: Generation Mode & Role Archetype -->
-                    <div class="stepper-pane" data-step="2">
-                        <div class="modal-field">
-                            <label>Generation Mode</label>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldGenMode" value="single" checked />
-                                    <span><strong>Single Sub-Agent</strong><br/><span style="font-size: 11px; color: var(--muted);">Scaffold a single specialized agent file</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldGenMode" value="team" />
-                                    <span><strong>Multi-Agent Team Workflow</strong><br/><span style="font-size: 11px; color: var(--muted);">Scaffold full SDLC team + Orchestrator</span></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Single Role Picker -->
-                        <div id="singleRolePickerContainer" class="modal-field">
-                            <label>Agent Role &amp; Archetype</label>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldRole" value="planner" checked />
-                                    <span><strong>Planner / Business Analyst</strong><br/><span style="font-size: 11px; color: var(--muted);">PRDs, scopes, task breakdown</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldRole" value="architect" />
-                                    <span><strong>Architect / System Designer</strong><br/><span style="font-size: 11px; color: var(--muted);">DB schemas, API contracts, seams</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldRole" value="developer" />
-                                    <span><strong>Developer / Implementer</strong><br/><span style="font-size: 11px; color: var(--muted);">Fullstack &amp; core coding</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldRole" value="qa" />
-                                    <span><strong>QA / Tester &amp; Reviewer</strong><br/><span style="font-size: 11px; color: var(--muted);">Tests, diff audits, edge cases</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldRole" value="flutter_ui" />
-                                    <span><strong>Flutter UI / Widget Specialist</strong><br/><span style="font-size: 11px; color: var(--muted);">Responsive widgets &amp; RTL</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldRole" value="flutter_state" />
-                                    <span><strong>Flutter Architecture &amp; Bloc</strong><br/><span style="font-size: 11px; color: var(--muted);">Clean Arch, Cubit &amp; state flow</span></span>
-                                </label>
-                                <label class="modal-option-card" style="grid-column: 1 / -1;">
-                                    <input type="radio" name="scaffoldRole" value="custom" />
-                                    <span><strong>Custom Role</strong><br/><span style="font-size: 11px; color: var(--muted);">Define custom job title and responsibilities</span></span>
-                                </label>
-                            </div>
-
-                            <div id="customRoleRow" class="modal-field" style="margin-top: 10px;" hidden>
-                                <input type="text" id="customRoleNameInput" placeholder="Agent Job Title (e.g. Security Auditor Agent)" style="margin-bottom: 6px;" />
-                                <input type="text" id="customRoleDescInput" placeholder="Short description of core duties..." />
-                            </div>
-                        </div>
-
-                        <!-- Team Mode Multi-Role Checklist -->
-                        <div id="teamRolePickerContainer" class="modal-field" hidden>
-                            <label><i class="fas fa-users-gear"></i> Select Team Roles (Choose 2 or more to build your workflow chain)</label>
-                            <span class="field-desc">The orchestrator will automatically chain the selected agents in sequence:</span>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
-                                <label class="modal-option-card">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="planner" checked />
-                                    <span><strong>Planner / Business Analyst</strong><br/><span style="font-size: 11px; color: var(--muted);">PRDs &amp; task breakdown</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="architect" checked />
-                                    <span><strong>Architect / System Designer</strong><br/><span style="font-size: 11px; color: var(--muted);">Schemas &amp; contracts</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="developer" checked />
-                                    <span><strong>Developer / Implementer</strong><br/><span style="font-size: 11px; color: var(--muted);">Source implementation</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="qa" checked />
-                                    <span><strong>QA / Tester &amp; Reviewer</strong><br/><span style="font-size: 11px; color: var(--muted);">Tests &amp; diff audit</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="flutter_ui" />
-                                    <span><strong>Flutter UI Specialist</strong><br/><span style="font-size: 11px; color: var(--muted);">Widgets, layouts &amp; RTL</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="flutter_state" />
-                                    <span><strong>Flutter Architecture &amp; Bloc</strong><br/><span style="font-size: 11px; color: var(--muted);">Clean Arch &amp; Cubit flow</span></span>
-                                </label>
-                                <label class="modal-option-card" style="grid-column: 1 / -1;">
-                                    <input type="checkbox" name="scaffoldTeamRoles" value="custom" id="scaffoldTeamCustomCheckbox" />
-                                    <span><strong>Custom Role Member</strong><br/><span style="font-size: 11px; color: var(--muted);">Include a custom-defined role in the workflow</span></span>
-                                </label>
-                            </div>
-
-                            <div id="customTeamRoleRow" class="modal-field" style="margin-top: 10px;" hidden>
-                                <input type="text" id="customTeamRoleNameInput" placeholder="Custom Agent Job Title (e.g. Security Auditor)" style="margin-bottom: 6px;" />
-                                <input type="text" id="customTeamRoleDescInput" placeholder="Core duties of this custom agent..." />
-                            </div>
-                        </div>
-
-                        <div class="stepper-nav">
-                            <button class="btn btn-quiet" type="button" data-stepper-back><i class="fas fa-arrow-left"></i> Back</button>
-                            <button class="btn btn-primary" type="button" data-stepper-next>Next: Framework <i class="fas fa-arrow-right"></i></button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 3: Target Framework -->
-                    <div class="stepper-pane" data-step="3">
-                        <div class="modal-field">
-                            <label>Target Agent Framework</label>
-                            <span class="field-desc">Select orchestrator format compatibility:</span>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr; gap: 8px; margin-top: 8px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldFramework" value="antigravity" checked />
-                                    <span><strong>Antigravity Markdown (.agent.md)</strong> [Default]<br/><span style="font-size: 11px; color: var(--muted);">Directly compatible with Antigravity CLI, IDE Subagents, and AI coding assistants</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldFramework" value="herdr" />
-                                    <span><strong>Herdr Framework (YAML &amp; Sequential Pipeline)</strong><br/><span style="font-size: 11px; color: var(--muted);">Includes <code>herdr.yaml</code> orchestration file with handoff stages</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldFramework" value="crewai" />
-                                    <span><strong>CrewAI (Python Agents &amp; Sequential Process)</strong><br/><span style="font-size: 11px; color: var(--muted);">Generates runnable <code>crew.py</code> with Agent, Task, and Process definitions</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldFramework" value="generic" />
-                                    <span><strong>Generic Custom Agent Loop</strong><br/><span style="font-size: 11px; color: var(--muted);">Standardized markdown specifications for custom autonomous agent loops</span></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="stepper-nav">
-                            <button class="btn btn-quiet" type="button" data-stepper-back><i class="fas fa-arrow-left"></i> Back</button>
-                            <button class="btn btn-primary" type="button" data-stepper-next>Next: Tool Permissions <i class="fas fa-arrow-right"></i></button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 4: Toolset & Access Permissions -->
-                    <div class="stepper-pane" data-step="4">
-                        <div class="modal-field">
-                            <label>Toolset &amp; Access Permissions</label>
-                            <span class="field-desc">Define what tools the generated agent is permitted to execute:</span>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr; gap: 8px; margin-top: 8px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="read_only" />
-                                    <span><strong>Read-Only / Analysis</strong><br/><span style="font-size: 11px; color: var(--muted);"><code>read_file</code>, <code>list_dir</code>, <code>web_search</code> (Zero file write permissions)</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="standard" checked />
-                                    <span><strong>Standard Engineering</strong><br/><span style="font-size: 11px; color: var(--muted);"><code>read_file</code>, <code>write_file</code>, <code>replace_file_content</code>, <code>run_tests</code></span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="full" />
-                                    <span><strong>Full Orchestration &amp; Terminal</strong><br/><span style="font-size: 11px; color: var(--muted);">Full file I/O + Shell command execution (<code>execute_command</code>, <code>git_operations</code>)</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="custom" />
-                                    <span><strong>Custom Tool Definition</strong><br/><span style="font-size: 11px; color: var(--muted);">Specify exact comma-separated list of tool names</span></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="customToolsRow" class="modal-field" style="margin-top: 8px;" hidden>
-                            <label>Comma-separated Tool Names</label>
-                            <input type="text" id="customToolsInput" placeholder="e.g. read_file, write_file, flutter_analyze, adb_run" />
-                        </div>
-
-                        <div class="stepper-nav">
-                            <button class="btn btn-quiet" type="button" data-stepper-back><i class="fas fa-arrow-left"></i> Back</button>
-                            <button class="btn btn-primary" type="button" data-stepper-next>Next: Content Mode <i class="fas fa-arrow-right"></i></button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 5: Content Scaffolding Mode -->
-                    <div class="stepper-pane" data-step="5">
-                        <div class="modal-field">
-                            <label>Content Scaffolding Mode</label>
-                            <span class="field-desc">Choose how the files should be populated:</span>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr; gap: 8px; margin-top: 8px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldContentMode" value="fully_populated" checked />
-                                    <span><strong>Fully Populated</strong><br/><span style="font-size: 11px; color: var(--muted);">Generate complete, production-ready markdown specs with full system prompts, operational loop, handoff phases, and quality gates.</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldContentMode" value="blank_template" />
-                                    <span><strong>Blank Template with Fill Prompts</strong><br/><span style="font-size: 11px; color: var(--muted);">Generate skeletal markdown structures with an embedded, ready-to-execute prompt for an LLM to populate based on project PRD.</span></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="secrets-notice-box" style="margin-top: 14px;">
-                            <h4><i class="fas fa-shield-halved"></i> Non-Destructive Scaffolding</h4>
-                            <p style="margin: 0;">Existing files in the destination directory will be safely preserved and merged.</p>
-                        </div>
-
-                        <div class="stepper-nav">
-                            <button class="btn btn-quiet" type="button" data-stepper-back><i class="fas fa-arrow-left"></i> Back</button>
-                            <button class="btn btn-primary" id="scaffoldSubmitBtn" type="button">
-                                <i class="fas fa-robot"></i> Generate Agent(s)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Flutter Compatibility Doctor & Auto-Fixer Modal -->
-        <div class="modal-backdrop" id="compatDoctorModal" hidden>
-            <div class="modal-card" style="max-width: 740px;">
-                <div class="modal-head">
-                    <h2><i class="fas fa-stethoscope"></i> Flutter Compatibility Doctor &amp; Auto-Fixer</h2>
-                    <button class="modal-close" id="closeCompatDoctorModalBtn" type="button" aria-label="Close">&times;</button>
-                </div>
-
-                <div class="modal-body" style="padding-top: 8px;">
-                    <!-- Project Selector Header -->
-                    <div class="modal-field" style="margin-bottom: 10px;">
-                        <label>Active Project Path</label>
-                        <div class="custom-path-row" style="display: flex; gap: 8px; margin-top: 4px;">
-                            <input type="text" id="compatProjectPathInput" class="modal-input" placeholder="Select a Flutter project..." readonly style="flex: 1;" />
-                            <button class="btn btn-secondary" id="browseCompatProjectBtn" type="button">
-                                <i class="fas fa-folder-open"></i> Browse
-                            </button>
-                            <button class="btn btn-primary" id="reScanCompatDoctorBtn" type="button">
-                                <i class="fas fa-sync-alt"></i> Re-scan
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Two Tabs Navigation Header -->
-                    <div class="compat-tabs-nav">
-                        <button class="compat-tab-btn is-active" id="tabBtnCompatAudit" type="button">
-                            <i class="fas fa-search-plus"></i> Audit Findings
-                        </button>
-                        <button class="compat-tab-btn" id="tabBtnCompatConfig" type="button">
-                            <i class="fas fa-sliders-h"></i> Version Configurator &amp; Auto-Sync
-                        </button>
-                    </div>
-
-                    <!-- Loading / Spinner State -->
-                    <div id="compatDoctorLoading" style="display: none; text-align: center; padding: 32px 0;">
-                        <i class="fas fa-circle-notch fa-spin fa-2x" style="color: var(--primary);"></i>
-                        <p style="margin-top: 12px; font-weight: 500;">Inspecting Gradle, AGP, Java runtime &amp; iOS deployment target...</p>
-                    </div>
-
-                    <!-- TAB 1: Audit Findings Content -->
-                    <div id="tabContentCompatAudit">
-                        <!-- Overview Cards Grid -->
-                        <div class="compat-cards-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;">
-                            <div class="compat-status-card" id="compatCardGradle">
-                                <div class="compat-card-title"><i class="fas fa-cubes"></i> Gradle Wrapper</div>
-                                <div class="compat-card-value" id="compatValGradle">-</div>
-                                <div class="compat-card-sub" id="compatSubGradle">Checking...</div>
-                            </div>
-                            <div class="compat-status-card" id="compatCardAgp">
-                                <div class="compat-card-title"><i class="fab fa-android"></i> Android Gradle Plugin</div>
-                                <div class="compat-card-value" id="compatValAgp">-</div>
-                                <div class="compat-card-sub" id="compatSubAgp">Checking...</div>
-                            </div>
-                            <div class="compat-status-card" id="compatCardJava">
-                                <div class="compat-card-title"><i class="fab fa-java"></i> Java Runtime (JDK)</div>
-                                <div class="compat-card-value" id="compatValJava">-</div>
-                                <div class="compat-card-sub" id="compatSubJava">Checking...</div>
-                            </div>
-                            <div class="compat-status-card" id="compatCardIos">
-                                <div class="compat-card-title"><i class="fab fa-apple"></i> iOS Target (Podfile)</div>
-                                <div class="compat-card-value" id="compatValIos">-</div>
-                                <div class="compat-card-sub" id="compatSubIos">Checking...</div>
-                            </div>
-                        </div>
-
-                        <!-- Issues & Recommendations List -->
-                        <div class="modal-field">
-                            <label><i class="fas fa-clipboard-check"></i> Diagnostic Findings &amp; Upgrades</label>
-                            <div id="compatIssuesContainer" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
-                                <!-- Dynamic issue items injected here -->
-                            </div>
-                        </div>
-
-                        <!-- Recommended Stack Banner -->
-                        <div class="secrets-notice-box" id="compatTargetNotice" style="margin-top: 14px;">
-                            <h4><i class="fas fa-shield-alt"></i> Verified Stable Baseline</h4>
-                            <p id="compatTargetText" style="margin: 0;">AGP 8.5.2 | Gradle 8.7 | JDK 17 | iOS 13.0+</p>
-                        </div>
-
-                        <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
-                            <button class="btn btn-quiet" id="cancelCompatDoctorBtn" type="button">Close</button>
-                            <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-secondary" id="openCompatOutputBtn" type="button">
-                                    <i class="fas fa-terminal"></i> View Detailed Log
-                                </button>
-                                <button class="btn btn-primary" id="autoUpgradeStackBtn" type="button" disabled>
-                                    <i class="fas fa-wrench"></i> Upgrade Stack (Auto-Fix)
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAB 2: Version Configurator & Auto-Sync -->
-                    <div id="tabContentCompatConfig" style="display: none;">
-                        <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted);">
-                            Customize your project build stack with real-time smart cascading compatibility enforcement. Incompatible options are automatically filtered or disabled to guarantee build stability.
-                        </p>
-
-                        <div class="compat-config-grid">
-                            <div class="modal-field">
-                                <label for="configAgpSelect"><i class="fab fa-android"></i> Android Gradle Plugin (AGP)</label>
-                                <select id="configAgpSelect" class="modal-input" style="width: 100%;">
-                                    <!-- Populated dynamically -->
-                                </select>
-                            </div>
-                            <div class="modal-field">
-                                <label for="configGradleSelect"><i class="fas fa-cubes"></i> Gradle Wrapper Version</label>
-                                <select id="configGradleSelect" class="modal-input" style="width: 100%;">
-                                    <!-- Populated & filtered dynamically -->
-                                </select>
-                            </div>
-                            <div class="modal-field">
-                                <label for="configKotlinSelect"><i class="fas fa-code"></i> Kotlin Version</label>
-                                <select id="configKotlinSelect" class="modal-input" style="width: 100%;">
-                                    <!-- Populated dynamically -->
-                                </select>
-                            </div>
-                            <div class="modal-field">
-                                <label for="configJavaSelect"><i class="fab fa-java"></i> Java / JDK Target</label>
-                                <select id="configJavaSelect" class="modal-input" style="width: 100%;">
-                                    <!-- Populated dynamically -->
-                                </select>
-                            </div>
-                            <div class="modal-field" style="grid-column: span 2;">
-                                <label for="configIosSelect"><i class="fab fa-apple"></i> iOS Minimum Deployment Target (Podfile)</label>
-                                <select id="configIosSelect" class="modal-input" style="width: 100%;">
-                                    <!-- Populated dynamically -->
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Live Compatibility Notification -->
-                        <div id="configStatusBanner" class="compat-status-card is-success" style="padding: 10px 14px; margin-top: 10px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-check-circle" style="color: #4caf50;"></i>
-                                <span id="configStatusText" style="font-size: 12px; font-weight: 600;">Selected combination is fully compatible and verified.</span>
-                            </div>
-                        </div>
-
-                        <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
-                            <button class="btn btn-quiet" id="cancelCompatConfigBtn" type="button">Close</button>
-                            <button class="btn btn-primary" id="previewCustomStackBtn" type="button">
-                                <i class="fas fa-eye"></i> Review &amp; Apply Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Compatibility Stack Diff Preview Modal -->
-        <div class="modal-backdrop" id="compatDiffModal" hidden style="z-index: 10001;">
-            <div class="modal-card" style="max-width: 640px;">
-                <div class="modal-head">
-                    <h2><i class="fas fa-code-branch"></i> Review Target Stack Modifications</h2>
-                    <button class="modal-close" id="closeCompatDiffModalBtn" type="button" aria-label="Close">&times;</button>
-                </div>
-                <div class="modal-body" style="padding-top: 8px;">
-                    <p style="margin: 0 0 10px; font-size: 12px; color: var(--muted);">
-                        The following file modifications will be applied to your workspace via non-destructive edits. You can undo all changes at any time using <code>Ctrl+Z</code>.
-                    </p>
-                    <div id="compatDiffList" style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;">
-                        <!-- Diff items injected dynamically -->
-                    </div>
-                </div>
-                <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
-                    <button class="btn btn-quiet" id="cancelCompatDiffModalBtn" type="button">Cancel</button>
-                    <button class="btn btn-primary" id="confirmApplyDiffBtn" type="button">
-                        <i class="fas fa-check"></i> Apply Selected Modifications
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                document.body.classList.add('js-loaded');
-
-                if (typeof acquireVsCodeApi !== 'undefined') {
-                    window.vscode = acquireVsCodeApi();
-                } else {
-                    document.body.classList.add('no-vscode-api');
-                }
-
-                window.airFlutter = {
-                    executeFlutterCommand: function (commandId) {
-                        if (window.vscode) {
-                            window.vscode.postMessage({
-                                command: 'runFlutterCommand',
-                                commandId: commandId
-                            });
-                        }
-                    },
-                    stopMirroring: function () {
-                        if (window.vscode) {
-                            window.vscode.postMessage({ command: 'stopMirroring' });
-                        }
-                    },
-                    openWorkflowModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openWorkflowModal) {
-                            airFlutter.openWorkflowModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openWorkflowModal' });
-                        }
-                    },
-                    openFlavorsModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openFlavorsModal) {
-                            airFlutter.openFlavorsModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openFlavorsModal' });
-                        }
-                    },
-                    openProxyModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openProxyModal) {
-                            airFlutter.openProxyModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openProxyModal' });
-                        }
-                    },
-                    toggleRecording: function () {
-                        if (window.vscode) {
-                            window.vscode.postMessage({ command: 'toggleScreenRecording' });
-                        }
-                    },
-                    openAgentScaffoldModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openAgentScaffoldModal) {
-                            airFlutter.openAgentScaffoldModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openAgentScaffoldModal' });
-                        }
-                    },
-                    openCompatDoctorModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openCompatDoctorModal) {
-                            airFlutter.openCompatDoctorModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openCompatDoctorModal' });
-                        }
-                    }
-                };
-
-                window.showTroubleshootingGuide = function () {
-                    if (window.vscode) {
-                        window.vscode.postMessage({ command: 'showTroubleshootingGuide' });
-                    }
-                };
-
-                const darkModeToggle = document.getElementById('darkModeToggle');
-                if (darkModeToggle) {
-                    const isDarkMode = localStorage.getItem('airFlutterDarkMode') === 'true';
-                    if (isDarkMode) {
-                        document.body.classList.add('dark-mode');
-                        darkModeToggle.innerHTML = '<i class="fas fa-sun"></i> Light';
-                    }
-
-                    darkModeToggle.addEventListener('click', function () {
-                        document.body.classList.toggle('dark-mode');
-                        const isDark = document.body.classList.contains('dark-mode');
-                        localStorage.setItem('airFlutterDarkMode', isDark);
-                        this.innerHTML = isDark
-                            ? '<i class="fas fa-sun"></i> Light'
-                            : '<i class="fas fa-moon"></i> Dark';
-                    });
-                }
-            });
-        </script>
-
-        <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
-    </body>
-    </html>`;
+    return getPanelWebviewContent(this.context, panel, this.extensionVersion);
   }
 
   private async handleConnectDevice(ip: string, port: string) {
@@ -1995,346 +964,105 @@ export class FlutterPanelController extends ADBBaseController {
     return '';
   }
 
+  // --- Workflow Handler Delegations ---
   private async openWorkflowModal() {
-    await this.openFlutterPanel();
-    const initialPath = this.getInitialProjectPath();
-    if (this.currentPanel) {
-      this.currentPanel.webview.postMessage({
-        command: 'openWorkflowModal',
-        projectPath: initialPath
-      });
-    }
+    return this.workflowHandler.openWorkflowModal();
   }
 
   private async selectWorkflowProject() {
-    const folders = await vscode.window.showOpenDialog({
-      canSelectMany: false,
-      canSelectFiles: false,
-      canSelectFolders: true,
-      openLabel: 'Select Flutter Project Folder'
-    });
-
-    if (folders && folders[0]) {
-      const selectedPath = folders[0].fsPath;
-      const validation = WorkflowGenerator.validateProject(selectedPath);
-      if (!validation.valid) {
-        this.showErrorMessage(validation.error || 'Invalid Flutter project folder.');
-        return;
-      }
-      this.currentPanel?.webview.postMessage({
-        command: 'workflowProjectPath',
-        path: selectedPath
-      });
-    }
+    return this.workflowHandler.selectWorkflowProject();
   }
 
   private async handleGenerateWorkflow(options: WorkflowOptions) {
-    try {
-      this.postStatus('⚙️ Generating GitHub Actions workflow…', 'info');
-      const result = await WorkflowGenerator.writeWorkflowFiles(options);
-      
-      this.currentPanel?.webview.postMessage({
-        command: 'workflowGenerated',
-        message: 'GitHub Workflow generated at .github/workflows/build_apk.yml'
-      });
-      this.postStatus('✅ GitHub Actions workflow generated successfully!', 'success');
-
-      // Open the generated workflow file in editor
-      const document = await vscode.workspace.openTextDocument(result.workflowPath);
-      await vscode.window.showTextDocument(document, { preview: false });
-
-      if (result.secretsGuidePath) {
-        const choice = await vscode.window.showInformationMessage(
-          '✅ GitHub Workflow and Secrets Setup Guide generated!',
-          'View Secrets Guide'
-        );
-        if (choice === 'View Secrets Guide') {
-          const guideDoc = await vscode.workspace.openTextDocument(result.secretsGuidePath);
-          await vscode.window.showTextDocument(guideDoc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
-        }
-      } else {
-        vscode.window.showInformationMessage('✅ GitHub Actions workflow generated successfully!');
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Workflow generation failed: ${msg}`);
-      this.postStatus(`❌ Workflow generation failed: ${msg}`, 'error');
-    }
+    return this.workflowHandler.handleGenerateWorkflow(options);
   }
 
+  // --- Agent Scaffold Handler Delegations ---
   private async openAgentScaffoldModal(targetPath?: string) {
-    await this.openFlutterPanel();
-    const initialPath = targetPath || this.getInitialProjectPath();
-    if (this.currentPanel) {
-      this.currentPanel.webview.postMessage({
-        command: 'openAgentScaffoldModal',
-        projectPath: initialPath
-      });
-    }
+    return this.agentHandler.openAgentScaffoldModal(targetPath);
   }
 
   private async selectAgentScaffoldProject() {
-    const folders = await vscode.window.showOpenDialog({
-      canSelectMany: false,
-      canSelectFiles: false,
-      canSelectFolders: true,
-      openLabel: 'Select Project Directory for Agents'
-    });
-
-    if (folders && folders[0]) {
-      const selectedPath = folders[0].fsPath;
-      this.currentPanel?.webview.postMessage({
-        command: 'agentScaffoldProjectPath',
-        path: selectedPath
-      });
-    }
+    return this.agentHandler.selectAgentScaffoldProject();
   }
 
   private async handleGenerateAgentScaffold(options: AgentScaffoldOptions) {
-    try {
-      this.postStatus('🤖 Scaffolding AI Agent specifications…', 'info');
-      const workspaceRoot = this.getInitialProjectPath() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      const result = await AgentScaffolder.scaffold(options, workspaceRoot);
-
-      this.currentPanel?.webview.postMessage({
-        command: 'agentScaffoldGenerated',
-        message: `Successfully scaffolded ${result.createdFiles.length} file(s) into: ${path.basename(result.targetDir)}`
-      });
-
-      this.postStatus(`✅ ${result.summary}`, 'success');
-      vscode.window.showInformationMessage(`✅ ${result.summary}`);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Agent scaffolding failed: ${msg}`);
-      this.postStatus(`❌ Agent scaffolding failed: ${msg}`, 'error');
-      if (this.currentPanel) {
-        this.currentPanel.webview.postMessage({
-          command: 'addStatusMessage',
-          message: `❌ Agent scaffolding failed: ${msg}`,
-          type: 'error'
-        });
-      }
-    }
+    return this.agentHandler.handleGenerateAgentScaffold(options);
   }
 
+  // --- Compat Doctor Handler Delegations ---
   private async openCompatDoctorModal(targetPath?: string) {
-    await this.openFlutterPanel();
-    const initialPath = targetPath || this.getInitialProjectPath();
-    if (this.currentPanel) {
-      this.currentPanel.webview.postMessage({
-        command: 'openCompatDoctorModal',
-        projectPath: initialPath
-      });
-      await this.handleRunCompatDoctorScan(initialPath);
-    }
+    return this.compatHandler.openCompatDoctorModal(targetPath);
   }
 
   private async selectCompatProject() {
-    const folders = await vscode.window.showOpenDialog({
-      canSelectMany: false,
-      canSelectFiles: false,
-      canSelectFolders: true,
-      openLabel: 'Select Flutter Project for Compatibility Scan'
-    });
-
-    if (folders && folders[0]) {
-      const selectedPath = folders[0].fsPath;
-      this.currentPanel?.webview.postMessage({
-        command: 'compatProjectSelected',
-        path: selectedPath
-      });
-      await this.handleRunCompatDoctorScan(selectedPath);
-    }
+    return this.compatHandler.selectCompatProject();
   }
 
   private async handleRunCompatDoctorScan(projectPath?: string) {
-    try {
-      this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: true });
-      const target = (projectPath && projectPath.trim().length > 0) ? projectPath.trim() : this.getInitialProjectPath();
-      const report = await CompatibilityModule.runScan(target);
-      const availableVersions = CompatibilityEngine.getAvailableVersions();
-      const rules = CompatibilityEngine.getMatrix().android.rules;
-      this.currentPanel?.webview.postMessage({
-        command: 'compatDoctorReport',
-        report,
-        availableVersions,
-        rules
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.showErrorMessage(`Compatibility scan failed: ${msg}`);
-      this.currentPanel?.webview.postMessage({
-        command: 'compatDoctorReport',
-        report: null,
-        error: msg
-      });
-    }
+    return this.compatHandler.handleRunCompatDoctorScan(projectPath);
   }
 
   private async handleApplyCompatUpgrades(projectPath?: string) {
-    try {
-      const target = (projectPath && projectPath.trim().length > 0) ? projectPath.trim() : this.getInitialProjectPath();
-      const success = await CompatibilityModule.upgradeBuildStackCommand(target);
-      if (success) {
-        await this.handleRunCompatDoctorScan(target);
-      } else {
-        this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.showErrorMessage(`Upgrade failed: ${msg}`);
-      this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
-    }
+    return this.compatHandler.handleApplyCompatUpgrades(projectPath);
   }
 
   private async handleApplyCustomStack(projectPath?: string, diffs?: StackDiffItem[]) {
-    try {
-      this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: true });
-      const target = (projectPath && projectPath.trim().length > 0) ? projectPath.trim() : this.getInitialProjectPath();
-      if (!diffs || diffs.length === 0) {
-        this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
-        return;
-      }
-      const success = await CompatibilityModule.applyCustomDiffs(diffs, target);
-      if (success) {
-        await this.handleRunCompatDoctorScan(target);
-      } else {
-        this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.showErrorMessage(`Failed to apply custom stack: ${msg}`);
-      this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
-    }
+    return this.compatHandler.handleApplyCustomStack(projectPath, diffs);
   }
 
+  // --- Flavors Handler Delegations ---
   private async openFlavorsModal(projectPath?: string) {
-    await this.openFlutterPanel();
-    const initialPath = projectPath || this.getInitialProjectPath();
-    if (this.currentPanel) {
-      this.currentPanel.webview.postMessage({
-        command: 'openFlavorsModal',
-        projectPath: initialPath
-      });
-    }
-    if (initialPath) {
-      await this.handleDetectFlavors(initialPath);
-    }
+    return this.flavorHandler.openFlavorsModal(projectPath);
   }
 
   private async selectFlavorsProject() {
-    const folders = await vscode.window.showOpenDialog({
-      canSelectMany: false,
-      canSelectFiles: false,
-      canSelectFolders: true,
-      openLabel: 'Select Flutter Project Folder'
-    });
-
-    if (folders && folders[0]) {
-      const selectedPath = folders[0].fsPath;
-      const validation = WorkflowGenerator.validateProject(selectedPath);
-      if (!validation.valid) {
-        this.showErrorMessage(validation.error || 'Invalid Flutter project folder.');
-        return;
-      }
-      this.currentPanel?.webview.postMessage({
-        command: 'openFlavorsModal',
-        projectPath: selectedPath
-      });
-      await this.handleDetectFlavors(selectedPath);
-    }
+    return this.flavorHandler.selectFlavorsProject();
   }
 
   private async handleDetectFlavors(projectPath?: string) {
-    const targetPath = projectPath || this.getInitialProjectPath();
-    try {
-      const result = await FlavorManager.detectFlavors(targetPath);
-      this.currentPanel?.webview.postMessage({
-        command: 'flavorsDetected',
-        data: result
-      });
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.postStatus(`⚠️ Flavors detection warning: ${msg}`, 'warning');
-      this.currentPanel?.webview.postMessage({
-        command: 'flavorsDetected',
-        data: { hasFlavors: false, flavors: [], error: msg }
-      });
-    }
+    return this.flavorHandler.handleDetectFlavors(projectPath);
   }
 
   private async handleSetupFlavors(projectPath?: string, flavors?: string[]) {
-    const targetPath = projectPath || this.getInitialProjectPath();
-    try {
-      this.postStatus('🪄 Setting up Flutter flavors...', 'info');
-      const result = await FlavorManager.setupFlavors(targetPath, flavors || ['dev', 'staging', 'prod']);
-      this.postStatus(`✅ Flavors configured! Created ${result.createdFiles.length} entrypoints.`, 'success');
-      vscode.window.showInformationMessage(`✅ Flavors configured successfully! (${result.createdFiles.join(', ')})`);
-      await this.handleDetectFlavors(targetPath);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Flavors setup failed: ${msg}`);
-      this.postStatus(`❌ Flavors setup failed: ${msg}`, 'error');
-    }
+    return this.flavorHandler.handleSetupFlavors(projectPath, flavors);
   }
 
   private async handleRunFlavor(projectPath?: string, flavor?: string, target?: string) {
-    if (!flavor) {
-      this.showErrorMessage('No flavor selected to run.');
-      return;
-    }
-    const targetPath = projectPath || this.getInitialProjectPath();
-    const terminal = vscode.window.createTerminal(`Flutter Run - ${flavor}`);
-    terminal.show();
-    if (targetPath) {
-      terminal.sendText(`cd "${targetPath}"`);
-    }
-    const targetArg = target ? ` -t ${target}` : '';
-    terminal.sendText(`flutter run --flavor ${flavor}${targetArg}`);
-    this.postStatus(`▶️ Running flavor "${flavor}" in terminal...`, 'info');
+    return this.flavorHandler.handleRunFlavor(projectPath, flavor, target);
   }
 
   private async handleBuildFlavorApk(projectPath?: string, flavor?: string, target?: string) {
-    if (!flavor) {
-      this.showErrorMessage('No flavor selected to build.');
-      return;
-    }
-    const targetPath = projectPath || this.getInitialProjectPath();
-    const terminal = vscode.window.createTerminal(`Flutter Build APK - ${flavor}`);
-    terminal.show();
-    if (targetPath) {
-      terminal.sendText(`cd "${targetPath}"`);
-    }
-    const targetArg = target ? ` -t ${target}` : '';
-    terminal.sendText(`flutter build apk --flavor ${flavor}${targetArg}`);
-    this.postStatus(`🚀 Building APK for flavor "${flavor}" in terminal...`, 'info');
-    await this.handleDetectFlavors(targetPath);
+    return this.flavorHandler.handleBuildFlavorApk(projectPath, flavor, target);
   }
 
   private async handleBuildAllFlavors(projectPath?: string, flavors?: string[]) {
-    if (!flavors || flavors.length === 0) {
-      this.showErrorMessage('No flavors available to build.');
-      return;
-    }
-    const targetPath = projectPath || this.getInitialProjectPath();
-    const terminal = vscode.window.createTerminal(`Flutter Build All Flavors`);
-    terminal.show();
-    if (targetPath) {
-      terminal.sendText(`cd "${targetPath}"`);
-    }
-    for (const flavor of flavors) {
-      terminal.sendText(`flutter build apk --flavor ${flavor}`);
-    }
-    this.postStatus(`🚀 Batch building ${flavors.length} flavors in terminal...`, 'info');
-    await this.handleDetectFlavors(targetPath);
+    return this.flavorHandler.handleBuildAllFlavors(projectPath, flavors);
   }
 
+  // --- Network / Proxy Handler Delegations ---
   private async openProxyModal() {
-    await this.openFlutterPanel();
-    if (this.currentPanel) {
-      this.currentPanel.webview.postMessage({ command: 'openProxyModal' });
-    }
-    await this.handleGetNetworkState();
+    return this.networkHandler.openProxyModal();
+  }
+
+  private async handleGetNetworkState() {
+    return this.networkHandler.handleGetNetworkState();
+  }
+
+  private async handleSetProxy(host?: string, port?: string) {
+    return this.networkHandler.handleSetProxy(host, port);
+  }
+
+  private async handleClearProxy() {
+    return this.networkHandler.handleClearProxy();
+  }
+
+  private async handleSetPrivateDns(host?: string) {
+    return this.networkHandler.handleSetPrivateDns(host);
+  }
+
+  private async handleClearPrivateDns() {
+    return this.networkHandler.handleClearPrivateDns();
   }
 
   private getActiveDeviceSerial(): string | undefined {
@@ -2342,121 +1070,13 @@ export class FlutterPanelController extends ADBBaseController {
       this.usbDevices.find(d => d.status === 'online')?.id;
   }
 
-  private async handleGetNetworkState() {
-    const serial = this.getActiveDeviceSerial();
-    const localIp = NetworkManager.getLocalIp();
-
-    if (!serial) {
-      this.currentPanel?.webview.postMessage({
-        command: 'networkState',
-        data: { proxy: null, dnsMode: null, dnsSpecifier: null, localIp }
-      });
-      return;
-    }
-
-    try {
-      const adbPath = await this.deviceManager.getADBExecutable();
-      const state = await NetworkManager.getNetworkState(adbPath, serial);
-      this.currentPanel?.webview.postMessage({
-        command: 'networkState',
-        data: state
-      });
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.postStatus(`⚠️ Network state check failed: ${msg}`, 'warning');
-      this.currentPanel?.webview.postMessage({
-        command: 'networkState',
-        data: { proxy: null, dnsMode: null, dnsSpecifier: null, localIp }
-      });
-    }
-  }
-
-  private async handleSetProxy(host?: string, port?: string) {
-    const serial = this.getActiveDeviceSerial();
-    if (!serial) {
-      this.showErrorMessage('No online device connected.');
-      return;
-    }
-    if (!host || !port) {
-      this.showErrorMessage('Proxy Host and Port are required.');
-      return;
-    }
-
-    try {
-      const adbPath = await this.deviceManager.getADBExecutable();
-      await NetworkManager.setHttpProxy(adbPath, serial, host, port);
-      this.postStatus(`✅ HTTP Proxy set to ${host}:${port}`, 'success');
-      vscode.window.showInformationMessage(`✅ HTTP Proxy set to ${host}:${port}`);
-      await this.handleGetNetworkState();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Failed to set HTTP proxy: ${msg}`);
-      this.postStatus(`❌ Proxy error: ${msg}`, 'error');
-    }
-  }
-
-  private async handleClearProxy() {
-    const serial = this.getActiveDeviceSerial();
-    if (!serial) {
-      this.showErrorMessage('No online device connected.');
-      return;
-    }
-
-    try {
-      const adbPath = await this.deviceManager.getADBExecutable();
-      await NetworkManager.clearHttpProxy(adbPath, serial);
-      this.postStatus('✅ HTTP Proxy cleared.', 'success');
-      vscode.window.showInformationMessage('✅ HTTP Proxy cleared on device.');
-      await this.handleGetNetworkState();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Failed to clear HTTP proxy: ${msg}`);
-      this.postStatus(`❌ Proxy error: ${msg}`, 'error');
-    }
-  }
-
-  private async handleSetPrivateDns(host?: string) {
-    const serial = this.getActiveDeviceSerial();
-    if (!serial) {
-      this.showErrorMessage('No online device connected.');
-      return;
-    }
-    if (!host) {
-      this.showErrorMessage('Private DNS hostname is required.');
-      return;
-    }
-
-    try {
-      const adbPath = await this.deviceManager.getADBExecutable();
-      await NetworkManager.setPrivateDns(adbPath, serial, host);
-      this.postStatus(`✅ Private DNS set to ${host}`, 'success');
-      vscode.window.showInformationMessage(`✅ Private DNS set to ${host}`);
-      await this.handleGetNetworkState();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Failed to set Private DNS: ${msg}`);
-      this.postStatus(`❌ DNS error: ${msg}`, 'error');
-    }
-  }
-
-  private async handleClearPrivateDns() {
-    const serial = this.getActiveDeviceSerial();
-    if (!serial) {
-      this.showErrorMessage('No online device connected.');
-      return;
-    }
-
-    try {
-      const adbPath = await this.deviceManager.getADBExecutable();
-      await NetworkManager.clearPrivateDns(adbPath, serial);
-      this.postStatus('✅ Private DNS turned off.', 'success');
-      vscode.window.showInformationMessage('✅ Private DNS turned off on device.');
-      await this.handleGetNetworkState();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.showErrorMessage(`Failed to clear Private DNS: ${msg}`);
-      this.postStatus(`❌ DNS error: ${msg}`, 'error');
-    }
+  private notifyRecordingState(isRecording: boolean, duration: number) {
+    this.currentPanel?.webview.postMessage({
+      command: 'recordingState',
+      isRecording,
+      duration
+    });
+    this._onRecordingStateChanged.fire({ isRecording, duration });
   }
 
   private async toggleScreenRecording() {
@@ -2475,11 +1095,7 @@ export class FlutterPanelController extends ADBBaseController {
 
         const videoPath = await this.screenRecorder.stopRecording(adbPath, outputDir);
 
-        this.currentPanel?.webview.postMessage({
-          command: 'recordingState',
-          isRecording: false,
-          duration: 0
-        });
+        this.notifyRecordingState(false, 0);
 
         this.postStatus(`🎬 Video saved: ${path.basename(videoPath)}`, 'success');
         const choice = await vscode.window.showInformationMessage(
@@ -2493,14 +1109,14 @@ export class FlutterPanelController extends ADBBaseController {
         const msg = error instanceof Error ? error.message : String(error);
         this.showErrorMessage(`Failed to stop recording: ${msg}`);
         this.postStatus(`❌ Screen recording error: ${msg}`, 'error');
-        this.currentPanel?.webview.postMessage({
-          command: 'recordingState',
-          isRecording: false,
-          duration: 0
-        });
+        this.notifyRecordingState(false, 0);
       }
     } else {
-      const serial = this.getActiveDeviceSerial();
+      let serial = this.getActiveDeviceSerial();
+      if (!serial) {
+        await this.refreshConnectedDevices();
+        serial = this.getActiveDeviceSerial();
+      }
       if (!serial) {
         this.showErrorMessage('No online device connected to record screen.');
         return;
@@ -2510,11 +1126,7 @@ export class FlutterPanelController extends ADBBaseController {
         await this.screenRecorder.startRecording(adbPath, serial);
         this.postStatus('🔴 Screen recording started...', 'info');
 
-        this.currentPanel?.webview.postMessage({
-          command: 'recordingState',
-          isRecording: true,
-          duration: 0
-        });
+        this.notifyRecordingState(true, 0);
 
         if (this.recordingTimer) {
           clearInterval(this.recordingTimer);
@@ -2525,19 +1137,11 @@ export class FlutterPanelController extends ADBBaseController {
               clearInterval(this.recordingTimer);
               this.recordingTimer = undefined;
             }
-            this.currentPanel?.webview.postMessage({
-              command: 'recordingState',
-              isRecording: false,
-              duration: 0
-            });
+            this.notifyRecordingState(false, 0);
             return;
           }
           const duration = this.screenRecorder.getDurationSeconds();
-          this.currentPanel?.webview.postMessage({
-            command: 'recordingState',
-            isRecording: true,
-            duration
-          });
+          this.notifyRecordingState(true, duration);
         }, 1000);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -2744,296 +1348,7 @@ export class FlutterPanelController extends ADBBaseController {
   }
 
   private getTroubleshootingContent(panel: vscode.WebviewPanel): string {
-    const mediaPath = path.join(this.context.extensionPath, 'media');
-    const styleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.css')));
-
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Air Flutter - Device Setup Guide</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-        <link href="${styleUri}" rel="stylesheet">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    </head>
-    <body>
-        <div class="ff-shell guide">
-            <!-- Header -->
-            <header class="guide-head">
-                <div>
-                    <h1>Device setup guide</h1>
-                    <p>Enable wireless debugging on an Android phone, step by step.</p>
-                </div>
-                <button class="btn btn-quiet" id="darkModeToggleTrouble" type="button" title="Toggle theme">
-                    <i class="fas fa-moon"></i> Dark
-                </button>
-            </header>
-
-            <!-- Error Alert -->
-            <div class="alert alert-custom">
-                <h5><i class="fas fa-triangle-exclamation"></i> Connection issue detected</h5>
-                <p class="mb-0">The error "ADB returned null value" usually means the device fingerprint is missing. Connect once with a USB cable, then enable wireless debugging with the steps below.</p>
-            </div>
-
-            <h2 class="guide-section-title">
-                <i class="fas fa-mobile-screen"></i> Enable developer settings
-            </h2>
-
-                <!-- Section 1: Enable Developer Settings (Steps 1-6) -->
-                <div class="row">
-                    <!-- Step 1: Open Settings -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">1</div>
-                                <div>Open Device Settings</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Open your device settings and look for the settings icon.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: About Phone -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">2</div>
-                                <div>Navigate to About Phone/Device</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Find and tap on "About Phone" or "About Device" in settings.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Software Information -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">3</div>
-                                <div>Software Information</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Tap on "Software Information" or "Software Details".</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- Step 4: Enable Developer Options -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">4</div>
-                                <div>Enable Developer Options</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Find "Build Number" and tap it 7 times rapidly to enable Developer Options.</strong></p>
-                                <div class="alert alert-info mt-3">
-                                    <i class="fas fa-info-circle"></i> <strong>Tip:</strong> You'll see a message saying "You are now X steps away from being a developer" as you tap.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 5: Developer Options Available -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">5</div>
-                                <div>Developer Options Available</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>After tapping 7 times, you'll see "Developer Options" is now available in settings.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 6: Open Developer Options -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">6</div>
-                                <div>Open Developer Options</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Go to main settings and tap on "Developer Options".</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- Step 7: Enable Developer Settings -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">7</div>
-                                <div>Enable Developer Settings</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Turn on the Developer Options toggle at the top.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <h2 class="guide-section-title">
-                    <i class="fas fa-wifi"></i> Enable USB &amp; wireless options
-                </h2>
-
-                <div class="row">
-                    <!-- Step 8: Open System Management -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">8</div>
-                                <div>Open System Management</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Look for "System Management" or similar option in settings.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 9: Open Developer Options -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">9</div>
-                                <div>Open Developer Options</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Navigate to "Developer Options" in the system settings.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 10: Enable USB Debugging -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">10</div>
-                                <div>Enable USB Debugging</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Find and enable "USB Debugging" option.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- Step 11: Enable Wireless Debugging -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">11</div>
-                                <div>Enable Wireless Debugging</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Find and enable "Wireless Debugging" option.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 12: Connect with USB First -->
-                    <div class="col-lg-4 col-md-6 mb-3">
-                        <div class="step-card">
-                            <div class="step-header">
-                                <div class="step-number">12</div>
-                                <div>Connect with USB First</div>
-                            </div>
-                            <div class="step-content">
-                                <p><strong>Connect your device with USB cable first, then run Flutter app to establish fingerprint.</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            <!-- Important Instructions -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="alert alert-success">
-                        <h6><i class="fas fa-lightbulb"></i> Before you connect wirelessly</h6>
-                        <ol class="mb-0">
-                            <li>Connect the device with a USB cable</li>
-                            <li>Run <code>flutter run</code> once</li>
-                            <li>Accept any fingerprint prompts on the device</li>
-                            <li>Press <strong>Connect wirelessly</strong> on the USB device in the panel</li>
-                            <li>Unplug the cable — the phone now answers on port 5555</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="testConnection()">
-                    <i class="fas fa-wifi"></i> Test wireless connection
-                </button>
-                <button class="btn btn-quiet" onclick="backToPanel()">
-                    <i class="fas fa-arrow-left"></i> Back to panel
-                </button>
-            </div>
-        </div>
-
-        <script>
-            const vscode = acquireVsCodeApi();
-
-            function testConnection() {
-                vscode.postMessage({
-                    command: 'testConnection'
-                });
-            }
-
-            function backToPanel() {
-                vscode.postMessage({
-                    command: 'backToPanel'
-                });
-            }
-            
-            function showTroubleshootingGuide() {
-                if (window.vscode) {
-                    window.vscode.postMessage({
-                        command: 'showTroubleshootingGuide'
-                    });
-                } else {
-                    console.error('VSCode API not available');
-                }
-            }
-            
-            // Load dark mode preference and setup toggle
-            window.addEventListener('DOMContentLoaded', () => {
-                const isDarkMode = localStorage.getItem('airFlutterDarkMode') === 'true';
-                if (isDarkMode) {
-                    document.body.classList.add('dark-mode');
-                }
-                
-                // Setup dark mode toggle
-                const darkModeToggle = document.getElementById('darkModeToggleTrouble');
-                if (darkModeToggle) {
-                    if (isDarkMode) {
-                        darkModeToggle.innerHTML = '<i class="fas fa-sun"></i> Light';
-                    }
-                    
-                    darkModeToggle.addEventListener('click', function() {
-                        document.body.classList.toggle('dark-mode');
-                        const isDark = document.body.classList.contains('dark-mode');
-                        localStorage.setItem('airFlutterDarkMode', isDark);
-                        this.innerHTML = isDark ? '<i class="fas fa-sun"></i> Light' : '<i class="fas fa-moon"></i> Dark';
-                    });
-                }
-            });
-        </script>
-    </body>
-    </html>`;
+    return getTroubleshootingContent(this.context, panel);
   }
 
   private isFlutterProject(workspacePath: string): boolean {

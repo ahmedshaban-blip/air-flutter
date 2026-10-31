@@ -5,6 +5,19 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
+## [1.1.0] - 2026-10-31
+
+### Features & Fixes
+
+- **Screen Recording Integrity & Playability**: Resolved unplayable MP4 recording bug caused by missing `moov atom` by sending targeted `SIGINT` signals to `screenrecord` and awaiting graceful container finalization before pulling from the device.
+- **Sidebar Live Recording Indicator & Toggle Control**: Added active recording state to the sidebar "Record Video" tool button with live pulsing effect, real-time duration timer (`REC mm:ss`), and 1-click toggle to stop recording immediately.
+- **Architectural Refactoring & Modularization**: Cleanly partitioned monolithic files into focused, maintainable modules:
+  - Extracted domain handlers for Flutter Panel (`panelCompatHandler`, `panelFlavorHandler`, `panelNetworkHandler`, `panelWorkflowHandler`, `panelAgentHandler`).
+  - Separated sidebar stylesheets into modular CSS files (`base.css`, `device-card.css`, `tools.css`, `logcat.css`).
+  - Decoupled `compatDoctorModule.js` into modular views (`compatAuditView.js`, `compatConfigView.js`).
+  - Extracted inline JavaScript from `sidebarHtml.ts` into clean `media/sidebar.js`.
+  - Modularized `android-device-manager` into dedicated parser and utility units.
+
 ## [1.0.9] - 2026-10-31
 
 ### Features & Fixes

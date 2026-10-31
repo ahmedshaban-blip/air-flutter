@@ -2,42 +2,23 @@ import { execFile } from 'child_process'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import { Socket } from 'net'
 import * as globalStateKeys from '../../config/global-state-keys'
 import { getCommonADBPaths } from '../adb-resolver/adb-path'
+import { DeviceParser } from './deviceParser'
+import { NetworkUtils } from './networkUtils'
+
+export * from './types'
+import {
+  AndroidDevice,
+  AndroidDeviceState,
+  AndroidDeviceTransport,
+  CommandResult,
+  NetworkDevice,
+  StateStorage,
+  WirelessConnectionResult
+} from './types'
 
 const findLocalDevices: () => Promise<Array<{ name?: string; ip: string }>> = require('local-devices')
-
-export type AndroidDeviceState = 'device' | 'offline' | 'unauthorized'
-export type AndroidDeviceTransport = 'usb' | 'wireless' | 'emulator'
-
-export interface AndroidDevice {
-  id: string
-  name: string
-  state: AndroidDeviceState
-  transport: AndroidDeviceTransport
-}
-
-export interface WirelessConnectionResult {
-  ipAddress: string
-  port: string
-  message: string
-}
-
-export interface NetworkDevice {
-  id: string
-  name: string
-  endpoint: string
-}
-
-interface CommandResult {
-  stdout: string
-  stderr: string
-}
-
-interface StateStorage {
-  get<T>(key: string, defaultValue?: T): T | undefined
-}
 
 export class AndroidDeviceManager {
   private adbExecutable: string | undefined
@@ -212,38 +193,15 @@ export class AndroidDeviceManager {
   }
 
   private parseDevices(output: string): AndroidDevice[] {
-    return output
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(line => line && !line.startsWith('List of devices'))
-      .map(line => this.parseDeviceLine(line))
-      .filter((device): device is AndroidDevice => device !== null)
+    return DeviceParser.parseDevices(output)
   }
 
   private parseMDNSDevices(output: string): NetworkDevice[] {
-    const devices = new Map<string, NetworkDevice>()
-    for (const line of output.split(/\r?\n/).map(value => value.trim())) {
-      const match = line.match(
-        /^(\S+)\s+(_adb-tls-connect\._tcp\.?)\s+(\S+:\d+)$/i
-      )
-      if (!match) {
-        continue
-      }
-
-      const endpoint = match[3]
-      devices.set(endpoint, {
-        id: `${match[1]}:${match[2]}`,
-        name: this.getMDNSDeviceName(match[1]),
-        endpoint
-      })
-    }
-    return Array.from(devices.values())
+    return DeviceParser.parseMDNSDevices(output)
   }
 
   private getMDNSDeviceName(serviceName: string): string {
-    const withoutPrefix = serviceName.replace(/^adb-/i, '')
-    const serial = withoutPrefix.split('-')[0]
-    return serial || serviceName
+    return DeviceParser.getMDNSDeviceName(serviceName)
   }
 
   private getSavedNetworkDevice(): NetworkDevice | undefined {
@@ -279,70 +237,15 @@ export class AndroidDeviceManager {
   }
 
   private isTCPPortOpen(host: string, port: number): Promise<boolean> {
-    return new Promise(resolve => {
-      const socket = new Socket()
-      let completed = false
-      const finish = (isOpen: boolean) => {
-        if (completed) return
-        completed = true
-        socket.destroy()
-        resolve(isOpen)
-      }
-      socket.setTimeout(500)
-      socket.once('connect', () => finish(true))
-      socket.once('timeout', () => finish(false))
-      socket.once('error', () => finish(false))
-      socket.connect(port, host)
-    })
+    return NetworkUtils.isTCPPortOpen(host, port)
   }
 
   private mergeNetworkDevices(devices: NetworkDevice[]): NetworkDevice[] {
-    const devicesByHost = new Map<string, NetworkDevice>()
-    for (const device of devices) {
-      const host = device.endpoint.substring(0, device.endpoint.lastIndexOf(':'))
-      const existingDevice = devicesByHost.get(host)
-      if (!existingDevice || device.endpoint.endsWith(':5555')) {
-        devicesByHost.set(host, device)
-      }
-    }
-    return Array.from(devicesByHost.values())
+    return DeviceParser.mergeNetworkDevices(devices)
   }
 
   private parseDeviceLine(line: string): AndroidDevice | null {
-    const [id, rawState, ...properties] = line.split(/\s+/)
-    if (!id || !rawState) {
-      return null
-    }
-
-    const state: AndroidDeviceState =
-      rawState === 'device' || rawState === 'offline' || rawState === 'unauthorized'
-        ? rawState
-        : 'offline'
-    const metadata = new Map<string, string>()
-
-    for (const property of properties) {
-      const separatorIndex = property.indexOf(':')
-      if (separatorIndex > 0) {
-        metadata.set(
-          property.substring(0, separatorIndex),
-          property.substring(separatorIndex + 1)
-        )
-      }
-    }
-
-    const model = metadata.get('model')?.replace(/_/g, ' ')
-    const transport: AndroidDeviceTransport = id.startsWith('emulator-')
-      ? 'emulator'
-      : id.includes(':')
-        ? 'wireless'
-        : 'usb'
-
-    return {
-      id,
-      name: model || metadata.get('device') || id,
-      state,
-      transport
-    }
+    return DeviceParser.parseDeviceLine(line)
   }
 
   private async getOnlineUSBDevice(serial: string): Promise<AndroidDevice> {
@@ -434,32 +337,19 @@ export class AndroidDeviceManager {
   }
 
   private isValidIPv4(value: string): boolean {
-    const segments = value.split('.')
-    return (
-      segments.length === 4 &&
-      segments.every(segment => /^\d{1,3}$/.test(segment) && Number(segment) <= 255)
-    )
+    return NetworkUtils.isValidIPv4(value)
   }
 
   private validateSerial(serial: string): void {
-    if (!/^[A-Za-z0-9._:-]+$/.test(serial)) {
-      throw new Error('Invalid Android device serial.')
-    }
+    return NetworkUtils.validateSerial(serial)
   }
 
   private validatePort(port: string): void {
-    const portNumber = Number(port)
-    if (!/^\d+$/.test(port) || portNumber < 1 || portNumber > 65535) {
-      throw new Error('Invalid ADB port.')
-    }
+    return NetworkUtils.validatePort(port)
   }
 
   private validateEndpoint(endpoint: string): void {
-    const match = endpoint.match(/^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/)
-    if (!match || !this.isValidIPv4(match[1])) {
-      throw new Error('Invalid wireless ADB endpoint.')
-    }
-    this.validatePort(match[2])
+    return NetworkUtils.validateEndpoint(endpoint)
   }
 
   private delay(milliseconds: number): Promise<void> {

@@ -59,6 +59,11 @@ export async function activate(context: vscode.ExtensionContext) {
         console.log('🗂️ Air Flutter: Initializing Sidebar Controller...')
         const sidebarController = new SidebarController(context)
         context.subscriptions.push(sidebarController.register())
+        context.subscriptions.push(
+            flutterPanelController.onRecordingStateChanged(state => {
+                sidebarController.updateRecordingState(state.isRecording, state.duration)
+            })
+        )
         console.log('✅ Sidebar Controller initialized')
         
         // 3. Initialize Flutter Commands Controller (handles build and run commands)

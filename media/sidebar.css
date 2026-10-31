@@ -1,3 +1,4 @@
+/* --- media/css/sidebar/base.css --- */
 /* ==========================================================================
    Air Flutter — sidebar launcher
    Same identity as the panel: paper + ink, one ember accent, mono machine data.
@@ -218,6 +219,123 @@ button {
     color: var(--ink);
 }
 
+
+/* --- Lede --------------------------------------------------------------- */
+.sf-lede {
+    margin: 12px 0 14px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+}
+
+/* --- Primary action ----------------------------------------------------- */
+.sf-primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 130ms linear, border-color 130ms linear;
+}
+
+.sf-primary:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+}
+
+.sf-primary:active {
+    transform: translateY(1px);
+}
+
+/* --- Sections ----------------------------------------------------------- */
+section {
+    margin-top: 20px;
+}
+
+section h2 {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.sf-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: none;
+    text-align: left;
+    font-size: 12.5px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: color 130ms linear;
+}
+
+.sf-item:hover {
+    color: var(--accent);
+}
+
+.sf-arrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--rule-strong);
+    transition: color 130ms linear, transform 130ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.sf-item:hover .sf-arrow {
+    color: var(--accent);
+    transform: translateX(2px);
+}
+
+/* --- Footer ------------------------------------------------------------- */
+.sf-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ink);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.sf-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--rule-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
+/* --- media/css/sidebar/device-card.css --- */
 /* --- Live device card --------------------------------------------------- */
 .sf-card {
     margin-top: 18px;
@@ -336,6 +454,8 @@ button {
     overflow-wrap: anywhere;
 }
 
+
+/* --- media/css/sidebar/tools.css --- */
 /* --- Tools -------------------------------------------------------------- */
 .sf-tool-grid {
     display: grid;
@@ -373,14 +493,21 @@ button {
 }
 
 .sf-tool.is-recording {
-    border-color: var(--err, #A3231C);
-    color: var(--err, #A3231C);
+    border-color: var(--err, #e03131);
+    background: rgba(224, 49, 49, 0.08);
+    color: var(--err, #e03131);
+    box-shadow: 0 0 8px rgba(224, 49, 49, 0.25);
     animation: sf-pulse 1s ease-in-out infinite;
 }
 
-.sf-tool.is-recording .sf-tool-note {
-    color: var(--err, #A3231C);
+.sf-tool.is-recording .sf-tool-name {
+    color: #e03131;
     font-weight: 600;
+}
+
+.sf-tool.is-recording .sf-tool-note {
+    color: #e03131;
+    font-weight: 700;
 }
 
 .sf-tool[disabled] {
@@ -436,6 +563,8 @@ button {
     50% { opacity: 0.55; }
 }
 
+
+/* --- media/css/sidebar/logcat.css --- */
 /* --- Logcat ------------------------------------------------------------- */
 .sf-log-section {
     margin-top: 18px;
@@ -638,116 +767,4 @@ body.vscode-high-contrast .sf-log {
     color: var(--muted);
 }
 
-/* --- Lede --------------------------------------------------------------- */
-.sf-lede {
-    margin: 12px 0 14px;
-    font-size: 12px;
-    line-height: 1.55;
-    color: var(--ink-soft);
-}
 
-/* --- Primary action ----------------------------------------------------- */
-.sf-primary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-    height: 34px;
-    padding: 0 12px;
-    border: 1px solid var(--accent);
-    border-radius: 2px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-size: 12.5px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 130ms linear, border-color 130ms linear;
-}
-
-.sf-primary:hover {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--paper);
-}
-
-.sf-primary:active {
-    transform: translateY(1px);
-}
-
-/* --- Sections ----------------------------------------------------------- */
-section {
-    margin-top: 20px;
-}
-
-section h2 {
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    font-weight: 500;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--rule);
-}
-
-.sf-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 0;
-    border: 0;
-    border-bottom: 1px solid var(--rule);
-    background: none;
-    text-align: left;
-    font-size: 12.5px;
-    color: var(--ink);
-    cursor: pointer;
-    transition: color 130ms linear;
-}
-
-.sf-item:hover {
-    color: var(--accent);
-}
-
-.sf-arrow {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--rule-strong);
-    transition: color 130ms linear, transform 130ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1));
-}
-
-.sf-item:hover .sf-arrow {
-    color: var(--accent);
-    transform: translateX(2px);
-}
-
-/* --- Footer ------------------------------------------------------------- */
-.sf-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 22px;
-    padding-top: 10px;
-    border-top: 1px solid var(--ink);
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-.sf-dot {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: var(--rule-strong);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    * {
-        transition-duration: 0.01ms !important;
-    }
-}

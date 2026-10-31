@@ -28,6 +28,10 @@ export class ScreenRecorder {
     return Math.floor((Date.now() - this.activeSession.startTime) / 1000)
   }
 
+  public getActiveSerial(): string | undefined {
+    return this.activeSession?.serial
+  }
+
   public async startRecording(adbPath: string, serial: string): Promise<void> {
     if (this.activeSession) {
       throw new Error('A screen recording is already in progress.')
@@ -62,21 +66,49 @@ export class ScreenRecorder {
 
     const serial = session.serial
 
-    // Gracefully interrupt screenrecord on Android so MP4 container finalizes
+    // screenrecord needs at least 1.5s to write initial headers and keyframes
+    const elapsed = Date.now() - session.startTime
+    if (elapsed < 1500) {
+      await new Promise(resolve => setTimeout(resolve, 1500 - elapsed))
+    }
+
+    // Gracefully send SIGINT (-2) to screenrecord so MediaMuxer writes moov atom
     await new Promise<void>(resolve => {
-      execFile(adbPath, ['-s', serial, 'shell', 'pkill', '-2', 'screenrecord'], { windowsHide: true }, () => resolve())
+      execFile(
+        adbPath,
+        ['-s', serial, 'shell', 'killall -2 screenrecord 2>/dev/null || kill -2 $(pidof screenrecord) 2>/dev/null'],
+        { windowsHide: true },
+        () => resolve()
+      )
     })
 
-    try {
-      session.child.kill()
-    } catch {
-      // ignore
+    // Wait for the adb shell child process to exit naturally
+    const childExitPromise = new Promise<void>(resolve => {
+      if (session.child.killed || session.child.exitCode !== null) {
+        resolve()
+      } else {
+        session.child.once('exit', () => resolve())
+      }
+    })
+
+    let timedOut = false
+    await Promise.race([
+      childExitPromise,
+      new Promise(resolve => setTimeout(() => { timedOut = true; resolve(undefined) }, 4000))
+    ])
+
+    if (timedOut) {
+      try {
+        session.child.kill()
+      } catch {
+        // ignore
+      }
     }
 
     this.activeSession = undefined
 
-    // Wait 1.5s for MediaMuxer to close file cleanly on the phone
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Give MediaMuxer and Android storage a moment to finish syncing to disk
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     await fs.promises.mkdir(outputDirectory, { recursive: true })
 
@@ -111,4 +143,3 @@ export class ScreenRecorder {
     return destination
   }
 }
-

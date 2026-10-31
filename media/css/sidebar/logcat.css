@@ -1,0 +1,201 @@
+/* --- Logcat ------------------------------------------------------------- */
+.sf-log-section {
+    margin-top: 18px;
+}
+
+.sf-log-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.sf-tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.sf-tab {
+    flex: 1;
+    padding: 4px 2px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 130ms linear, color 130ms linear;
+}
+
+.sf-tab:hover {
+    border-color: var(--ink-soft);
+    color: var(--ink);
+}
+
+.sf-tab.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.sf-log-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.sf-search {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    -webkit-text-fill-color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    appearance: none;
+}
+
+.sf-search::placeholder {
+    color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
+}
+
+.sf-search:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.sf-check {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+/* The editor's own form styles can hide or shrink a bare checkbox, so it is
+   drawn explicitly. */
+.sf-check input[type='checkbox'] {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    flex: none;
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.sf-check input[type='checkbox']:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+}
+
+.sf-check input[type='checkbox']:checked::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0;
+    width: 4px;
+    height: 8px;
+    border: solid var(--accent-ink);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.sf-check input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.sf-log {
+    margin-top: 6px;
+    height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: rgba(128, 128, 128, 0.06);
+    padding: 5px 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+body.vscode-dark .sf-log,
+body.vscode-high-contrast .sf-log {
+    background: rgba(0, 0, 0, 0.32);
+}
+
+.sf-log-line {
+    display: grid;
+    grid-template-columns: 60px 12px 74px minmax(0, 1fr);
+    column-gap: 6px;
+    row-gap: 0;
+    align-items: baseline;
+    padding: 2px 0;
+}
+
+.sf-log-line > span {
+    min-width: 0;
+}
+
+.sf-log-time {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.sf-log-level {
+    font-weight: 500;
+    text-align: center;
+}
+
+.lvl-verbose .sf-log-level { color: var(--muted); }
+.lvl-debug .sf-log-level { color: #6E93B8; }
+.lvl-info .sf-log-level { color: var(--ok, #2C6E49); }
+.lvl-warn .sf-log-level { color: var(--warn, #8A5A06); }
+.lvl-error .sf-log-level { color: var(--err, #A3231C); }
+
+.lvl-warn .sf-log-text { color: var(--warn, #8A5A06); }
+.lvl-error .sf-log-text { color: var(--err, #A3231C); }
+
+.sf-log-tag {
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sf-log-text {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.sf-log-empty {
+    padding: 6px 2px;
+    color: var(--muted);
+    font-size: 10.5px;
+}
+
+.sf-log-foot {
+    margin-top: 5px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}

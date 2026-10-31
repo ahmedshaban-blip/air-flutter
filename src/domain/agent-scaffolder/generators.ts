@@ -1,0 +1,265 @@
+import {
+  AgentRole,
+  AgentScaffoldOptions
+} from './types';
+import {
+  RoleDefinition,
+  getRoleDefinition,
+  getToolList,
+  generateToolsTable
+} from './roles';
+
+/**
+ * Generates single agent Markdown specification.
+ */
+export function generateAgentMarkdown(
+  role: AgentRole,
+  options: AgentScaffoldOptions,
+  customName?: string,
+  customDesc?: string
+): { filename: string; content: string } {
+  const roleDef = getRoleDefinition(role, customName, customDesc)
+  const filename = `${roleDef.id}.md`
+  const toolsTable = generateToolsTable(options.toolLevel, options.customTools)
+  const toolsList = getToolList(options.toolLevel, options.customTools)
+  const toolsYaml = toolsList.map(t => `  - ${t}`).join('\n')
+
+  const frontmatter = `---
+name: ${roleDef.id}
+description: ${roleDef.purpose}
+model: inherit
+workspace: inherit
+tools:
+${toolsYaml}
+---`
+
+  if (options.contentMode === 'blank_template') {
+    const fillPrompt = `${frontmatter}
+
+<!--
+================================================================================
+SELF-FILLING PROMPT FOR AI ARCHITECT:
+"You are an expert AI agent architect. Read the project PRD and the tech stack.
+Fill out the template below for the '${roleDef.title}' agent.
+Ensure the system prompt includes strict negative constraints, specifies the input
+schema for task execution, and maps out the handoff to the next agent.
+Output the result directly into this markdown file preserving the YAML frontmatter above."
+================================================================================
+-->
+
+# Agent: ${roleDef.title}
+> **File Purpose:** [Explain what this file does, how the orchestrator reads it, and why it is essential for the multi-agent workflow].
+
+## 1. Identity & System Prompt
+- **Role:** ${roleDef.title}
+- **Target LLM:** [e.g., Gemini 1.5 Pro, Claude 3.5 Sonnet, GPT-4o]
+- **System Prompt:**
+"""
+[High-density, imperative system instructions defining role, boundaries, tone, and operational loop]
+"""
+
+## 2. Core Responsibilities & Workflow
+1. **Input Phase:** [What exact artifacts/files does it accept?]
+2. **Processing Phase:** [What step-by-step logic does it execute?]
+3. **Handoff Phase:** [What does it produce, and which agent receives the output?]
+
+## 3. Tool Permissions & Access Control
+${toolsTable}
+
+## 4. Execution Rules & Quality Gates
+- Rule 1: [Critical operational constraint]
+- Rule 2: [Negative constraint: what NOT to do]
+- Verification Gate: [How the agent verifies its work before handing off]
+`
+    return { filename, content: fillPrompt }
+  }
+
+  // Fully Populated Mode
+  const rulesList = roleDef.rules.map(r => `- Rule: ${r}`).join('\n')
+  const fullContent = `${frontmatter}
+
+# Agent: ${roleDef.title}
+> **File Purpose:** ${roleDef.purpose}
+
+## 1. Identity & System Prompt
+- **Role:** ${roleDef.title}
+- **Target LLM:** ${roleDef.llm}
+- **System Prompt:**
+"""
+${roleDef.prompt}
+"""
+
+## 2. Core Responsibilities & Workflow
+1. **Input Phase:** ${roleDef.inputs}
+2. **Processing Phase:** ${roleDef.processing}
+3. **Handoff Phase:** ${roleDef.handoff}
+
+## 3. Tool Permissions & Access Control
+${toolsTable}
+
+## 4. Execution Rules & Quality Gates
+${rulesList}
+- **Verification Gate:** ${roleDef.verification}
+`
+  return { filename, content: fullContent }
+}
+
+/**
+ * Generates a complete Multi-Agent Team Pipeline with an Orchestration descriptor.
+ */
+export function generateTeamWorkflow(
+  options: AgentScaffoldOptions
+): Array<{ filename: string; content: string }> {
+  const files: Array<{ filename: string; content: string }> = []
+
+  const selectedRoles: AgentRole[] =
+    options.teamRoles && options.teamRoles.length > 0
+      ? options.teamRoles
+      : ['planner', 'architect', 'developer', 'qa']
+
+  const roleDefs: RoleDefinition[] = []
+
+  for (const role of selectedRoles) {
+    const def = getRoleDefinition(role, options.customRoleName, options.customRoleDescription)
+    roleDefs.push(def)
+    files.push(generateAgentMarkdown(role, options, options.customRoleName, options.customRoleDescription))
+  }
+
+  // Add Framework-specific Orchestrator
+  if (options.framework === 'crewai') {
+    const crewAgentsPy = roleDefs.map(def => `
+${def.id}_agent = Agent(
+    role="${def.title}",
+    goal="${def.purpose.replace(/"/g, '\\"')}",
+    backstory="Specialist dedicated to ${def.title} domain operations.",
+    verbose=True
+)`).join('\n')
+
+    const crewTasksPy = roleDefs.map(def => `
+task_${def.id} = Task(
+    description="Execute ${def.title} responsibilities: ${def.processing.replace(/"/g, '\\"')}",
+    agent=${def.id}_agent,
+    expected_output="Verified deliverables for ${def.title}."
+)`).join('\n')
+
+    const crewAgentsList = roleDefs.map(def => `${def.id}_agent`).join(', ')
+    const crewTasksList = roleDefs.map(def => `task_${def.id}`).join(', ')
+
+    files.push({
+      filename: 'crew.py',
+      content: `"""
+Production CrewAI Multi-Agent Workflow (${roleDefs.length} Agents)
+Generated by Air Flutter AI Agent Architect & Scaffolding Engine
+"""
+from crewai import Agent, Crew, Process, Task
+${crewAgentsPy}
+${crewTasksPy}
+
+crew = Crew(
+    agents=[${crewAgentsList}],
+    tasks=[${crewTasksList}],
+    process=Process.sequential,
+    verbose=True
+)
+
+if __name__ == "__main__":
+    result = crew.kickoff()
+    print("Workflow executed successfully:\\n", result)
+`
+    })
+  } else if (options.framework === 'herdr') {
+    const herdrPipelineYaml = roleDefs.map((def, idx) => {
+      const nextDef = roleDefs[idx + 1]
+      const onFinish = nextDef ? nextDef.id : 'complete'
+      return `    - name: "${def.id}"
+      file: "${def.id}.md"
+      on_finish: "${onFinish}"`
+    }).join('\n')
+
+    files.push({
+      filename: 'herdr.yaml',
+      content: `# Herdr Multi-Agent Pipeline Configuration (${roleDefs.length} Agents)
+# Generated by Air Flutter AI Agent Architect & Scaffolding Engine
+version: "1.0"
+pipeline:
+  name: "custom-agent-pipeline"
+  mode: "sequential"
+  agents:
+${herdrPipelineYaml}
+`
+    })
+  } else {
+    // Antigravity / Generic Markdown Orchestrator
+    const mermaidNodes = roleDefs.map((def, idx) => `node${idx}["${def.title}"]`).join(' --> ')
+    const mermaidChart = `\`\`\`mermaid\nflowchart LR\n    ${mermaidNodes}\n\`\`\``
+
+    const invocationStages = roleDefs.map((def, idx) => {
+      const stageNum = idx + 1
+      const isFirst = idx === 0
+      const prevDef = roleDefs[idx - 1]
+      const inputDesc = isFirst ? 'initial project PRD and requirements' : `verified deliverables emitted by ${prevDef.title}`
+
+      return `### Stage ${stageNum}: Asynchronous Invocation of \`${def.id}\`
+- **Subagent Type:** \`${def.id}\`
+- **Execution Tool Call:**
+\`\`\`json
+{
+  "tool": "invoke_subagent",
+  "arguments": {
+    "TypeName": "${def.id}",
+    "Role": "${def.title}",
+    "Prompt": "Execute stage ${stageNum}. Ingest ${inputDesc}. Perform core logic: ${def.processing.replace(/"/g, '\\"')}. Deliver verified output.",
+    "Model": "inherit",
+    "Workspace": "inherit"
+  }
+}
+\`\`\`
+- **Reactive Wakeup:** Subagent executes in the background. When notification arrives, inspect output and proceed to the next stage.`
+    }).join('\n\n')
+
+    const handoffSteps = roleDefs.map((def, idx) => {
+      const nextDef = roleDefs[idx + 1]
+      if (nextDef) {
+        return `${idx + 1}. **${def.title}**: Processes inputs and hands off verified deliverables to **${nextDef.title}**.`
+      } else {
+        return `${idx + 1}. **${def.title}**: Final pipeline stage. Performs quality gate verification and completes release.`
+      }
+    }).join('\n')
+
+    files.push({
+      filename: 'orchestrator.md',
+      content: `---
+name: orchestrator
+description: Master multi-agent orchestrator managing the asynchronous execution pipeline across ${roleDefs.length} subagents.
+model: inherit
+workspace: inherit
+tools:
+  - invoke_subagent
+  - send_message
+  - manage_subagents
+  - read_file
+---
+
+# Agent: Team Orchestrator & Asynchronous Workflow Controller
+> **File Purpose:** Orchestrates the multi-agent asynchronous pipeline across ${roleDefs.length} specialized subagents in accordance with Google Antigravity Subagents specifications.
+
+## 1. Pipeline Execution Flow
+${mermaidChart}
+
+## 2. Asynchronous Subagents Invocation Guide
+In Google Antigravity, subagents run in isolated background contexts. Call \`invoke_subagent\` for each stage in sequence. **Do not poll in a loop**; Antigravity will notify you automatically when a subagent finishes or sends a message.
+
+${invocationStages}
+
+## 3. Dynamic Handoff Protocol
+${handoffSteps}
+
+## 4. Quality Gate & Error Feedback
+- If any subagent reports test failures, missing criteria, or unhandled edge cases, the orchestrator routes the feedback message directly back via \`send_message(Recipient: conversationId, Message: errorDetails)\` before progressing to the next stage.
+`
+    })
+  }
+
+  return files
+}
+
