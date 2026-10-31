@@ -22,7 +22,7 @@
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/version-1.0.8-blue?style=for-the-badge" alt="Version 1.0.8"/>
+    <img src="https://img.shields.io/badge/version-1.0.9-blue?style=for-the-badge" alt="Version 1.0.9"/>
     <img src="https://img.shields.io/badge/VS_Code-1.85.0+-373277?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code"/>
     <img src="https://img.shields.io/badge/Flutter-3.0+-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
     <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT"/>
@@ -127,14 +127,15 @@ Interactive 5-step visual wizard to design, scaffold, and generate production-re
 
 ---
 
-### 8. 🩺 Flutter Compatibility Doctor &amp; Auto-Fixer
-Detect breaking version mismatches and outdated configurations across your Flutter project build stack before Gradle or Xcode fails:
-- **Android Matrix Validation**: Evaluates local Java Runtime (JDK) &harr; Gradle Wrapper &harr; Android Gradle Plugin (AGP) &harr; Kotlin versions against declarative Google stability rules.
-- **iOS Deployment Target Auditing**: Inspects `ios/Podfile` for minimum iOS deployment target (`platform :ios`) and deprecated SDK targets (e.g., iOS 11/12).
-- **Non-Destructive Parsers**: Regex line-range parsers target only version strings in `gradle-wrapper.properties`, `build.gradle`, `build.gradle.kts`, `settings.gradle`, and `Podfile`, leaving all comments, indentation, and structure completely intact.
-- **Inline VS Code Diagnostics &amp; Quick Fixes**: Highlights breaking lines with error/warning squigglies, linking directly to official migration documentation with 1-click Quick Fixes (`Ctrl+.`).
-- **Interactive Webview Modal**: Overview status cards (Gradle, AGP, Java, iOS), progress loading spinner, folder browser for external projects, and an interactive 1-click Auto-Upgrade wizard.
-- **Safe Workspace Edits**: All upgrades utilize `vscode.WorkspaceEdit`, allowing full single-click Undo (`Ctrl+Z`).
+### 8. 🩺 Flutter Compatibility Doctor &amp; Smart Version Configurator
+Detect breaking version mismatches, configure custom build stacks with smart cascading compatibility enforcement, and apply verified auto-fixes:
+- **Two-Tab Compatibility Hub**:
+  - **Audit Findings**: Status cards (Gradle Wrapper, AGP, Java Runtime, iOS Target), real-time diagnostics, and official migration links.
+  - **Version Configurator &amp; Auto-Sync**: Interactive customizer allowing you to choose any AGP, Gradle, Kotlin, or iOS version with dynamic cascading logic that disables incompatible choices in real time.
+- **Smart Cascading &amp; Auto-Sync**: Selecting an AGP (e.g. `8.5.2`) automatically restricts Gradle choices to `>=8.7`, pre-selects recommended versions, sets Kotlin target (`1.9.24`), and enforces the JDK baseline (JDK 17).
+- **Full Project Mutation Scope**: Non-destructively updates `gradle-wrapper.properties`, `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts`, `ios/Podfile`, and `android/app/build.gradle` (`sourceCompatibility`, `targetCompatibility`, and `jvmTarget`).
+- **Diff Preview Modal Before Applying**: Shows a granular before-and-after comparison across all targeted files with selective checkboxes before applying changes.
+- **Safe Workspace Edits**: All upgrades apply through `vscode.WorkspaceEdit`, allowing full single-click Undo (`Ctrl+Z`).
 - **Dedicated Output Channel**: Generates structured, readable audit reports inside `Air Flutter Compatibility Doctor`.
 
 ---

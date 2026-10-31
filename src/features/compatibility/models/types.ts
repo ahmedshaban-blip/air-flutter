@@ -17,12 +17,22 @@ export interface AndroidRule {
   compatibleGradle: string
   minJava: number
   recommendedGradle: string
+  recommendedKotlin?: string
+  compatibleKotlin?: string
   description?: string
   migrationUrl?: string
 }
 
 export interface IosRecommended {
   minDeploymentTarget: string
+}
+
+export interface AvailableVersions {
+  agp: string[]
+  gradle: string[]
+  kotlin: string[]
+  java: number[]
+  ios: string[]
 }
 
 export interface CompatibilityMatrix {
@@ -38,6 +48,17 @@ export interface CompatibilityMatrix {
     description?: string
     migrationUrl?: string
   }
+  availableVersions: AvailableVersions
+}
+
+export interface ParsedJavaConfig {
+  appBuildGradlePath?: string
+  sourceCompatibility?: string
+  sourceCompatibilityRange?: TextRange
+  targetCompatibility?: string
+  targetCompatibilityRange?: TextRange
+  jvmTarget?: string
+  jvmTargetRange?: TextRange
 }
 
 export interface ParsedGradleInfo {
@@ -49,6 +70,7 @@ export interface ParsedGradleInfo {
   agpRange?: TextRange
   kotlinVersion?: string
   kotlinRange?: TextRange
+  javaConfig?: ParsedJavaConfig
   isKotlinDsl: boolean
 }
 
@@ -98,5 +120,24 @@ export interface CompatibilityReport {
   issues: CompatibilityIssue[]
   isHealthy: boolean
   canAutoUpgrade: boolean
+}
+
+export interface CustomStackConfig {
+  agp: string
+  gradle: string
+  kotlin: string
+  java: number
+  iosTarget: string
+}
+
+export interface StackDiffItem {
+  id: string
+  title: string
+  filePath: string
+  currentValue: string
+  targetValue: string
+  description: string
+  range?: TextRange
+  selected: boolean
 }
 

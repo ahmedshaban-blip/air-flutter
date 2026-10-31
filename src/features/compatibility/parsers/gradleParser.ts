@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { ParsedGradleInfo, TextRange } from '../models/types'
+import { ParsedGradleInfo, ParsedJavaConfig, TextRange } from '../models/types'
 
 export class GradleParser {
   /**
@@ -40,6 +40,7 @@ export class GradleParser {
     const androidDir = path.join(projectPath, 'android')
     if (fs.existsSync(androidDir)) {
       await this.parseBuildScripts(androidDir, result)
+      await this.parseAppBuildGradle(androidDir, result)
     }
 
     return result
@@ -142,6 +143,70 @@ export class GradleParser {
             }
           }
         }
+      }
+    }
+  }
+
+  private static async parseAppBuildGradle(androidDir: string, result: ParsedGradleInfo): Promise<void> {
+    const candidates = [
+      path.join(androidDir, 'app', 'build.gradle'),
+      path.join(androidDir, 'app', 'build.gradle.kts')
+    ]
+
+    for (const filePath of candidates) {
+      if (!fs.existsSync(filePath)) continue
+
+      const content = await fs.promises.readFile(filePath, 'utf8')
+      const lines = content.split(/\r?\n/)
+      const javaConfig: ParsedJavaConfig = {
+        appBuildGradlePath: filePath
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        const trimmed = line.trim()
+        if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue
+
+        const sourceMatch = line.match(/sourceCompatibility(?:\s*=\s*|\s+)(JavaVersion\.VERSION_[0-9_]+)/)
+        if (sourceMatch && sourceMatch[1]) {
+          javaConfig.sourceCompatibility = sourceMatch[1]
+          const startChar = line.indexOf(sourceMatch[1])
+          javaConfig.sourceCompatibilityRange = {
+            startLine: i,
+            startChar,
+            endLine: i,
+            endChar: startChar + sourceMatch[1].length
+          }
+        }
+
+        const targetMatch = line.match(/targetCompatibility(?:\s*=\s*|\s+)(JavaVersion\.VERSION_[0-9_]+)/)
+        if (targetMatch && targetMatch[1]) {
+          javaConfig.targetCompatibility = targetMatch[1]
+          const startChar = line.indexOf(targetMatch[1])
+          javaConfig.targetCompatibilityRange = {
+            startLine: i,
+            startChar,
+            endLine: i,
+            endChar: startChar + targetMatch[1].length
+          }
+        }
+
+        const jvmMatch = line.match(/jvmTarget\s*=\s*['"]([0-9.]+)['"]/)
+        if (jvmMatch && jvmMatch[1]) {
+          javaConfig.jvmTarget = jvmMatch[1]
+          const startChar = line.indexOf(jvmMatch[1])
+          javaConfig.jvmTargetRange = {
+            startLine: i,
+            startChar,
+            endLine: i,
+            endChar: startChar + jvmMatch[1].length
+          }
+        }
+      }
+
+      if (javaConfig.sourceCompatibility || javaConfig.targetCompatibility || javaConfig.jvmTarget) {
+        result.javaConfig = javaConfig
+        break
       }
     }
   }

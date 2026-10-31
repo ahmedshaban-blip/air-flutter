@@ -7,7 +7,7 @@ import { EnvironmentService } from './services/environmentService'
 import { CompatibilityEngine } from './services/compatibilityEngine'
 import { CompatibilityDiagnosticsManager } from './providers/compatibilityDiagnostics'
 import { CompatibilityCodeActionProvider } from './providers/compatibilityCodeActions'
-import { CompatibilityReport, SuggestedFix } from './models/types'
+import { CompatibilityReport, StackDiffItem, SuggestedFix } from './models/types'
 
 export class CompatibilityModule {
   private static diagnosticsManager: CompatibilityDiagnosticsManager
@@ -272,6 +272,56 @@ export class CompatibilityModule {
       return true
     } else {
       vscode.window.showErrorMessage('Failed to apply workspace edits for build stack upgrade.')
+      return false
+    }
+  }
+
+  public static async applyCustomDiffs(diffs: StackDiffItem[], targetPath?: string): Promise<boolean> {
+    if (!diffs || diffs.length === 0) {
+      return false
+    }
+
+    const wsEdit = new vscode.WorkspaceEdit()
+    for (const diff of diffs) {
+      if (!diff.range) continue
+      const targetRange = new vscode.Range(
+        diff.range.startLine,
+        diff.range.startChar,
+        diff.range.endLine,
+        diff.range.endChar
+      )
+      wsEdit.replace(vscode.Uri.file(diff.filePath), targetRange, diff.targetValue)
+    }
+
+    const applied = await vscode.workspace.applyEdit(wsEdit)
+    if (applied) {
+      // Auto-save the touched documents
+      for (const diff of diffs) {
+        const doc = vscode.workspace.textDocuments.find(d => d.fileName === diff.filePath)
+        if (doc) {
+          await doc.save()
+        }
+      }
+
+      // Re-scan
+      const updatedReport = await this.runScan(targetPath)
+      if (updatedReport) {
+        this.printReportToOutput(updatedReport)
+      }
+
+      vscode.window
+        .showInformationMessage(
+          `🚀 Successfully applied ${diffs.length} custom build stack modification(s)! (Undo anytime with Ctrl+Z)`,
+          'View Output Report'
+        )
+        .then(res => {
+          if (res === 'View Output Report') {
+            this.outputChannel.show(true)
+          }
+        })
+      return true
+    } else {
+      vscode.window.showErrorMessage('Failed to apply workspace edits for custom build stack.')
       return false
     }
   }

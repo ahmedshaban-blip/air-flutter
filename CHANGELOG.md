@@ -5,6 +5,18 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
+## [1.0.9] - 2026-10-31
+
+### Features & Fixes
+
+- **Instant Auto-Scan on Modal Open**: Resolved hanging spinner issue when opening Compat Doctor from the panel by automatically resolving active workspace and initiating scan immediately.
+- **Two-Tab Compatibility Hub**: Redesigned `#compatDoctorModal` with two dedicated tabs:
+  - **Audit Findings**: Real-time diagnostic findings, status cards, and one-click auto-upgrade.
+  - **Version Configurator & Auto-Sync**: Interactive customizer to select specific versions with smart cascading enforcement.
+- **Smart Cascading & Incompatibility Prevention**: Selecting an AGP version automatically filters and disables incompatible Gradle versions, auto-selects the recommended Gradle version, and updates Kotlin and Java baseline (JDK 11 / 17).
+- **Full Project Mutation Scope**: Non-destructively modifies `gradle-wrapper.properties`, `build.gradle`, `build.gradle.kts`, `ios/Podfile`, and `app/build.gradle` (`sourceCompatibility`, `targetCompatibility`, and `jvmTarget`).
+- **Interactive Diff Preview Modal**: Displays granular before-and-after diffs for all affected files with selective checkboxes before applying non-destructive `vscode.WorkspaceEdit` (with full `Ctrl+Z` undo support).
+
 ## [1.0.8] - 2026-10-31
 
 ### Features

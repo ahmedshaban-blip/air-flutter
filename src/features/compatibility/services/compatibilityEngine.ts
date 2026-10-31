@@ -1,11 +1,15 @@
 import * as matrixData from '../data/compatibility-matrix.json'
 import {
+  AndroidRule,
+  AvailableVersions,
   CompatibilityIssue,
   CompatibilityMatrix,
   CompatibilityReport,
+  CustomStackConfig,
   EnvironmentInfo,
   ParsedGradleInfo,
-  ParsedPodfileInfo
+  ParsedPodfileInfo,
+  StackDiffItem
 } from '../models/types'
 
 export class VersionComparator {
@@ -183,6 +187,149 @@ export class CompatibilityEngine {
       isHealthy: issues.length === 0,
       canAutoUpgrade: issues.some(i => i.suggestedFix !== undefined)
     }
+  }
+
+  public static getAvailableVersions(): AvailableVersions {
+    return this.matrix.availableVersions
+  }
+
+  public static getRuleForAgp(agpVersion: string): AndroidRule | undefined {
+    return this.matrix.android.rules.find(r =>
+      VersionComparator.satisfies(agpVersion, r.agpRange)
+    )
+  }
+
+  public static getCompatibleGradlesForAgp(agpVersion: string): string[] {
+    const rule = this.getRuleForAgp(agpVersion)
+    if (!rule) {
+      return this.matrix.availableVersions.gradle
+    }
+    return this.matrix.availableVersions.gradle.filter(g =>
+      VersionComparator.satisfies(g, rule.compatibleGradle)
+    )
+  }
+
+  /**
+   * Generates diff preview items for a target custom configuration against the current report.
+   */
+  public static computeDiffItems(
+    report: CompatibilityReport,
+    target: CustomStackConfig
+  ): StackDiffItem[] {
+    const diffs: StackDiffItem[] = []
+
+    // 1. Gradle Wrapper
+    if (report.gradle.wrapperPath && report.gradle.gradleRange) {
+      if (report.gradle.gradleVersion !== target.gradle) {
+        diffs.push({
+          id: 'gradle',
+          title: 'Gradle Wrapper',
+          filePath: report.gradle.wrapperPath,
+          currentValue: report.gradle.gradleVersion || 'unknown',
+          targetValue: target.gradle,
+          description: `Update distributionUrl in gradle-wrapper.properties to Gradle ${target.gradle}`,
+          range: report.gradle.gradleRange,
+          selected: true
+        })
+      }
+    }
+
+    // 2. Android Gradle Plugin (AGP)
+    if (report.gradle.buildGradlePath && report.gradle.agpRange) {
+      if (report.gradle.agpVersion !== target.agp) {
+        diffs.push({
+          id: 'agp',
+          title: 'Android Gradle Plugin (AGP)',
+          filePath: report.gradle.buildGradlePath,
+          currentValue: report.gradle.agpVersion || 'unknown',
+          targetValue: target.agp,
+          description: `Update AGP version in build script to ${target.agp}`,
+          range: report.gradle.agpRange,
+          selected: true
+        })
+      }
+    }
+
+    // 3. Kotlin Version
+    if (report.gradle.buildGradlePath && report.gradle.kotlinRange && target.kotlin) {
+      if (report.gradle.kotlinVersion !== target.kotlin) {
+        diffs.push({
+          id: 'kotlin',
+          title: 'Kotlin Plugin / Extension',
+          filePath: report.gradle.buildGradlePath,
+          currentValue: report.gradle.kotlinVersion || 'unknown',
+          targetValue: target.kotlin,
+          description: `Update Kotlin version in build script to ${target.kotlin}`,
+          range: report.gradle.kotlinRange,
+          selected: true
+        })
+      }
+    }
+
+    // 4. Java / CompileOptions in app/build.gradle
+    if (report.gradle.javaConfig && report.gradle.javaConfig.appBuildGradlePath) {
+      const appBuildGradlePath = report.gradle.javaConfig.appBuildGradlePath
+      const jc = report.gradle.javaConfig
+      const targetJavaVer = target.java === 17 ? 'JavaVersion.VERSION_17' : 'JavaVersion.VERSION_11'
+      const targetJvm = target.java === 17 ? '17' : '11'
+
+      if (jc.sourceCompatibilityRange && jc.sourceCompatibility && jc.sourceCompatibility !== targetJavaVer) {
+        diffs.push({
+          id: 'javaSource',
+          title: 'Java sourceCompatibility',
+          filePath: appBuildGradlePath,
+          currentValue: jc.sourceCompatibility,
+          targetValue: targetJavaVer,
+          description: `Update sourceCompatibility in app/build.gradle to ${targetJavaVer}`,
+          range: jc.sourceCompatibilityRange,
+          selected: true
+        })
+      }
+
+      if (jc.targetCompatibilityRange && jc.targetCompatibility && jc.targetCompatibility !== targetJavaVer) {
+        diffs.push({
+          id: 'javaTarget',
+          title: 'Java targetCompatibility',
+          filePath: appBuildGradlePath,
+          currentValue: jc.targetCompatibility,
+          targetValue: targetJavaVer,
+          description: `Update targetCompatibility in app/build.gradle to ${targetJavaVer}`,
+          range: jc.targetCompatibilityRange,
+          selected: true
+        })
+      }
+
+      if (jc.jvmTargetRange && jc.jvmTarget && jc.jvmTarget !== targetJvm) {
+        diffs.push({
+          id: 'jvmTarget',
+          title: 'Kotlin jvmTarget',
+          filePath: appBuildGradlePath,
+          currentValue: jc.jvmTarget,
+          targetValue: targetJvm,
+          description: `Update jvmTarget in app/build.gradle to "${targetJvm}"`,
+          range: jc.jvmTargetRange,
+          selected: true
+        })
+      }
+    }
+
+    // 5. iOS Deployment Target
+    if (report.podfile.exists && report.podfile.podfilePath && report.podfile.targetRange && target.iosTarget) {
+      if (report.podfile.deploymentTarget !== target.iosTarget) {
+        diffs.push({
+          id: 'iosTarget',
+          title: 'iOS Deployment Target',
+          filePath: report.podfile.podfilePath,
+          currentValue: report.podfile.deploymentTarget || 'unknown',
+          targetValue: target.iosTarget,
+          description: `Update platform :ios in ios/Podfile to '${target.iosTarget}'`,
+          range: report.podfile.targetRange,
+          selected: true
+        })
+      }
+    }
+
+    return diffs
   }
 }
 

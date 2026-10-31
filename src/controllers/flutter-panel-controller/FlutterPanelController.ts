@@ -19,6 +19,8 @@ import { ScreenRecorder } from '../../domain/screen-recorder';
 import { NetworkManager } from '../../domain/network-manager';
 import { AgentScaffolder, AgentScaffoldOptions } from '../../domain/agent-scaffolder';
 import { CompatibilityModule } from '../../features/compatibility';
+import { CompatibilityEngine } from '../../features/compatibility/services/compatibilityEngine';
+import { StackDiffItem } from '../../features/compatibility/models/types';
 
 interface Device {
   id: string;
@@ -259,6 +261,9 @@ export class FlutterPanelController extends ADBBaseController {
               break;
             case 'applyCompatUpgrades':
               await this.handleApplyCompatUpgrades(message.projectPath);
+              break;
+            case 'applyCustomStack':
+              await this.handleApplyCustomStack(message.projectPath, message.diffs);
               break;
             case 'disconnectDevice':
               console.log('❌ FlutterPanelController: Disconnecting device...')
@@ -1107,7 +1112,7 @@ export class FlutterPanelController extends ADBBaseController {
 
         <!-- Flutter Compatibility Doctor & Auto-Fixer Modal -->
         <div class="modal-backdrop" id="compatDoctorModal" hidden>
-            <div class="modal-card" style="max-width: 720px;">
+            <div class="modal-card" style="max-width: 740px;">
                 <div class="modal-head">
                     <h2><i class="fas fa-stethoscope"></i> Flutter Compatibility Doctor &amp; Auto-Fixer</h2>
                     <button class="modal-close" id="closeCompatDoctorModalBtn" type="button" aria-label="Close">&times;</button>
@@ -1115,7 +1120,7 @@ export class FlutterPanelController extends ADBBaseController {
 
                 <div class="modal-body" style="padding-top: 8px;">
                     <!-- Project Selector Header -->
-                    <div class="modal-field" style="margin-bottom: 12px;">
+                    <div class="modal-field" style="margin-bottom: 10px;">
                         <label>Active Project Path</label>
                         <div class="custom-path-row" style="display: flex; gap: 8px; margin-top: 4px;">
                             <input type="text" id="compatProjectPathInput" class="modal-input" placeholder="Select a Flutter project..." readonly style="flex: 1;" />
@@ -1128,14 +1133,24 @@ export class FlutterPanelController extends ADBBaseController {
                         </div>
                     </div>
 
+                    <!-- Two Tabs Navigation Header -->
+                    <div class="compat-tabs-nav">
+                        <button class="compat-tab-btn is-active" id="tabBtnCompatAudit" type="button">
+                            <i class="fas fa-search-plus"></i> Audit Findings
+                        </button>
+                        <button class="compat-tab-btn" id="tabBtnCompatConfig" type="button">
+                            <i class="fas fa-sliders-h"></i> Version Configurator &amp; Auto-Sync
+                        </button>
+                    </div>
+
                     <!-- Loading / Spinner State -->
                     <div id="compatDoctorLoading" style="display: none; text-align: center; padding: 32px 0;">
                         <i class="fas fa-circle-notch fa-spin fa-2x" style="color: var(--primary);"></i>
                         <p style="margin-top: 12px; font-weight: 500;">Inspecting Gradle, AGP, Java runtime &amp; iOS deployment target...</p>
                     </div>
 
-                    <!-- Content State -->
-                    <div id="compatDoctorContent">
+                    <!-- TAB 1: Audit Findings Content -->
+                    <div id="tabContentCompatAudit">
                         <!-- Overview Cards Grid -->
                         <div class="compat-cards-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;">
                             <div class="compat-status-card" id="compatCardGradle">
@@ -1163,7 +1178,7 @@ export class FlutterPanelController extends ADBBaseController {
                         <!-- Issues & Recommendations List -->
                         <div class="modal-field">
                             <label><i class="fas fa-clipboard-check"></i> Diagnostic Findings &amp; Upgrades</label>
-                            <div id="compatIssuesContainer" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto;">
+                            <div id="compatIssuesContainer" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
                                 <!-- Dynamic issue items injected here -->
                             </div>
                         </div>
@@ -1173,19 +1188,98 @@ export class FlutterPanelController extends ADBBaseController {
                             <h4><i class="fas fa-shield-alt"></i> Verified Stable Baseline</h4>
                             <p id="compatTargetText" style="margin: 0;">AGP 8.5.2 | Gradle 8.7 | JDK 17 | iOS 13.0+</p>
                         </div>
+
+                        <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
+                            <button class="btn btn-quiet" id="cancelCompatDoctorBtn" type="button">Close</button>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary" id="openCompatOutputBtn" type="button">
+                                    <i class="fas fa-terminal"></i> View Detailed Log
+                                </button>
+                                <button class="btn btn-primary" id="autoUpgradeStackBtn" type="button" disabled>
+                                    <i class="fas fa-wrench"></i> Upgrade Stack (Auto-Fix)
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
-                        <button class="btn btn-quiet" id="cancelCompatDoctorBtn" type="button">Close</button>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-secondary" id="openCompatOutputBtn" type="button">
-                                <i class="fas fa-terminal"></i> View Detailed Log
-                            </button>
-                            <button class="btn btn-primary" id="autoUpgradeStackBtn" type="button" disabled>
-                                <i class="fas fa-wrench"></i> Upgrade Stack (Auto-Fix)
+                    <!-- TAB 2: Version Configurator & Auto-Sync -->
+                    <div id="tabContentCompatConfig" style="display: none;">
+                        <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted);">
+                            Customize your project build stack with real-time smart cascading compatibility enforcement. Incompatible options are automatically filtered or disabled to guarantee build stability.
+                        </p>
+
+                        <div class="compat-config-grid">
+                            <div class="modal-field">
+                                <label for="configAgpSelect"><i class="fab fa-android"></i> Android Gradle Plugin (AGP)</label>
+                                <select id="configAgpSelect" class="modal-input" style="width: 100%;">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="modal-field">
+                                <label for="configGradleSelect"><i class="fas fa-cubes"></i> Gradle Wrapper Version</label>
+                                <select id="configGradleSelect" class="modal-input" style="width: 100%;">
+                                    <!-- Populated & filtered dynamically -->
+                                </select>
+                            </div>
+                            <div class="modal-field">
+                                <label for="configKotlinSelect"><i class="fas fa-code"></i> Kotlin Version</label>
+                                <select id="configKotlinSelect" class="modal-input" style="width: 100%;">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="modal-field">
+                                <label for="configJavaSelect"><i class="fab fa-java"></i> Java / JDK Target</label>
+                                <select id="configJavaSelect" class="modal-input" style="width: 100%;">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="modal-field" style="grid-column: span 2;">
+                                <label for="configIosSelect"><i class="fab fa-apple"></i> iOS Minimum Deployment Target (Podfile)</label>
+                                <select id="configIosSelect" class="modal-input" style="width: 100%;">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Live Compatibility Notification -->
+                        <div id="configStatusBanner" class="compat-status-card is-success" style="padding: 10px 14px; margin-top: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-check-circle" style="color: #4caf50;"></i>
+                                <span id="configStatusText" style="font-size: 12px; font-weight: 600;">Selected combination is fully compatible and verified.</span>
+                            </div>
+                        </div>
+
+                        <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
+                            <button class="btn btn-quiet" id="cancelCompatConfigBtn" type="button">Close</button>
+                            <button class="btn btn-primary" id="previewCustomStackBtn" type="button">
+                                <i class="fas fa-eye"></i> Review &amp; Apply Changes
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compatibility Stack Diff Preview Modal -->
+        <div class="modal-backdrop" id="compatDiffModal" hidden style="z-index: 10001;">
+            <div class="modal-card" style="max-width: 640px;">
+                <div class="modal-head">
+                    <h2><i class="fas fa-code-branch"></i> Review Target Stack Modifications</h2>
+                    <button class="modal-close" id="closeCompatDiffModalBtn" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body" style="padding-top: 8px;">
+                    <p style="margin: 0 0 10px; font-size: 12px; color: var(--muted);">
+                        The following file modifications will be applied to your workspace via non-destructive edits. You can undo all changes at any time using <code>Ctrl+Z</code>.
+                    </p>
+                    <div id="compatDiffList" style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;">
+                        <!-- Diff items injected dynamically -->
+                    </div>
+                </div>
+                <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
+                    <button class="btn btn-quiet" id="cancelCompatDiffModalBtn" type="button">Cancel</button>
+                    <button class="btn btn-primary" id="confirmApplyDiffBtn" type="button">
+                        <i class="fas fa-check"></i> Apply Selected Modifications
+                    </button>
                 </div>
             </div>
         </div>
@@ -2056,10 +2150,15 @@ export class FlutterPanelController extends ADBBaseController {
   private async handleRunCompatDoctorScan(projectPath?: string) {
     try {
       this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: true });
-      const report = await CompatibilityModule.runScan(projectPath);
+      const target = (projectPath && projectPath.trim().length > 0) ? projectPath.trim() : this.getInitialProjectPath();
+      const report = await CompatibilityModule.runScan(target);
+      const availableVersions = CompatibilityEngine.getAvailableVersions();
+      const rules = CompatibilityEngine.getMatrix().android.rules;
       this.currentPanel?.webview.postMessage({
         command: 'compatDoctorReport',
-        report
+        report,
+        availableVersions,
+        rules
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -2074,15 +2173,37 @@ export class FlutterPanelController extends ADBBaseController {
 
   private async handleApplyCompatUpgrades(projectPath?: string) {
     try {
-      const success = await CompatibilityModule.upgradeBuildStackCommand(projectPath);
+      const target = (projectPath && projectPath.trim().length > 0) ? projectPath.trim() : this.getInitialProjectPath();
+      const success = await CompatibilityModule.upgradeBuildStackCommand(target);
       if (success) {
-        await this.handleRunCompatDoctorScan(projectPath);
+        await this.handleRunCompatDoctorScan(target);
       } else {
         this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.showErrorMessage(`Upgrade failed: ${msg}`);
+      this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
+    }
+  }
+
+  private async handleApplyCustomStack(projectPath?: string, diffs?: StackDiffItem[]) {
+    try {
+      this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: true });
+      const target = (projectPath && projectPath.trim().length > 0) ? projectPath.trim() : this.getInitialProjectPath();
+      if (!diffs || diffs.length === 0) {
+        this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
+        return;
+      }
+      const success = await CompatibilityModule.applyCustomDiffs(diffs, target);
+      if (success) {
+        await this.handleRunCompatDoctorScan(target);
+      } else {
+        this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.showErrorMessage(`Failed to apply custom stack: ${msg}`);
       this.currentPanel?.webview.postMessage({ command: 'compatDoctorLoading', loading: false });
     }
   }

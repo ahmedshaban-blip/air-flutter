@@ -1,6 +1,6 @@
 {
   "$schema": "./compatibility-schema.json",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "lastUpdated": "2026-10",
   "android": {
     "recommended": {
@@ -15,6 +15,8 @@
         "compatibleGradle": ">=8.7",
         "minJava": 17,
         "recommendedGradle": "8.7",
+        "recommendedKotlin": "1.9.24",
+        "compatibleKotlin": ">=1.9.0",
         "description": "AGP 8.5.x requires Gradle 8.7+ and JDK 17+",
         "migrationUrl": "https://developer.android.com/build/releases/gradle-plugin#updating-gradle"
       },
@@ -23,6 +25,8 @@
         "compatibleGradle": ">=8.2 <=8.7",
         "minJava": 17,
         "recommendedGradle": "8.4",
+        "recommendedKotlin": "1.9.10",
+        "compatibleKotlin": ">=1.8.20",
         "description": "AGP 8.2-8.4 requires Gradle 8.2+ and JDK 17+",
         "migrationUrl": "https://developer.android.com/build/releases/gradle-plugin#updating-gradle"
       },
@@ -31,6 +35,8 @@
         "compatibleGradle": ">=8.0 <=8.4",
         "minJava": 17,
         "recommendedGradle": "8.1",
+        "recommendedKotlin": "1.8.22",
+        "compatibleKotlin": ">=1.8.0",
         "description": "AGP 8.0-8.1 requires Gradle 8.0+ and JDK 17+",
         "migrationUrl": "https://developer.android.com/build/releases/gradle-plugin#updating-gradle"
       },
@@ -39,6 +45,8 @@
         "compatibleGradle": ">=7.5 <=7.6",
         "minJava": 11,
         "recommendedGradle": "7.5",
+        "recommendedKotlin": "1.8.0",
+        "compatibleKotlin": ">=1.7.10",
         "description": "AGP 7.4.x requires Gradle 7.5+ and JDK 11+",
         "migrationUrl": "https://developer.android.com/build/releases/gradle-plugin#updating-gradle"
       },
@@ -47,6 +55,8 @@
         "compatibleGradle": ">=7.0 <=7.4",
         "minJava": 11,
         "recommendedGradle": "7.3.3",
+        "recommendedKotlin": "1.7.20",
+        "compatibleKotlin": ">=1.6.0",
         "description": "AGP 7.0-7.3 requires Gradle 7.0-7.4 and JDK 11+",
         "migrationUrl": "https://developer.android.com/build/releases/gradle-plugin#updating-gradle"
       }
@@ -59,6 +69,12 @@
     "deprecatedTargets": ["11.0", "12.0"],
     "description": "Flutter 3.x and modern plugins recommend iOS deployment target 13.0 or higher.",
     "migrationUrl": "https://docs.flutter.dev/reference/supported-platforms"
+  },
+  "availableVersions": {
+    "agp": ["8.5.2", "8.4.2", "8.3.2", "8.2.2", "8.1.4", "8.0.2", "7.4.2"],
+    "gradle": ["8.7", "8.6", "8.5", "8.4", "8.2.1", "8.0.2", "7.6.4", "7.5"],
+    "kotlin": ["1.9.24", "1.9.10", "1.8.22", "1.7.20"],
+    "java": [17, 11],
+    "ios": ["13.0", "14.0", "15.0", "16.0", "17.0", "18.0", "12.0", "11.0"]
   }
 }
-

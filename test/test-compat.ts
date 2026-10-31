@@ -117,5 +117,26 @@ assert.strictEqual(reportHealthy.issues.length, 0)
 assert.strictEqual(reportHealthy.canAutoUpgrade, false)
 console.log('✅ Fully Compatible verification passed!')
 
+// Test 6: Smart Cascading Gradle filtering & Diff computation
+console.log('--- Testing Smart Cascading & Diff Computation ---')
+const gradlesFor85 = CompatibilityEngine.getCompatibleGradlesForAgp('8.5.2')
+assert.ok(gradlesFor85.includes('8.7'), 'Gradle 8.7 should be compatible with AGP 8.5.2')
+assert.ok(!gradlesFor85.includes('7.5'), 'Gradle 7.5 should be incompatible with AGP 8.5.2')
+
+const gradlesFor74 = CompatibilityEngine.getCompatibleGradlesForAgp('7.4.2')
+assert.ok(gradlesFor74.includes('7.5'), 'Gradle 7.5 should be compatible with AGP 7.4.2')
+assert.ok(!gradlesFor74.includes('8.7'), 'Gradle 8.7 should not be compatible with AGP 7.4.2')
+
+// Test diff computation
+const diffs = CompatibilityEngine.computeDiffItems(report1, {
+  agp: '8.5.2',
+  gradle: '8.7',
+  kotlin: '1.9.24',
+  java: 17,
+  iosTarget: '13.0'
+})
+assert.ok(diffs.some(d => d.id === 'gradle' && d.targetValue === '8.7'), 'Should compute gradle diff to 8.7')
+console.log('✅ Smart Cascading & Diff Computation passed!')
+
 console.log('\n🎉 ALL COMPATIBILITY TESTS PASSED SUCCESSFULLY! 🎉')
 
