@@ -123,6 +123,33 @@ export class DeviceToolsService {
     await this.shell(serial, ['input', 'keyevent', 'KEYCODE_MENU'], 10000).catch(() => undefined)
   }
 
+  public async installApk(serial: string, apkPath: string): Promise<string> {
+    this.validateSerial(serial)
+    if (!fs.existsSync(apkPath)) {
+      throw new Error(`APK file not found: ${apkPath}`)
+    }
+    const { stdout, stderr } = await this.runADB(['-s', serial, 'install', '-r', '-d', apkPath], 180000)
+    if (stderr && !stdout.includes('Success')) {
+      throw new Error(stderr)
+    }
+    return `${stdout}\n${stderr}`.trim()
+  }
+
+  public async sendText(serial: string, text: string): Promise<void> {
+    this.validateSerial(serial)
+    if (!text) {
+      return
+    }
+    // Android `input text` accepts string. Spaces should be %s. Special shell chars escaped.
+    const escaped = text
+      .replace(/\\/g, '\\\\')
+      .replace(/ /g, '%s')
+      .replace(/"/g, '\\"')
+      .replace(/'/g, "\\'")
+      .replace(/([&<>;|()$`*?~!=])/g, '\\$1')
+    await this.shell(serial, ['input', 'text', escaped], 15000)
+  }
+
   /** Full radio reset: reboot, wait for the phone, then restore wireless ADB. */
   public async healWifi(serial: string, onProgress: (message: string) => void): Promise<string> {
     this.validateSerial(serial)

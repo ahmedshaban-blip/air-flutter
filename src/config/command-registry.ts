@@ -148,6 +148,66 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
     category: 'Air Flutter',
     description: 'Kill ADB server'
   },
+  {
+    id: 'airFlutter.stopScreenMirroring',
+    title: '⏹️ Stop Screen Mirroring',
+    category: 'Air Flutter',
+    description: 'Stop active screen mirroring session'
+  },
+  {
+    id: 'airFlutter.installApk',
+    title: '📦 Install APK to Device',
+    category: 'Air Flutter',
+    description: 'Install selected APK file to connected device'
+  },
+  {
+    id: 'airFlutter.sendTextToDevice',
+    title: '⌨️ Send Text / Clipboard to Device',
+    category: 'Air Flutter',
+    description: 'Send text or clipboard to active input field on phone'
+  },
+  {
+    id: 'airFlutter.generateWorkflow',
+    title: '🚀 Generate GitHub Actions CI/CD Workflow',
+    category: 'Air Flutter',
+    description: 'Build Android APK / AAB with GitHub Actions workflow'
+  },
+  {
+    id: 'airFlutter.openFlavorsModal',
+    title: '🍧 Manage & Build Flutter Flavors',
+    category: 'Air Flutter',
+    description: 'Detect, configure, run, and build Flutter project flavors'
+  },
+  {
+    id: 'airFlutter.openProxyModal',
+    title: '🌐 Network Proxy & Private DNS Inspector',
+    category: 'Air Flutter',
+    description: 'Configure HTTP Proxy and Private DNS for network traffic inspection'
+  },
+  {
+    id: 'airFlutter.toggleScreenRecording',
+    title: '🎬 Record Screen (MP4) to Workspace',
+    category: 'Air Flutter',
+    description: 'Start or stop high quality screen recording of connected device'
+  },
+  {
+    id: 'airFlutter.openAgentScaffoldingModal',
+    title: '🤖 AI Agent Architect & Scaffolding Engine',
+    category: 'Air Flutter',
+    description: 'Interactively configure, scaffold, and generate AI sub-agents and multi-agent workflows'
+  },
+  {
+    id: 'airFlutter.runCompatDoctor',
+    title: '🩺 Flutter Compatibility Doctor',
+    category: 'Air Flutter',
+    description: 'Inspect Java, Gradle Wrapper, AGP, Kotlin, and Podfile compatibility with upgrade recommendations'
+  },
+  {
+    id: 'airFlutter.upgradeBuildStack',
+    title: '⚡ Upgrade Flutter Build Stack (Auto-Fixer)',
+    category: 'Air Flutter',
+    description: 'Interactively apply verified stable upgrades to Gradle, AGP, and iOS deployment target'
+  },
 
   // Firebase Commands
   {

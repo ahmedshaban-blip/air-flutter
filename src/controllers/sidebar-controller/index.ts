@@ -165,6 +165,9 @@ export class SidebarController {
       case 'fixWifi':
         await this.runFixWifi()
         break
+      case 'mirror':
+        await vscode.commands.executeCommand('airFlutter.startScreenMirroring')
+        break
       case 'mirrorOff':
         await vscode.commands.executeCommand('airFlutter.mirrorWithScreenOff')
         break
@@ -173,6 +176,33 @@ export class SidebarController {
         break
       case 'mirrorVirtual':
         await vscode.commands.executeCommand('airFlutter.mirrorWirelessDisplay')
+        break
+      case 'stopMirror':
+        await this.runStopMirror()
+        break
+      case 'installApk':
+        await this.runInstallApk()
+        break
+      case 'sendText':
+        await this.runSendText()
+        break
+      case 'workflow':
+        await vscode.commands.executeCommand('airFlutter.generateWorkflow')
+        break
+      case 'record':
+        await vscode.commands.executeCommand('airFlutter.toggleScreenRecording')
+        break
+      case 'flavors':
+        await vscode.commands.executeCommand('airFlutter.openFlavorsModal')
+        break
+      case 'proxy':
+        await vscode.commands.executeCommand('airFlutter.openProxyModal')
+        break
+      case 'agentEngine':
+        await vscode.commands.executeCommand('airFlutter.openAgentScaffoldingModal')
+        break
+      case 'compatDoctor':
+        await vscode.commands.executeCommand('airFlutter.runCompatDoctor')
         break
       default:
         break
@@ -358,7 +388,11 @@ export class SidebarController {
     this.post({ command: 'toolBusy', tool: 'wake', busy: true })
     try {
       await this.deviceTools.wakeScreen(serial)
-      this.post({ command: 'toolResult', ok: true, message: 'Screen woken.' })
+      this.post({
+        command: 'toolResult',
+        ok: true,
+        message: 'Screen woken. (💡 If display stays dark during eco mirror, press Alt+Shift+O in mirror window or stop mirror)'
+      })
       this.lastInfoJson = ''
       await this.pollDeviceInfo(true)
     } catch (error) {
@@ -369,6 +403,102 @@ export class SidebarController {
       })
     } finally {
       this.post({ command: 'toolBusy', tool: 'wake', busy: false })
+    }
+  }
+
+  private async runStopMirror(): Promise<void> {
+    this.post({ command: 'toolBusy', tool: 'stopMirror', busy: true })
+    try {
+      await vscode.commands.executeCommand('airFlutter.stopScreenMirroring')
+      this.post({ command: 'toolResult', ok: true, message: 'Screen mirroring stopped.' })
+      this.lastInfoJson = ''
+      await this.pollDeviceInfo(true)
+    } catch (error) {
+      this.post({
+        command: 'toolResult',
+        ok: false,
+        message: `Could not stop mirror: ${error instanceof Error ? error.message : String(error)}`
+      })
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'stopMirror', busy: false })
+    }
+  }
+
+  private async runInstallApk(): Promise<void> {
+    const serial = await this.deviceTools.listConnectedSerial()
+    if (!serial) {
+      this.post({ command: 'toolResult', ok: false, message: 'No online phone found.' })
+      return
+    }
+
+    const files = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      canSelectFiles: true,
+      canSelectFolders: false,
+      openLabel: 'Install APK to device',
+      filters: { 'Android Package': ['apk'] }
+    })
+
+    if (!files || !files[0]) {
+      return
+    }
+
+    const apkPath = files[0].fsPath
+    const apkName = path.basename(apkPath)
+
+    this.post({ command: 'toolBusy', tool: 'installApk', busy: true })
+    this.post({ command: 'toolResult', ok: true, message: `Installing ${apkName}…` })
+
+    try {
+      await this.deviceTools.installApk(serial, apkPath)
+      this.post({ command: 'toolResult', ok: true, message: `Installed ${apkName} successfully!` })
+    } catch (error) {
+      this.post({
+        command: 'toolResult',
+        ok: false,
+        message: `Install failed: ${error instanceof Error ? error.message : String(error)}`
+      })
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'installApk', busy: false })
+    }
+  }
+
+  private async runSendText(): Promise<void> {
+    const serial = await this.deviceTools.listConnectedSerial()
+    if (!serial) {
+      this.post({ command: 'toolResult', ok: false, message: 'No online phone found.' })
+      return
+    }
+
+    const clipboardText = await vscode.env.clipboard.readText()
+    const input = await vscode.window.showInputBox({
+      prompt: 'Enter text to send to active field on phone (or press Enter to send clipboard)',
+      value: clipboardText || '',
+      placeHolder: 'Text to send to phone'
+    })
+
+    if (input === undefined) {
+      return
+    }
+
+    const textToSend = input || clipboardText
+    if (!textToSend) {
+      this.post({ command: 'toolResult', ok: false, message: 'No text provided.' })
+      return
+    }
+
+    this.post({ command: 'toolBusy', tool: 'sendText', busy: true })
+    try {
+      await this.deviceTools.sendText(serial, textToSend)
+      this.post({ command: 'toolResult', ok: true, message: 'Text sent to phone input.' })
+    } catch (error) {
+      this.post({
+        command: 'toolResult',
+        ok: false,
+        message: `Failed to send text: ${error instanceof Error ? error.message : String(error)}`
+      })
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'sendText', busy: false })
     }
   }
 
@@ -488,29 +618,61 @@ export class SidebarController {
     <section>
         <h2 class="sf-label">Tools</h2>
         <div class="sf-tool-grid">
-            <button class="sf-tool" type="button" id="toolScreenshot" data-tool="screenshot">
+            <button class="sf-tool" type="button" id="toolScreenshot" data-tool="screenshot" title="Capture device screenshot to workspace">
                 <span class="sf-tool-name">Screenshot</span>
                 <span class="sf-tool-note">to workspace</span>
             </button>
-            <button class="sf-tool" type="button" id="toolWake" data-tool="wake">
+            <button class="sf-tool" type="button" id="toolWake" data-tool="wake" title="Wake up device screen from sleep">
                 <span class="sf-tool-name">Wake screen</span>
                 <span class="sf-tool-note">power on display</span>
             </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolWifi" data-tool="wifi">
+            <button class="sf-tool sf-tool-wide" type="button" id="toolWifi" data-tool="wifi" title="Reboot and restore wireless ADB connection">
                 <span class="sf-tool-name">Fix Wi-Fi</span>
                 <span class="sf-tool-note">reboot &amp; restore wireless ADB</span>
             </button>
-            <button class="sf-tool" type="button" id="toolMirrorOff" data-tool="mirrorOff">
-                <span class="sf-tool-name">Mirror, screen off</span>
-                <span class="sf-tool-note">same screen, panel dark</span>
+            <button class="sf-tool" type="button" id="toolMirror" data-tool="mirror" title="Standard mirroring: Display on PC &amp; phone">
+                <span class="sf-tool-name">Mirror</span>
+                <span class="sf-tool-note">Display on PC &amp; phone</span>
             </button>
-            <button class="sf-tool" type="button" id="toolMirrorKeys" data-tool="mirrorKeys">
-                <span class="sf-tool-name">Mirror + keyboard</span>
-                <span class="sf-tool-note">screen off, switch languages</span>
+            <button class="sf-tool" type="button" id="toolMirrorKeys" data-tool="mirrorKeys" title="Eco mode: Phone dark, keyboard active">
+                <span class="sf-tool-name">Screen Off + Keys</span>
+                <span class="sf-tool-note">Phone dark, keyboard active</span>
             </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolMirrorVirtual" data-tool="mirrorVirtual">
-                <span class="sf-tool-name">Phone off display</span>
-                <span class="sf-tool-note">virtual screen, phone panel dark</span>
+            <button class="sf-tool" type="button" id="toolStopMirror" data-tool="stopMirror" title="Stop active screen mirroring session">
+                <span class="sf-tool-name">Stop mirror</span>
+                <span class="sf-tool-note">close scrcpy session</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolSendText" data-tool="sendText" title="Send clipboard or text to phone's active input">
+                <span class="sf-tool-name">Send text</span>
+                <span class="sf-tool-note">paste to phone</span>
+            </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolInstallApk" data-tool="installApk" title="Install an APK file to connected phone">
+                <span class="sf-tool-name">Install APK</span>
+                <span class="sf-tool-note">select &amp; install to device</span>
+            </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolWorkflow" data-tool="workflow" title="Generate GitHub Actions CI/CD workflow for building APK">
+                <span class="sf-tool-name">GitHub Workflow</span>
+                <span class="sf-tool-note">CI/CD APK build action</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolRecord" data-tool="record" title="Record device screen to MP4">
+                <span class="sf-tool-name">Record Video</span>
+                <span class="sf-tool-note">start MP4 recording</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolFlavors" data-tool="flavors" title="Manage, run, and build Flutter flavors">
+                <span class="sf-tool-name">Flavors</span>
+                <span class="sf-tool-note">manage &amp; build</span>
+            </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolProxy" data-tool="proxy" title="Configure HTTP Proxy and Private DNS for network traffic inspection">
+                <span class="sf-tool-name">Proxy / DNS</span>
+                <span class="sf-tool-note">network inspector</span>
+            </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolAgentEngine" data-tool="agentEngine" title="Scaffold AI Sub-Agents and Multi-Agent Workflows">
+                <span class="sf-tool-name">AI Agent Engine</span>
+                <span class="sf-tool-note">scaffold sub-agents &amp; teams</span>
+            </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolCompatDoctor" data-tool="compatDoctor" title="Run Flutter Compatibility Doctor &amp; Auto-Fixer">
+                <span class="sf-tool-name">Compat Doctor</span>
+                <span class="sf-tool-note">Gradle, AGP, Java &amp; iOS</span>
             </button>
         </div>
         <p class="sf-tool-msg" id="toolMessage" hidden></p>
@@ -879,9 +1041,17 @@ export class SidebarController {
             ['toolScreenshot', 'screenshot'],
             ['toolWake', 'wake'],
             ['toolWifi', 'fixWifi'],
-            ['toolMirrorOff', 'mirrorOff'],
+            ['toolMirror', 'mirror'],
             ['toolMirrorKeys', 'mirrorKeys'],
-            ['toolMirrorVirtual', 'mirrorVirtual']
+            ['toolStopMirror', 'stopMirror'],
+            ['toolSendText', 'sendText'],
+            ['toolInstallApk', 'installApk'],
+            ['toolWorkflow', 'workflow'],
+            ['toolRecord', 'record'],
+            ['toolFlavors', 'flavors'],
+            ['toolProxy', 'proxy'],
+            ['toolAgentEngine', 'agentEngine'],
+            ['toolCompatDoctor', 'compatDoctor']
         ].forEach(function (pair) {
             const button = document.getElementById(pair[0]);
             if (!button) {

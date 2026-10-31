@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'child_process'
+import { execFile, spawn, ChildProcess } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as vscode from 'vscode'
@@ -18,6 +18,7 @@ export interface MirrorOptions {
 
 export class ScreenMirrorManager {
   private scrcpyExecutable: string | undefined
+  private activeProcesses: Map<string, ChildProcess> = new Map()
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -33,7 +34,7 @@ export class ScreenMirrorManager {
 
     const executable = await this.getScrcpyExecutable()
     const args = this.getScrcpyArguments(deviceSerial, deviceName, options)
-    await this.launchScrcpy(executable, args, adbPath)
+    await this.launchScrcpy(executable, args, adbPath, deviceSerial)
   }
 
   /**
@@ -82,7 +83,7 @@ export class ScreenMirrorManager {
       args.push(`--start-app=${options.startApp}`)
     }
 
-    await this.launchScrcpy(executable, args, adbPath)
+    await this.launchScrcpy(executable, args, adbPath, deviceSerial)
   }
 
   private getScrcpyArguments(
@@ -145,12 +146,24 @@ export class ScreenMirrorManager {
     })
   }
 
-  private launchScrcpy(executable: string, args: string[], adbPath: string): Promise<void> {
+  private launchScrcpy(
+    executable: string,
+    args: string[],
+    adbPath: string,
+    deviceSerial: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
-      // `windowsHide` gives the process a hidden console, so the `adb` children
-      // scrcpy spawns inherit it. Using `detached` here would create a process
-      // without any console, and Windows would then flash a visible console
-      // window for every `adb` call.
+      // If an existing scrcpy process is running for this device, terminate it
+      const existing = this.activeProcesses.get(deviceSerial)
+      if (existing) {
+        try {
+          existing.kill()
+        } catch {
+          // ignore
+        }
+        this.activeProcesses.delete(deviceSerial)
+      }
+
       const child = spawn(executable, args, {
         windowsHide: true,
         stdio: 'ignore',
@@ -158,11 +171,76 @@ export class ScreenMirrorManager {
       })
 
       child.once('spawn', () => {
-        child.unref()
+        this.activeProcesses.set(deviceSerial, child)
+        child.once('exit', () => {
+          if (this.activeProcesses.get(deviceSerial) === child) {
+            this.activeProcesses.delete(deviceSerial)
+          }
+        })
         resolve()
       })
       child.once('error', reject)
     })
+  }
+
+  /**
+   * Stops mirroring sessions. If deviceSerial is omitted, stops all sessions.
+   */
+  public async stop(deviceSerial?: string): Promise<boolean> {
+    let stoppedAny = false
+
+    if (deviceSerial && this.activeProcesses.has(deviceSerial)) {
+      const proc = this.activeProcesses.get(deviceSerial)
+      if (proc) {
+        try {
+          proc.kill()
+          stoppedAny = true
+        } catch {
+          // ignore
+        }
+      }
+      this.activeProcesses.delete(deviceSerial)
+    } else {
+      for (const [, proc] of this.activeProcesses) {
+        try {
+          proc.kill()
+          stoppedAny = true
+        } catch {
+          // ignore
+        }
+      }
+      this.activeProcesses.clear()
+    }
+
+    // Ensure any orphaned scrcpy processes are terminated
+    if (process.platform === 'win32') {
+      try {
+        await new Promise<void>((resolve) => {
+          execFile('taskkill', ['/F', '/IM', 'scrcpy.exe'], { windowsHide: true }, () => resolve())
+        })
+        stoppedAny = true
+      } catch {
+        // ignore
+      }
+    } else {
+      try {
+        await new Promise<void>((resolve) => {
+          execFile('pkill', ['-f', 'scrcpy'], () => resolve())
+        })
+        stoppedAny = true
+      } catch {
+        // ignore
+      }
+    }
+
+    return stoppedAny
+  }
+
+  public isMirroring(deviceSerial?: string): boolean {
+    if (deviceSerial) {
+      return this.activeProcesses.has(deviceSerial)
+    }
+    return this.activeProcesses.size > 0
   }
 
   public async selectScrcpyExecutable(): Promise<string | undefined> {

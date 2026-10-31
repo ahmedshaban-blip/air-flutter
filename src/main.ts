@@ -16,6 +16,7 @@ import { ADBPathManager } from './domain/adb-path-manager'
 import { FirebaseManagerChannel } from './domain/firebase-channel'
 import { ConsoleInterface } from './domain/console/console-interface'
 import { ADBResolver } from './domain/adb-resolver'
+import { CompatibilityModule } from './features/compatibility'
 import * as os from 'os'
 
 // your extension is activated the very first time the command is executed
@@ -88,6 +89,11 @@ export async function activate(context: vscode.ExtensionContext) {
         )
         await adbPathController.onInit()
         console.log('✅ ADB Path Controller initialized')
+
+        // 5. Initialize Compatibility Doctor & Auto-Fixer Module
+        console.log('🩺 Air Flutter: Initializing Compatibility Doctor Module...')
+        CompatibilityModule.activate(context)
+        console.log('✅ Compatibility Doctor Module initialized')
         
         console.log('✅ All Air Flutter controllers registered successfully')
         

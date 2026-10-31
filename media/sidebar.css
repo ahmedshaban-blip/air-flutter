@@ -372,6 +372,17 @@ button {
     animation: sf-pulse 1s ease-in-out infinite;
 }
 
+.sf-tool.is-recording {
+    border-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+    animation: sf-pulse 1s ease-in-out infinite;
+}
+
+.sf-tool.is-recording .sf-tool-note {
+    color: var(--err, #A3231C);
+    font-weight: 600;
+}
+
 .sf-tool[disabled] {
     cursor: progress;
     opacity: 0.55;

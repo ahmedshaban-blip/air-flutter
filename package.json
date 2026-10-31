@@ -1,8 +1,8 @@
 {
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
-  "description": "Debug Flutter on a real Android phone without cables: wireless ADB, screen mirroring with the phone display off, live device log (logcat), one-click screenshots and Flutter build commands in one panel.",
-  "version": "1.0.2",
+  "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
+  "version": "1.0.8",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",
@@ -61,7 +61,22 @@
     "mobile development",
     "emulator",
     "connected device",
-    "adb"
+    "adb",
+    "flutter flavors",
+    "flavors",
+    "screen recording",
+    "mp4",
+    "network proxy",
+    "proxy",
+    "charles proxy",
+    "proxyman",
+    "private dns",
+    "dns over tls",
+    "github actions",
+    "ci cd",
+    "ai agents",
+    "subagents",
+    "antigravity"
   ],
   "main": "./out/main.js",
   "scripts": {
@@ -211,10 +226,68 @@
         "command": "airFlutter.setScrcpyPath",
         "title": "Select scrcpy Executable",
         "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.stopScreenMirroring",
+        "title": "Stop Screen Mirroring",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.installApk",
+        "title": "Install APK to Device",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.sendTextToDevice",
+        "title": "Send Text / Clipboard to Device",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.generateWorkflow",
+        "title": "Generate GitHub Actions CI/CD Workflow",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.openFlavorsModal",
+        "title": "Manage & Build Flutter Flavors",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.openProxyModal",
+        "title": "Configure Network Proxy & Private DNS",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.toggleScreenRecording",
+        "title": "Record Screen (MP4) to Workspace",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.openAgentScaffoldingModal",
+        "title": "AI Agent Architect & Scaffolding Engine",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.runCompatDoctor",
+        "title": "Flutter Compatibility Doctor",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.upgradeBuildStack",
+        "title": "Upgrade Flutter Build Stack (Auto-Fixer)",
+        "category": "Air Flutter"
       }
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "airFlutter.runCompatDoctor",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.upgradeBuildStack",
+          "when": "workspaceHasAirFlutter"
+        },
         {
           "command": "airFlutter.openFlutterPanel",
           "when": "workspaceHasAirFlutter"

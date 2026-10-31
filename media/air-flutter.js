@@ -35,6 +35,12 @@ class AirFlutterWebview {
             this.bindDeviceActions('usbDevicesList');
             this.bindDeviceActions('networkDevicesList');
             this.bindDeviceActions('devicesList');
+            this.initWorkflowModal();
+            this.initFlavorsModal();
+            this.initProxyModal();
+            this.initRecording();
+            this.initAgentScaffoldModal();
+            this.initCompatDoctorModal();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -152,17 +158,13 @@ class AirFlutterWebview {
                     </div>
                 </div>
                 <div class="device-mirror">
-                    <button class="mirror-btn" data-device-action="mirror" data-device-id="${this.escapeHtml(device.id)}" ${offline}>
-                        Screen
+                    <button class="mirror-btn" data-device-action="mirror" data-device-id="${this.escapeHtml(device.id)}" title="Standard mirroring: Display on PC & phone" ${offline}>
+                        <span class="mirror-btn-title">Mirror</span>
+                        <span class="mirror-btn-desc">Display on PC & phone</span>
                     </button>
-                    <button class="mirror-btn" data-device-action="mirror-off" data-device-id="${this.escapeHtml(device.id)}" ${offline}>
-                        Screen off
-                    </button>
-                    <button class="mirror-btn" data-device-action="mirror-keys" data-device-id="${this.escapeHtml(device.id)}" ${offline}>
-                        + Keyboard
-                    </button>
-                    <button class="mirror-btn" data-device-action="mirror-virtual" data-device-id="${this.escapeHtml(device.id)}" ${offline}>
-                        Phone off
+                    <button class="mirror-btn" data-device-action="mirror-keys" data-device-id="${this.escapeHtml(device.id)}" title="Eco mode: Phone dark, keyboard active" ${offline}>
+                        <span class="mirror-btn-title">Screen Off + Keys</span>
+                        <span class="mirror-btn-desc">Phone dark, keyboard active</span>
                     </button>
                 </div>
             </div>
@@ -382,12 +384,840 @@ class AirFlutterWebview {
                 case 'showToast':
                     this.showToast(message.message, message.type);
                     break;
+                case 'openWorkflowModal':
+                    this.openWorkflowModal(message.projectPath);
+                    break;
+                case 'workflowProjectPath':
+                    const pathInput = document.getElementById('workflowProjectPathInput');
+                    if (pathInput) pathInput.value = message.path || '';
+                    break;
+                case 'workflowGenerated':
+                    const modalToClose = document.getElementById('workflowModal');
+                    if (modalToClose) modalToClose.hidden = true;
+                    this.showToast(message.message || 'Workflow generated successfully!', 'success');
+                    const genSubmitBtn = document.getElementById('generateWorkflowSubmitBtn');
+                    if (genSubmitBtn) {
+                        genSubmitBtn.disabled = false;
+                        genSubmitBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Workflow';
+                    }
+                    break;
+                case 'openFlavorsModal':
+                    this.openFlavorsModal(message.projectPath);
+                    break;
+                case 'flavorsDetected':
+                    this.renderFlavors(message.data);
+                    break;
+                case 'openProxyModal':
+                    this.openProxyModal();
+                    break;
+                case 'networkState':
+                    this.renderNetworkState(message.data);
+                    break;
+                case 'recordingState':
+                    this.updateRecordingState(message.isRecording, message.duration);
+                    break;
+                case 'openAgentScaffoldModal':
+                    this.openAgentScaffoldModal(message.projectPath);
+                    break;
+                case 'agentScaffoldProjectPath':
+                    const scaffoldPathInput = document.getElementById('scaffoldExternalPathInput');
+                    if (scaffoldPathInput) scaffoldPathInput.value = message.path || '';
+                    break;
+                case 'agentScaffoldGenerated':
+                    const scaffoldModal = document.getElementById('agentScaffoldModal');
+                    if (scaffoldModal) scaffoldModal.hidden = true;
+                    this.showToast(message.message || 'Agents generated successfully!', 'success');
+                    const genAgentBtn = document.getElementById('scaffoldSubmitBtn');
+                    if (genAgentBtn) {
+                        genAgentBtn.disabled = false;
+                        genAgentBtn.innerHTML = '<i class="fas fa-robot"></i> Generate Agent(s)';
+                    }
+                    break;
+                case 'openCompatDoctorModal':
+                    this.openCompatDoctorModal(message.projectPath);
+                    break;
+                case 'compatProjectSelected':
+                    const compatPathInput = document.getElementById('compatProjectPathInput');
+                    if (compatPathInput) compatPathInput.value = message.path || '';
+                    break;
+                case 'compatDoctorLoading':
+                    this.setCompatDoctorLoading(message.loading);
+                    break;
+                case 'compatDoctorReport':
+                    this.renderCompatReport(message.report, message.error);
+                    break;
                 default:
                     console.warn('⚠️ Unknown message command:', message.command);
                     break;
             }
         } catch (error) {
             console.error('❌ Error handling message from extension:', error);
+        }
+    }
+
+    initWorkflowModal() {
+        const modal = document.getElementById('workflowModal');
+        if (!modal) return;
+
+        const closeBtn = document.getElementById('closeWorkflowModalBtn');
+        const cancelBtn = document.getElementById('cancelWorkflowModalBtn');
+        const browseBtn = document.getElementById('browseWorkflowProjectBtn');
+        const signingToggle = document.getElementById('workflowEnableSigning');
+        const secretsBox = document.getElementById('workflowSecretsBox');
+        const submitBtn = document.getElementById('generateWorkflowSubmitBtn');
+
+        const closeModal = () => {
+            modal.hidden = true;
+        };
+
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        if (browseBtn) {
+            browseBtn.addEventListener('click', () => {
+                this.sendMessage('selectWorkflowProject', {});
+            });
+        }
+
+        if (signingToggle && secretsBox) {
+            signingToggle.addEventListener('change', () => {
+                secretsBox.hidden = !signingToggle.checked;
+            });
+        }
+
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                const projectPath = document.getElementById('workflowProjectPathInput')?.value?.trim();
+                const branch = document.getElementById('workflowBranchInput')?.value?.trim() || 'main';
+                const triggerOnPush = document.getElementById('workflowTriggerPush')?.checked ?? true;
+                const triggerOnPr = document.getElementById('workflowTriggerPr')?.checked ?? false;
+                const triggerManual = document.getElementById('workflowTriggerManual')?.checked ?? true;
+
+                const targetRadio = document.querySelector('input[name="workflowBuildTarget"]:checked');
+                const buildTarget = targetRadio ? targetRadio.value : 'universal_apk';
+
+                const modeRadio = document.querySelector('input[name="workflowBuildMode"]:checked');
+                const buildMode = modeRadio ? modeRadio.value : 'release';
+
+                const enableSigning = document.getElementById('workflowEnableSigning')?.checked ?? false;
+                const enableCache = document.getElementById('workflowEnableCache')?.checked ?? true;
+
+                if (!projectPath) {
+                    this.showToast('Please select a valid project path', 'error');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Generating…';
+
+                this.sendMessage('generateWorkflow', {
+                    projectPath,
+                    branch,
+                    triggerOnPush,
+                    triggerOnPr,
+                    triggerManual,
+                    buildTarget,
+                    buildMode,
+                    enableSigning,
+                    enableCache
+                });
+            });
+        }
+    }
+
+    openWorkflowModal(defaultPath) {
+        const modal = document.getElementById('workflowModal');
+        if (modal) {
+            modal.hidden = false;
+            const input = document.getElementById('workflowProjectPathInput');
+            if (input && defaultPath) {
+                input.value = defaultPath;
+            } else if (!input?.value) {
+                this.sendMessage('getWorkflowInitialPath', {});
+            }
+            const submitBtn = document.getElementById('generateWorkflowSubmitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Workflow';
+            }
+        }
+    }
+
+    // --- Flavors Modal -----------------------------------------------------
+
+    initFlavorsModal() {
+        const modal = document.getElementById('flavorsModal');
+        if (!modal) return;
+
+        const closeBtn = document.getElementById('closeFlavorsModalBtn');
+        const cancelBtn = document.getElementById('cancelFlavorsModalBtn');
+        const browseBtn = document.getElementById('browseFlavorsProjectBtn');
+        const setupBtn = document.getElementById('setupFlavorsBtn');
+        const runBtn = document.getElementById('runFlavorBtn');
+        const buildApkBtn = document.getElementById('buildFlavorApkBtn');
+        const buildAllBtn = document.getElementById('buildAllFlavorsBtn');
+
+        const closeModal = () => { modal.hidden = true; };
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        if (browseBtn) {
+            browseBtn.addEventListener('click', () => {
+                this.sendMessage('selectFlavorsProject', {});
+            });
+        }
+
+        if (setupBtn) {
+            setupBtn.addEventListener('click', () => {
+                const projectPath = document.getElementById('flavorsProjectPathInput')?.value?.trim();
+                setupBtn.disabled = true;
+                setupBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Setting up…';
+                this.sendMessage('setupFlavors', { projectPath, flavors: ['dev', 'staging', 'prod'] });
+            });
+        }
+
+        if (runBtn) {
+            runBtn.addEventListener('click', () => {
+                const projectPath = document.getElementById('flavorsProjectPathInput')?.value?.trim();
+                const selectedFlavor = this.getSelectedFlavor();
+                if (!selectedFlavor) {
+                    this.showToast('Select a flavor first', 'error');
+                    return;
+                }
+                this.sendMessage('runFlavor', { projectPath, flavor: selectedFlavor.name, target: selectedFlavor.entrypoint });
+                closeModal();
+            });
+        }
+
+        if (buildApkBtn) {
+            buildApkBtn.addEventListener('click', () => {
+                const projectPath = document.getElementById('flavorsProjectPathInput')?.value?.trim();
+                const selectedFlavor = this.getSelectedFlavor();
+                if (!selectedFlavor) {
+                    this.showToast('Select a flavor first', 'error');
+                    return;
+                }
+                buildApkBtn.disabled = true;
+                buildApkBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Building…';
+                this.sendMessage('buildFlavorApk', { projectPath, flavor: selectedFlavor.name, target: selectedFlavor.entrypoint });
+            });
+        }
+
+        if (buildAllBtn) {
+            buildAllBtn.addEventListener('click', () => {
+                const projectPath = document.getElementById('flavorsProjectPathInput')?.value?.trim();
+                const flavors = this.detectedFlavorsList || [];
+                if (flavors.length === 0) {
+                    this.showToast('No flavors detected to build', 'error');
+                    return;
+                }
+                buildAllBtn.disabled = true;
+                buildAllBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Building All…';
+                this.sendMessage('buildAllFlavors', { projectPath, flavors: flavors.map(f => f.name) });
+            });
+        }
+    }
+
+    openFlavorsModal(defaultPath) {
+        const modal = document.getElementById('flavorsModal');
+        if (modal) {
+            modal.hidden = false;
+            const input = document.getElementById('flavorsProjectPathInput');
+            if (input && defaultPath) {
+                input.value = defaultPath;
+            }
+            const currentPath = input?.value?.trim() || defaultPath;
+            this.sendMessage('detectFlavors', { projectPath: currentPath });
+        }
+    }
+
+    renderFlavors(data) {
+        this.detectedFlavorsList = data?.flavors || [];
+        const container = document.getElementById('flavorsListContainer');
+        const emptyState = document.getElementById('flavorsEmptyState');
+        const actionsRow = document.getElementById('flavorsActionsRow');
+
+        if (!container || !emptyState || !actionsRow) return;
+
+        if (!data || !data.hasFlavors || data.flavors.length === 0) {
+            container.innerHTML = '';
+            emptyState.hidden = false;
+            actionsRow.hidden = true;
+            const setupBtn = document.getElementById('setupFlavorsBtn');
+            if (setupBtn) {
+                setupBtn.disabled = false;
+                setupBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Setup Flavors (dev, staging, prod)';
+            }
+        } else {
+            emptyState.hidden = true;
+            actionsRow.hidden = false;
+
+            container.innerHTML = data.flavors.map((flavor, index) => `
+                <label class="flavor-item-card ${index === 0 ? 'is-selected' : ''}">
+                    <div>
+                        <input type="radio" name="selectedFlavorRadio" value="${this.escapeHtml(flavor.name)}" data-entrypoint="${this.escapeHtml(flavor.entrypoint || '')}" ${index === 0 ? 'checked' : ''} />
+                        <span class="flavor-item-name">${this.escapeHtml(flavor.name)}</span>
+                    </div>
+                    <span class="flavor-item-entry">${this.escapeHtml(flavor.entrypoint || 'lib/main.dart')}</span>
+                </label>
+            `).join('');
+
+            container.querySelectorAll('.flavor-item-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    container.querySelectorAll('.flavor-item-card').forEach(c => c.classList.remove('is-selected'));
+                    card.classList.add('is-selected');
+                });
+            });
+
+            const buildApkBtn = document.getElementById('buildFlavorApkBtn');
+            if (buildApkBtn) {
+                buildApkBtn.disabled = false;
+                buildApkBtn.innerHTML = '<i class="fas fa-box"></i> Build APK';
+            }
+            const buildAllBtn = document.getElementById('buildAllFlavorsBtn');
+            if (buildAllBtn) {
+                buildAllBtn.disabled = false;
+                buildAllBtn.innerHTML = '<i class="fas fa-boxes-stacked"></i> Build All Flavors';
+            }
+        }
+    }
+
+    getSelectedFlavor() {
+        const radio = document.querySelector('input[name="selectedFlavorRadio"]:checked');
+        if (!radio) return null;
+        return {
+            name: radio.value,
+            entrypoint: radio.dataset.entrypoint
+        };
+    }
+
+    // --- Proxy & DNS Modal -------------------------------------------------
+
+    initProxyModal() {
+        const modal = document.getElementById('proxyModal');
+        if (!modal) return;
+
+        const closeBtn = document.getElementById('closeProxyModalBtn');
+        const cancelBtn = document.getElementById('cancelProxyModalBtn');
+        const applyProxyBtn = document.getElementById('applyProxyBtn');
+        const clearProxyBtn = document.getElementById('clearProxyBtn');
+        const applyDnsBtn = document.getElementById('applyDnsBtn');
+        const clearDnsBtn = document.getElementById('clearDnsBtn');
+        const refreshBtn = document.getElementById('refreshNetworkBtn');
+
+        const closeModal = () => { modal.hidden = true; };
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        // Port Presets
+        document.querySelectorAll('.port-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const portInput = document.getElementById('proxyPortInput');
+                if (portInput) portInput.value = btn.dataset.port || '';
+            });
+        });
+
+        // DNS Presets
+        document.querySelectorAll('.dns-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const dnsInput = document.getElementById('dnsHostInput');
+                if (dnsInput) dnsInput.value = btn.dataset.dns || '';
+            });
+        });
+
+        if (applyProxyBtn) {
+            applyProxyBtn.addEventListener('click', () => {
+                const host = document.getElementById('proxyHostInput')?.value?.trim();
+                const port = document.getElementById('proxyPortInput')?.value?.trim();
+                if (!host || !port) {
+                    this.showToast('Please enter both Proxy IP and Port', 'error');
+                    return;
+                }
+                this.sendMessage('setProxy', { host, port });
+            });
+        }
+
+        if (clearProxyBtn) {
+            clearProxyBtn.addEventListener('click', () => {
+                this.sendMessage('clearProxy', {});
+            });
+        }
+
+        if (applyDnsBtn) {
+            applyDnsBtn.addEventListener('click', () => {
+                const host = document.getElementById('dnsHostInput')?.value?.trim();
+                if (!host) {
+                    this.showToast('Please enter a DNS hostname', 'error');
+                    return;
+                }
+                this.sendMessage('setPrivateDns', { host });
+            });
+        }
+
+        if (clearDnsBtn) {
+            clearDnsBtn.addEventListener('click', () => {
+                this.sendMessage('clearPrivateDns', {});
+            });
+        }
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.sendMessage('getNetworkState', {});
+            });
+        }
+    }
+
+    openProxyModal() {
+        const modal = document.getElementById('proxyModal');
+        if (modal) {
+            modal.hidden = false;
+            this.sendMessage('getNetworkState', {});
+        }
+    }
+
+    renderNetworkState(data) {
+        if (!data) return;
+
+        const hostInput = document.getElementById('proxyHostInput');
+        if (hostInput && data.localIp && !hostInput.value) {
+            hostInput.value = data.localIp;
+        }
+
+        const proxyBadge = document.getElementById('currentProxyBadge');
+        if (proxyBadge) {
+            if (data.proxy) {
+                proxyBadge.textContent = `Active: ${data.proxy}`;
+                proxyBadge.className = 'status-badge is-active';
+            } else {
+                proxyBadge.textContent = 'Disabled (Direct)';
+                proxyBadge.className = 'status-badge is-disabled';
+            }
+        }
+
+        const dnsBadge = document.getElementById('currentDnsBadge');
+        if (dnsBadge) {
+            if (data.dnsMode === 'hostname' && data.dnsSpecifier) {
+                dnsBadge.textContent = `Active: ${data.dnsSpecifier}`;
+                dnsBadge.className = 'status-badge is-active';
+            } else {
+                dnsBadge.textContent = data.dnsMode ? `Mode: ${data.dnsMode}` : 'Default (Off)';
+                dnsBadge.className = 'status-badge is-disabled';
+            }
+        }
+    }
+
+    // --- Screen Recording --------------------------------------------------
+
+    initRecording() {
+        const recordBtn = document.getElementById('screenRecordBtn');
+        if (recordBtn) {
+            recordBtn.addEventListener('click', () => {
+                this.sendMessage('toggleScreenRecording', {});
+            });
+        }
+    }
+
+    updateRecordingState(isRecording, duration) {
+        const recordBtn = document.getElementById('screenRecordBtn');
+        if (!recordBtn) return;
+
+        if (isRecording) {
+            recordBtn.classList.add('btn-recording');
+            const mm = String(Math.floor(duration / 60)).padStart(2, '0');
+            const ss = String(duration % 60).padStart(2, '0');
+            recordBtn.innerHTML = `<i class="fas fa-stop"></i> Stop Rec (${mm}:${ss})`;
+        } else {
+            recordBtn.classList.remove('btn-recording');
+            recordBtn.innerHTML = '<i class="fas fa-video"></i> Record Screen';
+        }
+    }
+
+    // --- AI Agent Scaffolding Stepper Wizard -------------------------------
+
+    initAgentScaffoldModal() {
+        const modal = document.getElementById('agentScaffoldModal');
+        if (!modal) return;
+
+        const closeBtn = document.getElementById('closeAgentScaffoldModalBtn');
+        const cancelBtn = document.getElementById('cancelAgentScaffoldModalBtn');
+        const browseBtn = document.getElementById('browseScaffoldProjectBtn');
+        const submitBtn = document.getElementById('scaffoldSubmitBtn');
+
+        const closeModal = () => { modal.hidden = true; };
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        if (browseBtn) {
+            browseBtn.addEventListener('click', () => {
+                this.sendMessage('selectAgentScaffoldProject', {});
+            });
+        }
+
+        // Stepper Navigation
+        this.scaffoldCurrentStep = 1;
+        const setStep = (step) => {
+            this.scaffoldCurrentStep = Math.max(1, Math.min(5, step));
+            modal.querySelectorAll('.stepper-step').forEach(s => {
+                const stepNum = parseInt(s.dataset.step, 10);
+                s.classList.toggle('is-active', stepNum === this.scaffoldCurrentStep);
+                s.classList.toggle('is-completed', stepNum < this.scaffoldCurrentStep);
+            });
+            modal.querySelectorAll('.stepper-pane').forEach(p => {
+                const stepNum = parseInt(p.dataset.step, 10);
+                p.classList.toggle('is-active', stepNum === this.scaffoldCurrentStep);
+            });
+        };
+
+        modal.querySelectorAll('[data-stepper-next]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (this.scaffoldCurrentStep === 2) {
+                    const modeRadio = document.querySelector('input[name="scaffoldGenMode"]:checked');
+                    if (modeRadio && modeRadio.value === 'team') {
+                        const checkedRoles = Array.from(modal.querySelectorAll('input[name="scaffoldTeamRoles"]:checked'));
+                        if (checkedRoles.length < 2) {
+                            this.showToast('Please select at least 2 roles to build a workflow team', 'error');
+                            return;
+                        }
+                    }
+                }
+                setStep(this.scaffoldCurrentStep + 1);
+            });
+        });
+
+        modal.querySelectorAll('[data-stepper-back]').forEach(btn => {
+            btn.addEventListener('click', () => setStep(this.scaffoldCurrentStep - 1));
+        });
+
+        // Location type change
+        modal.querySelectorAll('input[name="scaffoldLocation"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const pathRow = document.getElementById('scaffoldExternalPathRow');
+                if (pathRow) {
+                    pathRow.hidden = !(radio.value === 'external' || radio.value === 'custom');
+                }
+            });
+        });
+
+        // Mode change (single vs team)
+        modal.querySelectorAll('input[name="scaffoldGenMode"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const singlePicker = document.getElementById('singleRolePickerContainer');
+                const teamPicker = document.getElementById('teamRolePickerContainer');
+                if (singlePicker && teamPicker) {
+                    const isTeam = radio.value === 'team';
+                    singlePicker.hidden = isTeam;
+                    teamPicker.hidden = !isTeam;
+                }
+            });
+        });
+
+        // Role change (show custom role if custom)
+        modal.querySelectorAll('input[name="scaffoldRole"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const customRoleRow = document.getElementById('customRoleRow');
+                if (customRoleRow) {
+                    customRoleRow.hidden = radio.value !== 'custom';
+                }
+            });
+        });
+
+        // Team custom checkbox change
+        const teamCustomCheckbox = document.getElementById('scaffoldTeamCustomCheckbox');
+        if (teamCustomCheckbox) {
+            teamCustomCheckbox.addEventListener('change', () => {
+                const customTeamRoleRow = document.getElementById('customTeamRoleRow');
+                if (customTeamRoleRow) {
+                    customTeamRoleRow.hidden = !teamCustomCheckbox.checked;
+                }
+            });
+        }
+
+        // Tool level change (show custom tools if custom)
+        modal.querySelectorAll('input[name="scaffoldToolLevel"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const customToolsRow = document.getElementById('customToolsRow');
+                if (customToolsRow) {
+                    customToolsRow.hidden = radio.value !== 'custom';
+                }
+            });
+        });
+
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                const locationRadio = document.querySelector('input[name="scaffoldLocation"]:checked');
+                const targetLocationType = locationRadio ? locationRadio.value : 'workspace';
+                const targetPath = document.getElementById('scaffoldExternalPathInput')?.value?.trim();
+
+                const modeRadio = document.querySelector('input[name="scaffoldGenMode"]:checked');
+                const generationMode = modeRadio ? modeRadio.value : 'single';
+
+                let role = 'planner';
+                let teamRoles = [];
+                let customRoleName = '';
+                let customRoleDescription = '';
+
+                if (generationMode === 'team') {
+                    teamRoles = Array.from(modal.querySelectorAll('input[name="scaffoldTeamRoles"]:checked')).map(cb => cb.value);
+                    if (teamRoles.length < 2) {
+                        this.showToast('Please select at least 2 roles for a workflow team', 'error');
+                        return;
+                    }
+                    customRoleName = document.getElementById('customTeamRoleNameInput')?.value?.trim();
+                    customRoleDescription = document.getElementById('customTeamRoleDescInput')?.value?.trim();
+                } else {
+                    const roleRadio = document.querySelector('input[name="scaffoldRole"]:checked');
+                    role = roleRadio ? roleRadio.value : 'planner';
+                    customRoleName = document.getElementById('customRoleNameInput')?.value?.trim();
+                    customRoleDescription = document.getElementById('customRoleDescInput')?.value?.trim();
+                }
+
+                const frameworkRadio = document.querySelector('input[name="scaffoldFramework"]:checked');
+                const framework = frameworkRadio ? frameworkRadio.value : 'antigravity';
+
+                const toolRadio = document.querySelector('input[name="scaffoldToolLevel"]:checked');
+                const toolLevel = toolRadio ? toolRadio.value : 'standard';
+                const customTools = document.getElementById('customToolsInput')?.value?.trim();
+
+                const contentRadio = document.querySelector('input[name="scaffoldContentMode"]:checked');
+                const contentMode = contentRadio ? contentRadio.value : 'fully_populated';
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Scaffolding…';
+
+                this.sendMessage('generateAgentScaffold', {
+                    targetLocationType,
+                    targetPath,
+                    generationMode,
+                    role,
+                    teamRoles,
+                    customRoleName,
+                    customRoleDescription,
+                    framework,
+                    toolLevel,
+                    customTools,
+                    contentMode
+                });
+            });
+        }
+    }
+
+    // --- Compatibility Doctor & Auto-Fixer Modal ----------------------------
+    initCompatDoctorModal() {
+        const modal = document.getElementById('compatDoctorModal');
+        if (!modal) return;
+
+        const closeBtn = document.getElementById('closeCompatDoctorModalBtn');
+        const cancelBtn = document.getElementById('cancelCompatDoctorBtn');
+        const browseBtn = document.getElementById('browseCompatProjectBtn');
+        const reScanBtn = document.getElementById('reScanCompatDoctorBtn');
+        const outputBtn = document.getElementById('openCompatOutputBtn');
+        const autoUpgradeBtn = document.getElementById('autoUpgradeStackBtn');
+        const pathInput = document.getElementById('compatProjectPathInput');
+
+        const closeModal = () => { modal.hidden = true; };
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        if (browseBtn) {
+            browseBtn.addEventListener('click', () => {
+                this.sendMessage('selectCompatProject', {});
+            });
+        }
+
+        if (reScanBtn) {
+            reScanBtn.addEventListener('click', () => {
+                const p = pathInput ? pathInput.value : '';
+                this.setCompatDoctorLoading(true);
+                this.sendMessage('runCompatDoctorScan', { projectPath: p });
+            });
+        }
+
+        if (outputBtn) {
+            outputBtn.addEventListener('click', () => {
+                this.sendMessage('runFlutterCommand', { commandId: 'airFlutter.runCompatDoctor' });
+            });
+        }
+
+        if (autoUpgradeBtn) {
+            autoUpgradeBtn.addEventListener('click', () => {
+                const p = pathInput ? pathInput.value : '';
+                this.setCompatDoctorLoading(true);
+                this.sendMessage('applyCompatUpgrades', { projectPath: p });
+            });
+        }
+    }
+
+    setCompatDoctorLoading(loading) {
+        const loadingEl = document.getElementById('compatDoctorLoading');
+        const contentEl = document.getElementById('compatDoctorContent');
+        if (loadingEl) loadingEl.style.display = loading ? 'block' : 'none';
+        if (contentEl) contentEl.style.display = loading ? 'none' : 'block';
+    }
+
+    openCompatDoctorModal(defaultPath) {
+        const modal = document.getElementById('compatDoctorModal');
+        if (modal) {
+            modal.hidden = false;
+            const pathInput = document.getElementById('compatProjectPathInput');
+            if (pathInput && defaultPath) {
+                pathInput.value = defaultPath;
+            }
+            this.setCompatDoctorLoading(true);
+        }
+    }
+
+    renderCompatReport(report, error) {
+        this.setCompatDoctorLoading(false);
+        const issuesContainer = document.getElementById('compatIssuesContainer');
+        const autoUpgradeBtn = document.getElementById('autoUpgradeStackBtn');
+
+        if (error || !report) {
+            if (issuesContainer) {
+                issuesContainer.innerHTML = `<div class="compat-issue-item is-error">
+                    <div class="compat-issue-header">
+                        <span class="compat-issue-badge is-error">Error</span>
+                    </div>
+                    <div class="compat-issue-msg">${error || 'Failed to analyze project build stack.'}</div>
+                </div>`;
+            }
+            if (autoUpgradeBtn) autoUpgradeBtn.disabled = true;
+            return;
+        }
+
+        // Update cards
+        const updateCard = (cardId, valId, subId, val, sub, state) => {
+            const card = document.getElementById(cardId);
+            const valEl = document.getElementById(valId);
+            const subEl = document.getElementById(subId);
+            if (card) {
+                card.classList.remove('is-success', 'is-warning', 'is-error');
+                if (state) card.classList.add(state);
+            }
+            if (valEl) valEl.textContent = val || '-';
+            if (subEl) subEl.textContent = sub || '';
+        };
+
+        const gradleVer = report.gradle ? report.gradle.gradleVersion : null;
+        const agpVer = report.gradle ? report.gradle.agpVersion : null;
+        const javaVer = report.environment ? report.environment.javaVersion : null;
+        const iosVer = report.podfile ? report.podfile.deploymentTarget : null;
+
+        const hasAgpMismatch = report.issues && report.issues.some(i => i.code === 'AGP_GRADLE_MISMATCH');
+        const hasJavaMismatch = report.issues && report.issues.some(i => i.code === 'JAVA_AGP_MISMATCH');
+        const hasOutdatedStack = report.issues && report.issues.some(i => i.code === 'OUTDATED_STACK');
+        const hasIosIssue = report.issues && report.issues.some(i => i.code === 'OUTDATED_IOS_TARGET' || i.code === 'DEPRECATED_IOS_TARGET');
+
+        updateCard(
+            'compatCardGradle',
+            'compatValGradle',
+            'compatSubGradle',
+            gradleVer ? `Gradle ${gradleVer}` : 'Not Detected',
+            report.gradle && report.gradle.wrapperPath ? 'wrapper.properties' : 'wrapper missing',
+            hasAgpMismatch ? 'is-error' : (gradleVer ? 'is-success' : 'is-warning')
+        );
+
+        updateCard(
+            'compatCardAgp',
+            'compatValAgp',
+            'compatSubAgp',
+            agpVer ? `AGP ${agpVer}` : 'Not Detected',
+            report.gradle && report.gradle.isKotlinDsl ? 'Kotlin DSL (.kts)' : 'Groovy DSL (.gradle)',
+            hasAgpMismatch ? 'is-error' : (hasOutdatedStack ? 'is-warning' : (agpVer ? 'is-success' : 'is-warning'))
+        );
+
+        updateCard(
+            'compatCardJava',
+            'compatValJava',
+            'compatSubJava',
+            javaVer ? `JDK ${javaVer}` : 'Not Found',
+            javaVer ? 'Runtime active' : 'Check JAVA_HOME / PATH',
+            hasJavaMismatch ? 'is-error' : (javaVer ? 'is-success' : 'is-warning')
+        );
+
+        updateCard(
+            'compatCardIos',
+            'compatValIos',
+            'compatSubIos',
+            iosVer ? `iOS ${iosVer}` : (report.podfile && report.podfile.exists ? 'Not set' : 'No Podfile'),
+            report.environment && report.environment.isWindows ? 'Skipped CocoaPods (Windows)' : (report.podfile && report.podfile.exists ? 'Podfile target' : 'iOS not configured'),
+            hasIosIssue ? 'is-warning' : (iosVer ? 'is-success' : '')
+        );
+
+        // Render issues list
+        if (issuesContainer) {
+            issuesContainer.innerHTML = '';
+            if (!report.issues || report.issues.length === 0) {
+                issuesContainer.innerHTML = `
+                    <div style="padding: 16px; text-align: center; background: rgba(46, 125, 50, 0.08); border: 1px solid rgba(46, 125, 50, 0.3); border-radius: 6px; color: var(--ink);">
+                        <i class="fas fa-check-circle" style="color: #4caf50; font-size: 20px; margin-bottom: 6px; display: block;"></i>
+                        <strong>All Configurations Healthy &amp; Up to Date!</strong>
+                        <p style="margin: 4px 0 0; font-size: 11px; color: var(--muted);">AGP, Gradle wrapper, Java runtime, and iOS deployment target are fully compatible.</p>
+                    </div>`;
+            } else {
+                report.issues.forEach(issue => {
+                    const item = document.createElement('div');
+                    item.className = `compat-issue-item is-${issue.type}`;
+                    const badgeClass = issue.type === 'error' ? 'is-error' : 'is-warning';
+                    const iconClass = issue.type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+                    let fixHtml = '';
+                    if (issue.suggestedFix) {
+                        fixHtml = `
+                            <div class="compat-issue-fix">
+                                <i class="fas fa-magic"></i>
+                                <span>Suggested Auto-Fix: <strong>${issue.suggestedFix.description}</strong> (&rarr; "${issue.suggestedFix.newText}")</span>
+                            </div>`;
+                    }
+
+                    let guideHtml = '';
+                    if (issue.migrationUrl) {
+                        guideHtml = `<a href="${issue.migrationUrl}" target="_blank" style="font-size: 11px; color: var(--primary); text-decoration: underline; margin-top: 2px; display: inline-block;"><i class="fas fa-external-link-alt"></i> Migration Guide</a>`;
+                    }
+
+                    item.innerHTML = `
+                        <div class="compat-issue-header">
+                            <span class="compat-issue-badge ${badgeClass}"><i class="fas ${iconClass}"></i> ${issue.code}</span>
+                            ${issue.filePath ? `<span style="font-size: 10px; color: var(--muted); font-family: monospace;">${issue.filePath.split(/[\\\\/]/).slice(-2).join('/')}</span>` : ''}
+                        </div>
+                        <div class="compat-issue-msg">${issue.message}</div>
+                        ${fixHtml}
+                        ${guideHtml}
+                    `;
+                    issuesContainer.appendChild(item);
+                });
+            }
+        }
+
+        // Enable or disable Auto-Upgrade button
+        if (autoUpgradeBtn) {
+            autoUpgradeBtn.disabled = !report.canAutoUpgrade;
+        }
+    }
+
+    openAgentScaffoldModal(defaultPath) {
+        const modal = document.getElementById('agentScaffoldModal');
+        if (modal) {
+            modal.hidden = false;
+            this.scaffoldCurrentStep = 1;
+            modal.querySelectorAll('.stepper-step').forEach(s => {
+                const stepNum = parseInt(s.dataset.step, 10);
+                s.classList.toggle('is-active', stepNum === 1);
+                s.classList.toggle('is-completed', false);
+            });
+            modal.querySelectorAll('.stepper-pane').forEach(p => {
+                const stepNum = parseInt(p.dataset.step, 10);
+                p.classList.toggle('is-active', stepNum === 1);
+            });
+
+            const pathInput = document.getElementById('scaffoldExternalPathInput');
+            if (pathInput && defaultPath) {
+                pathInput.value = defaultPath;
+            }
+            const submitBtn = document.getElementById('scaffoldSubmitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-robot"></i> Generate Agent(s)';
+            }
         }
     }
 }

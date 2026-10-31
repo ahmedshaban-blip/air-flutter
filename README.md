@@ -1,7 +1,7 @@
 <div align="center">
 
   <h1>Air Flutter</h1>
-  <p><i>Wireless Flutter debug &amp; screen mirroring for real Android phones</i></p>
+  <p><i>The Complete Wireless Flutter &amp; Android Engineering Suite</i></p>
 
   <p align="center">
     <a href="https://www.linkedin.com/in/ahmed-shaban-front-cross">
@@ -22,7 +22,7 @@
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
+    <img src="https://img.shields.io/badge/version-1.0.8-blue?style=for-the-badge" alt="Version 1.0.8"/>
     <img src="https://img.shields.io/badge/VS_Code-1.85.0+-373277?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code"/>
     <img src="https://img.shields.io/badge/Flutter-3.0+-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
     <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT"/>
@@ -32,14 +32,11 @@
 
 ---
 
-# Air Flutter
+# Air Flutter: All-in-One Flutter & Android Powerhouse
 
-**Your phone, on your desktop, without the cable.**
+**Air Flutter** bridges your physical Android phone and your desktop into a unified, wireless development environment. Connect over Wi-Fi, mirror your display with the screen turned off, record clean MP4 videos for PRs, inspect network traffic through proxies &amp; Private DNS, manage Flutter Flavors, scaffold AI Sub-Agents, and automate GitHub Actions CI/CD workflows — all from a single, beautifully designed control panel.
 
-Air Flutter connects an Android phone to your machine over Wi-Fi, mirrors its screen,
-streams its log, and runs your everyday Flutter tasks — from one panel, not five terminals.
-
-No pairing codes. No scrcpy setup. No "where is adb again?".
+No pairing codes. No terminal acrobatics. No manual adb commands.
 
 ---
 
@@ -47,147 +44,155 @@ No pairing codes. No scrcpy setup. No "where is adb again?".
 
 <div align="center">
 
-### The whole wireless loop, one panel
+### The whole wireless loop &amp; command hub, in one panel
+<img src="https://raw.githubusercontent.com/ahmedshaban-blip/air-flutter/main/screenshots/01-panel.png" alt="Air Flutter panel" width="880"/>
 
-<img src="screenshots/01-panel.png" alt="Air Flutter panel" width="880"/>
+### Live device diagnostics &amp; filtered logcat — right from your sidebar
+<img src="https://raw.githubusercontent.com/ahmedshaban-blip/air-flutter/main/screenshots/02-sidebar-and-log.png" alt="Air Flutter sidebar" width="880"/>
 
-### Live device, live log — from the sidebar
-
-<img src="screenshots/02-sidebar-and-log.png" alt="Air Flutter sidebar" width="880"/>
-
-### Log filtering, measured on a chatty phone
-
-<img src="screenshots/03-log-filter.png" alt="Default filter vs verbose" width="820"/>
+### Aggressive log noise reduction (~27× fewer lines)
+<img src="https://raw.githubusercontent.com/ahmedshaban-blip/air-flutter/main/screenshots/03-log-filter.png" alt="Default filter vs verbose" width="820"/>
 
 </div>
 
 ---
 
-## Why it is different
+## Key Features
 
-Most wireless-debug workflows are a pile of shell commands you re-type every time the
-phone sleeps. Air Flutter keeps the whole loop in one place, and the interface is built
-to be *read*: warm paper and ink, hairline rules, real typographic hierarchy — not
-another wall of rounded cards.
-
-- **Zero-config mirroring.** scrcpy ships inside the extension. There is no path to set.
-- **No pairing flow.** Plug in once over USB, press one button, unplug. The phone answers
-  on the network from then on.
-- **Screen-off mirroring.** Keep working on the desktop window while the physical panel
-  stays dark — and the phone does not wake when you touch it.
-- **A log you can actually read.** Filtered by default to app noise, with Flutter /
-  Crashes / Warnings tabs, search, and a Pause that freezes the view without dropping lines.
+### 1. 📱 Zero-Friction Wireless ADB
+- **One-Click Cable Release**: Plug in once over USB, press **Connect wirelessly**, and unplug. Your phone remains connected over Wi-Fi indefinitely.
+- **Auto-Discovery**: Automatically discovers Android devices on your local network with open wireless ADB ports (`5555`).
+- **Live Device Health Card**: Monitors battery percentage, charging state, battery temperature, Wi-Fi SSID, IP address, and Android/API versions in real time.
 
 ---
 
-## Features
-
-### Devices
-
-- **Over USB** — detected automatically, one button to enable wireless ADB.
-- **On your network** — phones with an open wireless ADB port are discovered for you.
-- **Connected** — live status, plus four mirror modes **on each device row**, so there is
-  no "pick the device afterwards" step.
-
-### Mirroring
-
-| Mode | What you get |
-|---|---|
-| **Screen** | The phone screen, as-is, on your desktop |
-| **Screen off** | Same screen, physical panel dark |
-| **+ Keyboard** | Screen off with a simulated hardware keyboard, so you can switch input languages per keystroke |
-| **Phone off** | A virtual display — the phone panel stays off and does not wake on touch |
-
-### Device log
-
-- Streams `adb logcat`, started and stopped on demand.
-- Tabs for **All / Flutter / Crashes / Warnings**, a free-text search, and follow-scroll.
-- **Pause** freezes the view while lines keep buffering, then catches up on resume.
-- Default filter keeps every crash and warning while cutting the vendor chatter — measured
-  at **~27× fewer lines** on a Samsung device in debug mode.
-- Every line is also appended to `.air-flutter/logcat.log` in your workspace.
-
-### Live device card
-
-Model, serial, Android version and API level, network and Wi-Fi name, IP address, screen
-state, and a battery gauge with charging state and temperature — refreshed every 5 seconds.
-
-### Quick tools
-
-- **Screenshot** → saved to `.air-flutter/screenshots/`, then offer to open or reveal it.
-- **Wake screen** → turns the display on without unlocking.
-- **Fix Wi-Fi** → reboots the phone (with confirmation), waits for it to return, and
-  re-establishes wireless ADB.
-
-### Flutter commands
-
-Run app · Flutter doctor · Get packages · Upgrade packages · Build APK · Build app bundle ·
-Clean project — plus a live activity log.
+### 2. 🖥️ Low-Latency Screen Mirroring (`scrcpy` inside)
+- **Zero Configuration**: Bundled with a native, high-performance `scrcpy` build. No paths to configure.
+- **Standard Mirror**: Smooth, ultra-low-latency real-time display on your monitor.
+- **Screen Off + Hardware Keyboard (Eco Mode)**: Turns the phone's physical display completely dark while keeping it fully operational on your desktop. Your physical keyboard maps directly to the device, enabling instant language switching per keystroke.
+- **Instant Termination**: Stop active mirroring sessions with one click from the panel or sidebar, restoring the phone display immediately.
 
 ---
 
-## Getting started
-
-1. Install the extension and open a Flutter project.
-2. Open the **Air Flutter** panel from the Activity Bar.
-3. Plug the phone in over USB, enable **USB debugging**, and authorize this computer.
-4. Press **Connect wirelessly** on the USB device.
-5. Unplug. The phone stays reachable over Wi-Fi.
-
-> The very first wireless connection needs that one USB step — Android requires it once to
-> enable TCP/IP mode. After that, reconnecting is a single click.
+### 3. 🚀 GitHub Actions CI/CD Workflow Builder
+Automate your Flutter build pipeline without writing YAML by hand:
+- **Project Scope Selection**: Target the active workspace or browse to any external Flutter project folder with `pubspec.yaml` validation.
+- **Build Targets**: Universal APK, Split-per-ABI APKs, App Bundle (AAB), or Both.
+- **Branch Triggers**: Configure Push, Pull Request, and Manual `workflow_dispatch` triggers.
+- **Production Keystore Signing**: Full GitHub Secrets configuration for app signing, complete with automatic PowerShell commands to encode your `.jks` file to Base64 and an auto-generated `SECRETS_SETUP.md` guide.
+- **Gradle &amp; Pub Caching**: Speed up remote CI build times by caching Gradle packages and Flutter Pub dependencies.
 
 ---
 
-## Settings
+### 4. 🍧 Flutter Flavors Suite
+Effortlessly manage, configure, run, and batch-build multi-environment Flutter apps:
+- **Dialect Detection**: Automatically parses and detects existing `productFlavors` in both Groovy (`android/app/build.gradle`) and Kotlin DSL (`android/app/build.gradle.kts`).
+- **Automated Setup Wizard**: Missing flavors? Inject `dev`, `staging`, and `prod` configurations into your build scripts and generate boilerplate entrypoint files (`lib/main_dev.dart`, `lib/main_staging.dart`, `lib/main_prod.dart`) with one click.
+- **Run &amp; Build**: Run a specific flavor with its custom entrypoint, build a release APK for a single flavor, or batch-build all project flavors sequentially.
 
-| Setting | Default | What it does |
+---
+
+### 5. 🎬 Screen Recording for PRs (MP4)
+Record silky-smooth demo videos directly from your Android phone for Pull Requests, bug reports, and UX reviews:
+- **One-Click Start/Stop**: Record high-bitrate video via ADB `screenrecord`.
+- **Live Visual Feedback**: Pulsating animated recording indicator and live timer counter in both the panel and sidebar.
+- **Graceful Signal Handling**: Uses graceful interrupt signals to allow Android's `MediaMuxer` to write the MP4 `moov` atom cleanly without file corruption.
+- **Instant Access**: Automatically pulls the `.mp4` into your workspace's `screenshots/` directory with a one-click notification to open the video immediately.
+
+---
+
+### 6. 🌐 Network Proxy &amp; Private DNS Inspector
+Inspect API requests, debug backend communication, and bypass SSL pinning barriers:
+- **LAN IP Detection**: Automatically resolves your host machine's primary local Wi-Fi / Ethernet IPv4 address.
+- **HTTP Proxy Presets**: One-click quick presets for popular network inspectors:
+  - **Charles Proxy**: Port `8888`
+  - **Proxyman**: Port `9090`
+  - **Fiddler**: Port `8866`
+- **Instant Toggle**: Apply or clear device HTTP proxy settings immediately over ADB without opening Android Settings.
+- **Private DNS (DNS-over-TLS)**: Quick presets for **Google** (`dns.google`), **Cloudflare** (`1dot1dot1dot1.cloudflare-dns.com`), **AdGuard** (`dns.adguard-dns.com`), or custom hostnames.
+
+---
+
+### 7. 🤖 AI Agent Architect &amp; Scaffolding Engine
+Interactive 5-step visual wizard to design, scaffold, and generate production-ready AI Sub-Agents and Multi-Agent Workflows:
+- **Step 1: Scope &amp; Target**: Workspace (`./.agents/agents/`), external project directory (intelligently resolves `<project>/.agents/agents/`), or global machine scope (`~/.gemini/config/agents/` for Antigravity discovery) with safe, non-destructive merging.
+- **Step 2: Archetypes &amp; Custom Team Workflow**: Single Sub-Agent or custom Multi-Agent Team Workflows with multi-role selection (Planner, Architect, Developer, QA, Flutter UI, Flutter State, and Custom Roles) with automatic dynamic sequential chaining.
+- **Step 3: Framework Compatibility**:
+  - **Antigravity Subagents (`<name>.md`)**: Fully compliant with Google Antigravity Subagents specifications with native YAML Frontmatter (`name`, `description`, `model`, `tools`) and asynchronous execution guidance (`invoke_subagent`).
+  - **Herdr (`herdr.yaml`)**: Sequential multi-agent pipeline orchestration.
+  - **CrewAI (`crew.py`)**: Python crew agents, tasks, and sequential process loops.
+  - **Generic Custom Loops**: Standardized agent definitions for autonomous AI loops.
+- **Step 4: Tool Permissions Matrix**: Read-Only / Analysis, Standard Engineering, Full Orchestration &amp; Terminal, or Custom tool arrays.
+- **Step 5: Content Modes**: **Fully Populated** (high-density system prompts, operational loops, and verification gates) or **Blank Template with Fill Prompts** (skeletal markdown with LLM self-filling prompts).
+
+---
+
+### 8. 🩺 Flutter Compatibility Doctor &amp; Auto-Fixer
+Detect breaking version mismatches and outdated configurations across your Flutter project build stack before Gradle or Xcode fails:
+- **Android Matrix Validation**: Evaluates local Java Runtime (JDK) &harr; Gradle Wrapper &harr; Android Gradle Plugin (AGP) &harr; Kotlin versions against declarative Google stability rules.
+- **iOS Deployment Target Auditing**: Inspects `ios/Podfile` for minimum iOS deployment target (`platform :ios`) and deprecated SDK targets (e.g., iOS 11/12).
+- **Non-Destructive Parsers**: Regex line-range parsers target only version strings in `gradle-wrapper.properties`, `build.gradle`, `build.gradle.kts`, `settings.gradle`, and `Podfile`, leaving all comments, indentation, and structure completely intact.
+- **Inline VS Code Diagnostics &amp; Quick Fixes**: Highlights breaking lines with error/warning squigglies, linking directly to official migration documentation with 1-click Quick Fixes (`Ctrl+.`).
+- **Interactive Webview Modal**: Overview status cards (Gradle, AGP, Java, iOS), progress loading spinner, folder browser for external projects, and an interactive 1-click Auto-Upgrade wizard.
+- **Safe Workspace Edits**: All upgrades utilize `vscode.WorkspaceEdit`, allowing full single-click Undo (`Ctrl+Z`).
+- **Dedicated Output Channel**: Generates structured, readable audit reports inside `Air Flutter Compatibility Doctor`.
+
+---
+
+### 9. 📜 High-Performance Device Log (Logcat)
+- **Aggressive Noise Filtering**: Filters out noisy vendor and system logs by default, reducing chatter by up to **27×** on heavy devices.
+- **Category Tabs**: Switch seamlessly between **All**, **Flutter**, **Crashes**, and **Warnings**.
+- **Live Search &amp; Pause**: Search log text on the fly. Freezing the view buffers incoming entries without losing a single line.
+- **Automatic Export**: Streams directly to `.air-flutter/logcat.log` in your workspace for easy sharing.
+
+---
+
+### 10. ⚡ Fast Device Actions
+- **APK Installer**: Select any `.apk` file from your machine and install it to the device via `adb install -r -d` with a single click.
+- **Send Text / Clipboard**: Push computer clipboard content or typed text directly to the active input field on your phone.
+- **Wake Screen**: Turn the phone display on without physical button presses.
+- **Fix Wi-Fi**: Reboots device ADB services, re-pairs, and recovers lost wireless ADB connections automatically.
+
+---
+
+## Getting Started
+
+1. Install **Air Flutter** in VS Code / Antigravity IDE.
+2. Open the **Air Flutter** icon in the Activity Bar.
+3. Connect your Android phone via USB cable once with **USB Debugging** enabled.
+4. Click **Connect wirelessly** next to your USB device.
+5. Unplug the cable! Your device will remain connected and accessible over Wi-Fi.
+
+> **Tip:** You only need the USB cable once to initialize TCP/IP mode on the device. Once enabled, you can reconnect wirelessly anytime as long as the phone has not rebooted.
+
+---
+
+## Extension Settings
+
+| Setting | Default | Description |
 |---|---|---|
-| `airFlutter.adbPath` | *(auto)* | Custom ADB executable |
-| `airFlutter.flutterPath` | *(auto)* | Custom Flutter executable |
-| `airFlutter.scrcpyPath` | *(bundled)* | Custom scrcpy executable |
-| `airFlutter.buildMode` | `debug` | Default mode for APK/AAB builds |
-| `airFlutter.mirroringMaxSize` | `1600` | Max mirrored dimension; lower means less latency |
-| `airFlutter.mirroringMaxFps` | `60` | Max mirroring frame rate |
-| `airFlutter.mirroringVideoBitRate` | `6M` | scrcpy video bit rate |
+| `airFlutter.adbPath` | `""` *(auto)* | Custom path to the ADB executable if not on system PATH |
+| `airFlutter.flutterPath` | `""` *(auto)* | Custom path to the Flutter executable |
+| `airFlutter.scrcpyPath` | `""` *(bundled)* | Custom path to an external scrcpy executable |
+| `airFlutter.defaultBuildMode` | `debug` | Default build mode for APK/AAB compilation (`debug`, `profile`, `release`) |
+| `airFlutter.mirroringMaxSize` | `1600` | Maximum mirrored dimension; lower values decrease wireless latency |
+| `airFlutter.mirroringMaxFps` | `60` | Maximum screen mirroring frame rate (15–120 FPS) |
+| `airFlutter.mirroringVideoBitRate` | `6M` | Video bitrate for screen mirroring (e.g. `4M`, `8M`) |
 | `airFlutter.mirroringAudio` | `false` | Forward device audio while mirroring |
 
 ---
 
-## Troubleshooting
+## System Requirements
 
-**The phone does not appear on the network.**
-Connect over USB once and press **Connect wirelessly**. Wireless ADB stays enabled until
-the phone reboots.
-
-**Mirroring fails.**
-scrcpy is bundled, so this is almost always an ADB problem. Check that `adb devices`
-lists the phone, then try again.
-
-**Arabic or another language types the wrong letters.**
-Use **Mirror + Keyboard**. The phone treats your computer keyboard as a physical
-keyboard, so language switching happens per keystroke. If the letters are still wrong,
-open the phone's *Languages &amp; input → Physical keyboard* settings once and set the
-layout. The extension offers a button that opens that page for you.
-
-**The log is overwhelming.**
-That is the default *Verbose* being off — it already filters aggressively. If you need
-everything, tick **Verbose** in the log panel.
-
----
-
-## Requirements
-
-- VS Code 1.85.0 or newer (also works in Antigravity IDE and other VS Code forks)
-- Flutter SDK on `PATH`
-- Android platform-tools (`adb`)
-- An Android phone with USB debugging enabled
+- **VS Code**: Version `1.85.0` or newer (or Google Antigravity IDE, Cursor, VSCodium)
+- **Flutter SDK**: Installed and available on system `PATH`
+- **Android Platform Tools**: `adb` installed (bundled or on system `PATH`)
+- **Android Device**: Android 5.0+ with **Developer Options** and **USB Debugging** enabled
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT © [Ahmed Shaban](https://ahmed-shaban-dev.vercel.app)
 
-Built by **[Ahmed Shaban](https://ahmed-shaban-dev.vercel.app)** ·
-[LinkedIn](https://www.linkedin.com/in/ahmed-shaban-front-cross)
+Crafted with care by **Ahmed Shaban** · [LinkedIn](https://www.linkedin.com/in/ahmed-shaban-front-cross) · [Portfolio](https://ahmed-shaban-dev.vercel.app) · [GitHub](https://github.com/ahmedshaban-blip)

@@ -5,6 +5,62 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
+## [1.0.8] - 2026-10-31
+
+### Features
+
+- **Flutter Compatibility Doctor & Auto-Fixer**:
+  - **Declarative Compatibility Matrix**: Extensible rules matrix covering Java (JDK), Gradle Wrapper, Android Gradle Plugin (AGP), Kotlin, and iOS deployment targets (`platform :ios`).
+  - **Robust Non-Destructive Parsers**: Accurately parses `gradle-wrapper.properties`, Groovy & Kotlin DSL build scripts (`build.gradle`, `build.gradle.kts`), and `ios/Podfile` while strictly preserving user comments, indentation, and structure.
+  - **Real-Time VS Code Diagnostics**: Issues inline editor squigglies with clickable links to official Android & Apple migration guides.
+  - **1-Click Quick Fixes**: Provides `vscode.CodeActionProvider` with non-destructive `vscode.WorkspaceEdit` to resolve mismatches and outdated configurations instantly with full Undo support.
+  - **Interactive Webview Modal & Sidebar Integration**: Visual status cards (Gradle, AGP, Java, iOS), loading spinner, external project browser, structured findings, and a 1-click Auto-Upgrade wizard.
+  - **Dedicated Output Channel**: Generates structured, readable build stack audit reports inside `Air Flutter Compatibility Doctor`.
+  - **Environment-Aware JDK & CocoaPods Detection**: Detects local Java Runtime from `PATH`/`JAVA_HOME`, gracefully handling CocoaPods on Windows.
+
+## [1.0.7] - 2026-10-31
+
+### Features
+
+- **Full Google Antigravity Subagents Specification Compliance**:
+  - Implements canonical `<name>.md` subagent file discovery structure.
+  - Generates mandatory YAML Frontmatter (`name`, `description`, `model`, `workspace`, `tools`) for native Antigravity subagent registration.
+  - Aligns global machine scope path with `~/.gemini/config/agents/` for seamless cross-project agent discovery.
+  - Intelligent project-level resolution: auto-targets `<project>/.agents/agents/` when selecting external Flutter project roots.
+  - Generates production-ready Asynchronous Subagent Delegation instructions (`invoke_subagent` calls, tool payloads, reactive wakeup patterns) in `orchestrator.md`.
+
+## [1.0.6] - 2026-10-31
+
+### Features
+
+- **Multi-Role Custom Workflow Builder**: Multi-select any combination of Agent Roles (Planner, Architect, Developer, QA, Flutter UI, Flutter State, and Custom Roles) to build bespoke multi-agent workflows.
+- **Dynamic Orchestration Chaining**: Dynamically crafts sequential pipeline flowcharts (Mermaid diagrams in `orchestrator.agent.md`), sequential step execution in Herdr (`herdr.yaml`), and sequential Agent/Task runs in CrewAI (`crew.py`) mapping exclusively to the chosen roles.
+
+## [1.0.5] - 2026-10-31
+
+### Features
+
+- **AI Agent Architect & Scaffolding Engine**: Interactive 5-step visual stepper wizard to configure, scaffold, and generate production-ready AI Sub-Agents and Multi-Agent Workflows. Supports workspace, external, or global machine scopes with non-destructive merging; Single Sub-Agent or full SDLC Team Pipelines (Planner -> Architect -> Developer -> QA); multi-framework outputs (Antigravity Markdown `.agent.md`, Herdr YAML, CrewAI Python, Generic Custom Loops); granular tool permission matrices; and Fully Populated vs. Blank Template with LLM self-filling prompts.
+
+## [1.0.4] - 2026-10-31
+
+### Features
+
+- **Flutter Flavors Suite**: Detect existing product flavors in `build.gradle` / `build.gradle.kts`, select any Flutter project on disk, automated flavor setup wizard (`dev`, `staging`, `prod` + Dart entrypoints), one-click run with flavor, flavor APK building, and batch building all flavors.
+- **Screen Recording for PRs**: Record device screen directly to workspace MP4 files (`screenshots/recording_*.mp4`) via ADB `screenrecord` with live animated pulsating recording badge and timer in both Webview Panel and Sidebar, graceful signal handling for clean MP4 muxing, and instant "Open Video" action.
+- **Network Proxy & Private DNS Inspector**: Interactive modal detecting local machine Wi-Fi IP, one-click presets for HTTP Proxy (Charles `8888`, Proxyman `9090`, Fiddler `8866`) with instant apply and clear, and Private DNS (DNS-over-TLS) presets (Google, Cloudflare, AdGuard) for secure network inspection.
+
+## [1.0.3] - 2026-10-31
+
+### Features
+
+- **GitHub Actions CI/CD Workflow Builder**: Generate a complete `.github/workflows/build_apk.yml` and `SECRETS_SETUP.md` with options for project folder, target branch, build outputs (Universal APK, Split-per-ABI, AAB, or both), Gradle & Pub caching, and production signing via GitHub Secrets.
+- **Consolidated Mirroring Controls**: Streamlined mirroring into two clear modes: `Mirror` (standard) and `Screen Off + Keys` (eco mode with hardware keyboard), complete with subtext notes and hover tooltips.
+- **Stop Mirroring**: One-click termination of active `scrcpy` sessions from VS Code, restoring phone screen immediately.
+- **One-click APK Installer**: Install selected APK files directly to connected devices via ADB.
+- **Send Text / Clipboard**: Send text or computer clipboard directly to active input fields on the device.
+- **Smart Screen-Off Guidance**: Helpful tips and reminders for `Alt+Shift+O` shortcut when using screen-off mirror modes.
+
 ## [1.0.2] - 2026-10-30
 
 ### Fixes
