@@ -111,7 +111,7 @@ export function getPanelWebviewContent(
                             <div class="ff-subhead">
                                 <h3>Mirroring</h3>
                             </div>
-                            <button class="btn btn-quiet btn-block btn-danger-hover" id="stopMirrorBtn" type="button" onclick="airFlutter.stopMirroring()" title="Stop active screen mirroring session">
+                            <button class="btn btn-quiet btn-block" id="stopMirrorBtn" type="button" disabled title="No active screen mirroring session">
                                 <i class="fas fa-stop"></i> Stop mirroring
                             </button>
                             <button class="btn btn-quiet btn-block" id="setScrcpyPathBtn" type="button">

@@ -2,7 +2,7 @@ export function getAgentScaffoldModalHtml(): string {
   return `
         <!-- AI Agent Architect & Scaffolding Stepper Modal -->
         <div class="modal-backdrop" id="agentScaffoldModal" hidden>
-            <div class="modal-card" style="max-width: 680px;">
+            <div class="modal-card" style="max-width: 760px;">
                 <div class="modal-head">
                     <h2><i class="fas fa-robot"></i> AI Agent Architect &amp; Scaffolding Engine</h2>
                     <button class="modal-close" id="closeAgentScaffoldModalBtn" type="button" aria-label="Close">&times;</button>
@@ -17,7 +17,7 @@ export function getAgentScaffoldModalHtml(): string {
                     <div class="stepper-divider"></div>
                     <div class="stepper-step" data-step="2">
                         <span class="stepper-number">2</span>
-                        <span class="stepper-title">Role</span>
+                        <span class="stepper-title">Roles &amp; Pipeline</span>
                     </div>
                     <div class="stepper-divider"></div>
                     <div class="stepper-step" data-step="3">
@@ -75,105 +75,194 @@ export function getAgentScaffoldModalHtml(): string {
                         <div class="stepper-nav">
                             <button class="btn btn-quiet" id="cancelAgentScaffoldModalBtn" type="button">Cancel</button>
                             <button class="btn btn-primary" type="button" data-stepper-next>
-                                Next: Role Archetype <i class="fas fa-arrow-right"></i>
+                                Next: Roles &amp; Pipeline <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
 
-                    <!-- STEP 2: Generation Mode & Role Archetype -->
+                    <!-- STEP 2: Generation Mode, Role Archetype & Pipeline Ordering -->
                     <div class="stepper-pane" data-step="2">
-                        <div class="modal-field">
-                            <label>Generation Mode</label>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldGenMode" value="single" checked />
-                                    <span><strong>Single Sub-Agent</strong><br/><span style="font-size: 11px; color: var(--muted);">Scaffold a single specialized agent file</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldGenMode" value="team" />
-                                    <span><strong>Multi-Agent Team Workflow</strong><br/><span style="font-size: 11px; color: var(--muted);">Scaffold full SDLC team + Orchestrator</span></span>
-                                </label>
+                        <!-- Mode Selector: Segmented Control -->
+                        <div class="modal-field" style="margin-bottom: 12px;">
+                            <label>Generation Architecture</label>
+                            <div class="segmented-control" id="genModeSegmentedControl">
+                                <button type="button" class="segmented-btn is-active" data-mode="single">
+                                    <i class="fas fa-user-ninja"></i> Single Sub-Agent
+                                </button>
+                                <button type="button" class="segmented-btn" data-mode="team">
+                                    <i class="fas fa-users-gear"></i> Multi-Agent Team Pipeline
+                                </button>
                             </div>
+                            <!-- Hidden input to preserve compatibility -->
+                            <input type="hidden" name="scaffoldGenMode" id="scaffoldGenModeInput" value="single" />
                         </div>
 
-                        <!-- Single Role Picker -->
+                        <!-- SECTION A: Single Role Picker -->
                         <div id="singleRolePickerContainer" class="modal-field">
-                            <label>Agent Role &amp; Archetype</label>
+                            <label>Select Agent Archetype</label>
                             <div class="modal-options-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
                                 <label class="modal-option-card">
                                     <input type="radio" name="scaffoldRole" value="planner" checked />
-                                    <span><strong>Planner / Business Analyst</strong><br/><span style="font-size: 11px; color: var(--muted);">PRDs, scopes, task breakdown</span></span>
+                                    <span><strong>Planner / Analyst</strong><br/><span style="font-size: 11px; color: var(--muted);">PRDs, scopes, task breakdown</span></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="radio" name="scaffoldRole" value="architect" />
-                                    <span><strong>Architect / System Designer</strong><br/><span style="font-size: 11px; color: var(--muted);">DB schemas, API contracts, seams</span></span>
+                                    <span><strong>System Architect</strong><br/><span style="font-size: 11px; color: var(--muted);">Schemas, API contracts, seams</span></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="radio" name="scaffoldRole" value="developer" />
-                                    <span><strong>Developer / Implementer</strong><br/><span style="font-size: 11px; color: var(--muted);">Fullstack &amp; core coding</span></span>
+                                    <span><strong>Developer / Coder</strong><br/><span style="font-size: 11px; color: var(--muted);">Fullstack &amp; core coding</span></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="radio" name="scaffoldRole" value="qa" />
-                                    <span><strong>QA / Tester &amp; Reviewer</strong><br/><span style="font-size: 11px; color: var(--muted);">Tests, diff audits, edge cases</span></span>
+                                    <span><strong>QA &amp; Code Reviewer</strong><br/><span style="font-size: 11px; color: var(--muted);">Unit/widget tests, edge cases</span></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="radio" name="scaffoldRole" value="flutter_ui" />
-                                    <span><strong>Flutter UI / Widget Specialist</strong><br/><span style="font-size: 11px; color: var(--muted);">Responsive widgets &amp; RTL</span></span>
+                                    <span><strong>Flutter UI Specialist</strong><br/><span style="font-size: 11px; color: var(--muted);">Responsive widgets &amp; RTL</span></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="radio" name="scaffoldRole" value="flutter_state" />
-                                    <span><strong>Flutter Architecture &amp; Bloc</strong><br/><span style="font-size: 11px; color: var(--muted);">Clean Arch, Cubit &amp; state flow</span></span>
+                                    <span><strong>Flutter Architecture &amp; Bloc</strong><br/><span style="font-size: 11px; color: var(--muted);">Clean Arch, Cubit flow</span></span>
                                 </label>
                                 <label class="modal-option-card" style="grid-column: 1 / -1;">
                                     <input type="radio" name="scaffoldRole" value="custom" />
-                                    <span><strong>Custom Role</strong><br/><span style="font-size: 11px; color: var(--muted);">Define custom job title and responsibilities</span></span>
+                                    <span><strong><i class="fas fa-sliders"></i> Custom Domain Agent</strong><br/><span style="font-size: 11px; color: var(--muted);">Design bespoke agent specifications from scratch</span></span>
                                 </label>
-                            </div>
-
-                            <div id="customRoleRow" class="modal-field" style="margin-top: 10px;" hidden>
-                                <input type="text" id="customRoleNameInput" placeholder="Agent Job Title (e.g. Security Auditor Agent)" style="margin-bottom: 6px;" />
-                                <input type="text" id="customRoleDescInput" placeholder="Short description of core duties..." />
                             </div>
                         </div>
 
-                        <!-- Team Mode Multi-Role Checklist -->
+                        <!-- SECTION B: Team Mode Role Checklist & Pipeline Ordering -->
                         <div id="teamRolePickerContainer" class="modal-field" hidden>
-                            <label><i class="fas fa-users-gear"></i> Select Team Roles (Choose 2 or more to build your workflow chain)</label>
-                            <span class="field-desc">The orchestrator will automatically chain the selected agents in sequence:</span>
+                            <label><i class="fas fa-users-gear"></i> Include Roles in Team Pipeline</label>
+                            <span class="field-desc">Toggle the agents participating in this workflow:</span>
                             <div class="modal-options-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
                                 <label class="modal-option-card">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="planner" checked />
-                                    <span><strong>Planner / Business Analyst</strong><br/><span style="font-size: 11px; color: var(--muted);">PRDs &amp; task breakdown</span></span>
+                                    <span><strong>Planner / Analyst</strong></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="architect" checked />
-                                    <span><strong>Architect / System Designer</strong><br/><span style="font-size: 11px; color: var(--muted);">Schemas &amp; contracts</span></span>
+                                    <span><strong>System Architect</strong></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="developer" checked />
-                                    <span><strong>Developer / Implementer</strong><br/><span style="font-size: 11px; color: var(--muted);">Source implementation</span></span>
+                                    <span><strong>Developer / Coder</strong></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="qa" checked />
-                                    <span><strong>QA / Tester &amp; Reviewer</strong><br/><span style="font-size: 11px; color: var(--muted);">Tests &amp; diff audit</span></span>
+                                    <span><strong>QA &amp; Code Reviewer</strong></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="flutter_ui" />
-                                    <span><strong>Flutter UI Specialist</strong><br/><span style="font-size: 11px; color: var(--muted);">Widgets, layouts &amp; RTL</span></span>
+                                    <span><strong>Flutter UI Specialist</strong></span>
                                 </label>
                                 <label class="modal-option-card">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="flutter_state" />
-                                    <span><strong>Flutter Architecture &amp; Bloc</strong><br/><span style="font-size: 11px; color: var(--muted);">Clean Arch &amp; Cubit flow</span></span>
+                                    <span><strong>Flutter Bloc Specialist</strong></span>
                                 </label>
                                 <label class="modal-option-card" style="grid-column: 1 / -1;">
                                     <input type="checkbox" name="scaffoldTeamRoles" value="custom" id="scaffoldTeamCustomCheckbox" />
-                                    <span><strong>Custom Role Member</strong><br/><span style="font-size: 11px; color: var(--muted);">Include a custom-defined role in the workflow</span></span>
+                                    <span><strong>Custom Role Member</strong></span>
                                 </label>
                             </div>
 
-                            <div id="customTeamRoleRow" class="modal-field" style="margin-top: 10px;" hidden>
-                                <input type="text" id="customTeamRoleNameInput" placeholder="Custom Agent Job Title (e.g. Security Auditor)" style="margin-bottom: 6px;" />
-                                <input type="text" id="customTeamRoleDescInput" placeholder="Core duties of this custom agent..." />
+                            <!-- Interactive Pipeline Ordering Card -->
+                            <div class="pipeline-order-container" style="margin-top: 14px;">
+                                <div class="pipeline-header">
+                                    <span class="pipeline-title"><i class="fas fa-route"></i> Orchestrator Pipeline Sequence</span>
+                                    <span class="pipeline-subtitle">Arrange stage order with Up/Down buttons. Orchestrator executes subagents in this exact sequence:</span>
+                                </div>
+                                <div id="pipelineOrderList" class="pipeline-list">
+                                    <!-- Populated dynamically via JavaScript -->
+                                </div>
+                                <div class="pipeline-flow-preview" id="pipelineFlowPreview">
+                                    <!-- e.g. Planner ➔ Architect ➔ Developer ➔ QA -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION C: Detailed Custom Agent Builder (Accordion) -->
+                        <div id="customAgentBuilderSection" class="custom-builder-container" hidden>
+                            <div class="custom-builder-header">
+                                <h4><i class="fas fa-wand-magic-sparkles"></i> Custom Agent Specification Builder</h4>
+                                <span class="custom-builder-subtitle">Define all parameters and constraints for your custom agent:</span>
+                            </div>
+
+                            <!-- Accordion 1: Identity & Model -->
+                            <div class="accordion-item is-open" data-acc="1">
+                                <button type="button" class="accordion-head">
+                                    <span><i class="fas fa-id-badge"></i> 1. Identity &amp; Target Model</span>
+                                    <i class="fas fa-chevron-down accordion-icon"></i>
+                                </button>
+                                <div class="accordion-body">
+                                    <div class="form-row">
+                                        <div class="form-group" style="flex: 2;">
+                                            <label>Agent Title / Name</label>
+                                            <input type="text" id="customRoleNameInput" placeholder="e.g. Security Auditor Agent" />
+                                        </div>
+                                        <div class="form-group" style="flex: 1;">
+                                            <label>Target LLM Model</label>
+                                            <select id="customRoleModelSelect">
+                                                <option value="inherit" selected>inherit (Parent)</option>
+                                                <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
+                                                <option value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</option>
+                                                <option value="GPT-4o">GPT-4o</option>
+                                                <option value="flash">flash (Fast Tier)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 6px;">
+                                        <label>Core Purpose &amp; Mission</label>
+                                        <input type="text" id="customRoleDescInput" placeholder="e.g. Performs security vulnerability scans and audits API authentication." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Accordion 2: Operational Loop & Artifacts -->
+                            <div class="accordion-item" data-acc="2">
+                                <button type="button" class="accordion-head">
+                                    <span><i class="fas fa-arrows-spin"></i> 2. Operational Loop &amp; Artifacts</span>
+                                    <i class="fas fa-chevron-down accordion-icon"></i>
+                                </button>
+                                <div class="accordion-body">
+                                    <div class="form-group">
+                                        <label>System Prompt (Directive Instructions)</label>
+                                        <textarea id="customRolePromptInput" rows="3" placeholder="You are the Lead Security Auditor. Inspect source code for OWASP vulnerabilities and unvalidated inputs..."></textarea>
+                                    </div>
+                                    <div class="form-row" style="margin-top: 6px;">
+                                        <div class="form-group" style="flex: 1;">
+                                            <label>Input Artifacts / Schemas</label>
+                                            <input type="text" id="customRoleInputsInput" placeholder="e.g. Pull request diffs, security policy docs" />
+                                        </div>
+                                        <div class="form-group" style="flex: 1;">
+                                            <label>Handoff Deliverables</label>
+                                            <input type="text" id="customRoleHandoffInput" placeholder="e.g. Signed Security Audit Report in markdown" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 6px;">
+                                        <label>Processing Steps</label>
+                                        <input type="text" id="customRoleProcessingInput" placeholder="e.g. 1. Run SAST audit; 2. Inspect authentication flows; 3. Generate remediation report." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Accordion 3: Rules & Verification Gate -->
+                            <div class="accordion-item" data-acc="3">
+                                <button type="button" class="accordion-head">
+                                    <span><i class="fas fa-shield-check"></i> 3. Rules &amp; Verification Gate</span>
+                                    <i class="fas fa-chevron-down accordion-icon"></i>
+                                </button>
+                                <div class="accordion-body">
+                                    <div class="form-group">
+                                        <label>Operational Rules &amp; Negative Constraints (One per line)</label>
+                                        <textarea id="customRoleRulesInput" rows="2" placeholder="Never expose API secrets or hardcoded tokens.&#10;Flag any unencrypted network endpoints immediately."></textarea>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 6px;">
+                                        <label>Verification Gate (Pre-completion check)</label>
+                                        <input type="text" id="customRoleVerificationInput" placeholder="e.g. Verify zero high-severity vulnerabilities before greenlighting handoff." />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -210,39 +299,118 @@ export function getAgentScaffoldModalHtml(): string {
 
                         <div class="stepper-nav">
                             <button class="btn btn-quiet" type="button" data-stepper-back><i class="fas fa-arrow-left"></i> Back</button>
-                            <button class="btn btn-primary" type="button" data-stepper-next>Next: Tool Permissions <i class="fas fa-arrow-right"></i></button>
+                            <button class="btn btn-primary" type="button" data-stepper-next>Next: Tools <i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
 
-                    <!-- STEP 4: Toolset & Access Permissions -->
+                    <!-- STEP 4: Per-Agent Tools Selection -->
                     <div class="stepper-pane" data-step="4">
                         <div class="modal-field">
-                            <label>Toolset &amp; Access Permissions</label>
-                            <span class="field-desc">Define what tools the generated agent is permitted to execute:</span>
-                            <div class="modal-options-grid" style="grid-template-columns: 1fr; gap: 8px; margin-top: 8px;">
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="read_only" />
-                                    <span><strong>Read-Only / Analysis</strong><br/><span style="font-size: 11px; color: var(--muted);"><code>read_file</code>, <code>list_dir</code>, <code>web_search</code> (Zero file write permissions)</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="standard" checked />
-                                    <span><strong>Standard Engineering</strong><br/><span style="font-size: 11px; color: var(--muted);"><code>read_file</code>, <code>write_file</code>, <code>replace_file_content</code>, <code>run_tests</code></span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="full" />
-                                    <span><strong>Full Orchestration &amp; Terminal</strong><br/><span style="font-size: 11px; color: var(--muted);">Full file I/O + Shell command execution (<code>execute_command</code>, <code>git_operations</code>)</span></span>
-                                </label>
-                                <label class="modal-option-card">
-                                    <input type="radio" name="scaffoldToolLevel" value="custom" />
-                                    <span><strong>Custom Tool Definition</strong><br/><span style="font-size: 11px; color: var(--muted);">Specify exact comma-separated list of tool names</span></span>
-                                </label>
+                            <div class="tools-step-header">
+                                <div>
+                                    <label><i class="fas fa-toolbox"></i> Tools &amp; Capabilities Configuration</label>
+                                    <span class="field-desc" id="toolsStepSubtitle">Select tools permitted for each agent:</span>
+                                </div>
+                                <button type="button" class="btn btn-quiet btn-sm" id="resetRoleToolsBtn">
+                                    <i class="fas fa-rotate-left"></i> Reset to Recommended
+                                </button>
+                            </div>
+
+                            <!-- Team Mode Agent Tabs -->
+                            <div id="toolsAgentTabBar" class="tool-agent-tabs" hidden>
+                                <!-- Injected dynamically: [Planner] [Architect] [Developer] [QA] -->
+                            </div>
+
+                            <!-- Granular Categorized Antigravity Tools Checklist -->
+                            <div class="tool-groups-container" id="toolGroupsContainer">
+                                <!-- File Operations -->
+                                <div class="tool-group-card">
+                                    <div class="tool-group-title"><i class="fas fa-folder-tree"></i> File Operations</div>
+                                    <div class="tool-checkbox-grid">
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="read_file" checked />
+                                            <span><code>read_file</code><br/><small>Read file contents</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="write_file" checked />
+                                            <span><code>write_file</code><br/><small>Create / overwrite</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="replace_file_content" checked />
+                                            <span><code>replace_file_content</code><br/><small>Targeted edit</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="list_dir" checked />
+                                            <span><code>list_dir</code><br/><small>List directories</small></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Search & Discovery -->
+                                <div class="tool-group-card">
+                                    <div class="tool-group-title"><i class="fas fa-magnifying-glass"></i> Search &amp; Discovery</div>
+                                    <div class="tool-checkbox-grid">
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="grep_search" checked />
+                                            <span><code>grep_search</code><br/><small>Regex / code search</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="find_by_name" checked />
+                                            <span><code>find_by_name</code><br/><small>Find files by pattern</small></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Execution & Terminal -->
+                                <div class="tool-group-card">
+                                    <div class="tool-group-title"><i class="fas fa-terminal"></i> Terminal &amp; Execution</div>
+                                    <div class="tool-checkbox-grid">
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="run_command" checked />
+                                            <span><code>run_command</code><br/><small>Shell, test, build, lint</small></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Web & Browser -->
+                                <div class="tool-group-card">
+                                    <div class="tool-group-title"><i class="fas fa-globe"></i> Web &amp; Documentation</div>
+                                    <div class="tool-checkbox-grid">
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="search_web" />
+                                            <span><code>search_web</code><br/><small>Search live internet</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="read_url_content" />
+                                            <span><code>read_url_content</code><br/><small>Fetch online docs</small></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Subagent Orchestration -->
+                                <div class="tool-group-card" id="orchestrationToolGroup" style="opacity: 0.85;">
+                                    <div class="tool-group-title"><i class="fas fa-network-wired"></i> Subagent Orchestration <small>(Orchestrators only)</small></div>
+                                    <div class="tool-checkbox-grid">
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="invoke_subagent" />
+                                            <span><code>invoke_subagent</code><br/><small>Spawn subagents</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="send_message" />
+                                            <span><code>send_message</code><br/><small>Inter-agent messaging</small></span>
+                                        </label>
+                                        <label class="tool-checkbox-item">
+                                            <input type="checkbox" data-tool="manage_subagents" />
+                                            <span><code>manage_subagents</code><br/><small>Monitor / cancel</small></span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div id="customToolsRow" class="modal-field" style="margin-top: 8px;" hidden>
-                            <label>Comma-separated Tool Names</label>
-                            <input type="text" id="customToolsInput" placeholder="e.g. read_file, write_file, flutter_analyze, adb_run" />
-                        </div>
+                        <!-- Hidden fields to preserve option interface -->
+                        <input type="hidden" name="scaffoldToolLevel" value="standard" />
+                        <input type="hidden" id="customToolsInput" value="" />
 
                         <div class="stepper-nav">
                             <button class="btn btn-quiet" type="button" data-stepper-back><i class="fas fa-arrow-left"></i> Back</button>

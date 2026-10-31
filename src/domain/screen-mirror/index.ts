@@ -19,6 +19,8 @@ export interface MirrorOptions {
 export class ScreenMirrorManager {
   private scrcpyExecutable: string | undefined
   private activeProcesses: Map<string, ChildProcess> = new Map()
+  private readonly _onMirroringStateChanged = new vscode.EventEmitter<{ isMirroring: boolean; serial?: string }>()
+  public readonly onMirroringStateChanged = this._onMirroringStateChanged.event
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -172,9 +174,11 @@ export class ScreenMirrorManager {
 
       child.once('spawn', () => {
         this.activeProcesses.set(deviceSerial, child)
+        this._onMirroringStateChanged.fire({ isMirroring: true, serial: deviceSerial })
         child.once('exit', () => {
           if (this.activeProcesses.get(deviceSerial) === child) {
             this.activeProcesses.delete(deviceSerial)
+            this._onMirroringStateChanged.fire({ isMirroring: this.activeProcesses.size > 0, serial: deviceSerial })
           }
         })
         resolve()
@@ -216,9 +220,13 @@ export class ScreenMirrorManager {
     if (process.platform === 'win32') {
       try {
         await new Promise<void>((resolve) => {
-          execFile('taskkill', ['/F', '/IM', 'scrcpy.exe'], { windowsHide: true }, () => resolve())
+          execFile('taskkill', ['/F', '/T', '/IM', 'scrcpy.exe'], { windowsHide: true }, (error) => {
+            if (!error) {
+              stoppedAny = true
+            }
+            resolve()
+          })
         })
-        stoppedAny = true
       } catch {
         // ignore
       }
@@ -233,6 +241,7 @@ export class ScreenMirrorManager {
       }
     }
 
+    this._onMirroringStateChanged.fire({ isMirroring: this.activeProcesses.size > 0 })
     return stoppedAny
   }
 

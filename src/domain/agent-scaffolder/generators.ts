@@ -10,6 +10,15 @@ import {
 } from './roles';
 
 /**
+ * Safely formats a string value for YAML frontmatter scalar fields.
+ * Wraps in standard double quotes and escapes backslashes and internal quotes.
+ */
+export function formatYamlString(value: string): string {
+  const normalized = value.replace(/\r\n/g, ' ').replace(/\n/g, ' ').trim();
+  return JSON.stringify(normalized);
+}
+
+/**
  * Generates single agent Markdown specification.
  */
 export function generateAgentMarkdown(
@@ -18,17 +27,17 @@ export function generateAgentMarkdown(
   customName?: string,
   customDesc?: string
 ): { filename: string; content: string } {
-  const roleDef = getRoleDefinition(role, customName, customDesc)
+  const roleDef = getRoleDefinition(role, customName, customDesc, options.customAgentDetails)
   const filename = `${roleDef.id}.md`
-  const toolsTable = generateToolsTable(options.toolLevel, options.customTools)
-  const toolsList = getToolList(options.toolLevel, options.customTools)
+  const toolsList = getToolList(options.toolLevel, options.customTools, options.framework, role, options.agentToolsMap)
+  const toolsTable = generateToolsTable(toolsList)
   const toolsYaml = toolsList.map(t => `  - ${t}`).join('\n')
 
   const frontmatter = `---
-name: ${roleDef.id}
-description: ${roleDef.purpose}
-model: inherit
-workspace: inherit
+name: ${formatYamlString(roleDef.id)}
+description: ${formatYamlString(roleDef.purpose)}
+model: "inherit"
+workspace: "inherit"
 tools:
 ${toolsYaml}
 ---`
@@ -113,14 +122,16 @@ export function generateTeamWorkflow(
   const files: Array<{ filename: string; content: string }> = []
 
   const selectedRoles: AgentRole[] =
-    options.teamRoles && options.teamRoles.length > 0
-      ? options.teamRoles
-      : ['planner', 'architect', 'developer', 'qa']
+    options.pipelineOrder && options.pipelineOrder.length > 0
+      ? options.pipelineOrder
+      : options.teamRoles && options.teamRoles.length > 0
+        ? options.teamRoles
+        : ['planner', 'architect', 'developer', 'qa']
 
   const roleDefs: RoleDefinition[] = []
 
   for (const role of selectedRoles) {
-    const def = getRoleDefinition(role, options.customRoleName, options.customRoleDescription)
+    const def = getRoleDefinition(role, options.customRoleName, options.customRoleDescription, options.customAgentDetails)
     roleDefs.push(def)
     files.push(generateAgentMarkdown(role, options, options.customRoleName, options.customRoleDescription))
   }
@@ -226,18 +237,22 @@ ${herdrPipelineYaml}
       }
     }).join('\n')
 
+    const orchestratorDesc = `Master multi-agent orchestrator managing the asynchronous execution pipeline across ${roleDefs.length} subagents.`
+
     files.push({
       filename: 'orchestrator.md',
       content: `---
-name: orchestrator
-description: Master multi-agent orchestrator managing the asynchronous execution pipeline across ${roleDefs.length} subagents.
-model: inherit
-workspace: inherit
+name: "orchestrator"
+description: ${formatYamlString(orchestratorDesc)}
+model: "inherit"
+workspace: "inherit"
 tools:
   - invoke_subagent
   - send_message
   - manage_subagents
   - read_file
+  - list_dir
+  - run_command
 ---
 
 # Agent: Team Orchestrator & Asynchronous Workflow Controller

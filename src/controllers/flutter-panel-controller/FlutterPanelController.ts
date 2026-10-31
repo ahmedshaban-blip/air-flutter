@@ -76,6 +76,9 @@ export class FlutterPanelController extends ADBBaseController {
     this.adbConnection = new ADBConnection(consoleInterface, context.globalState, netHelper);
     this.deviceManager = new AndroidDeviceManager(context.globalState);
     this.screenMirrorManager = new ScreenMirrorManager(context);
+    this.screenMirrorManager.onMirroringStateChanged(event => {
+      this.notifyMirroringState(event.isMirroring);
+    });
     this.extensionVersion = (context.extension.packageJSON.version as string) || 'unknown';
 
     const handlerCtx: PanelDeviceContext = {
@@ -342,6 +345,8 @@ export class FlutterPanelController extends ADBBaseController {
     // Initial device refresh
     console.log('🔄 FlutterPanelController: Performing initial device refresh...')
     await this.refreshConnectedDevices();
+
+    this.notifyMirroringState(this.screenMirrorManager.isMirroring());
     
     console.log('✅ FlutterPanelController: Panel opened successfully')
   }
@@ -833,17 +838,37 @@ export class FlutterPanelController extends ADBBaseController {
     }
   }
 
+  private notifyMirroringState(isMirroring: boolean) {
+    this.currentPanel?.webview.postMessage({
+      command: 'mirroringState',
+      isMirroring
+    });
+  }
+
   private async stopMirroring() {
     try {
       const stopped = await this.screenMirrorManager.stop();
+      // Wake up phone screen if it was turned off during mirror
+      const serial = this.getActiveDeviceSerial();
+      if (serial) {
+        try {
+          const adbPath = await this.deviceManager.getADBExecutable();
+          execFile(adbPath, ['-s', serial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'], { windowsHide: true }, () => {});
+        } catch {
+          // ignore
+        }
+      }
+
+      this.notifyMirroringState(false);
       if (stopped) {
         this.postStatus('⏹️ Screen mirroring stopped. Phone screen restored.', 'info');
         vscode.window.showInformationMessage('Screen mirroring stopped. Phone screen restored.');
       } else {
-        this.postStatus('No active screen mirroring session found.', 'info');
+        this.postStatus('⏹️ Screen mirroring stopped.', 'info');
       }
     } catch (error) {
       this.showErrorMessage(error instanceof Error ? error.message : String(error));
+      this.notifyMirroringState(this.screenMirrorManager.isMirroring());
     }
   }
 

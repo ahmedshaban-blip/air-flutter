@@ -7,7 +7,8 @@ import {
   AgentRole,
   AgentScaffoldOptions,
   AgentScaffoldResult,
-  ToolAccessLevel
+  ToolAccessLevel,
+  AgentFramework
 } from './types';
 import { getToolList } from './roles';
 import { generateAgentMarkdown, generateTeamWorkflow } from './generators';
@@ -53,10 +54,16 @@ export class AgentScaffolder {
   }
 
   /**
-   * Returns list of tools based on access level.
+   * Returns list of tools based on access level, framework, and role.
    */
-  public static getToolList(level: ToolAccessLevel, customTools?: string): string[] {
-    return getToolList(level, customTools);
+  public static getToolList(
+    level: ToolAccessLevel,
+    customTools?: string,
+    framework: AgentFramework = 'antigravity',
+    role?: AgentRole,
+    agentToolsMap?: Record<string, string[]>
+  ): string[] {
+    return getToolList(level, customTools, framework, role, agentToolsMap);
   }
 
   /**

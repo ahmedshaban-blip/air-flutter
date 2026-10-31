@@ -32,6 +32,13 @@ class AirFlutterWebview {
                 });
             }
 
+            const stopMirrorBtn = document.getElementById('stopMirrorBtn');
+            if (stopMirrorBtn) {
+                stopMirrorBtn.addEventListener('click', () => {
+                    this.stopMirroring();
+                });
+            }
+
             this.bindDeviceActions('usbDevicesList');
             this.bindDeviceActions('networkDevicesList');
             this.bindDeviceActions('devicesList');
@@ -279,6 +286,36 @@ class AirFlutterWebview {
         this.addStatusMessage('Opening device setup guide', 'info');
     }
 
+    stopMirroring() {
+        const stopMirrorBtn = document.getElementById('stopMirrorBtn');
+        if (stopMirrorBtn) {
+            stopMirrorBtn.disabled = true;
+            stopMirrorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Stopping…';
+        }
+        this.sendMessage('stopMirroring', {});
+        this.addStatusMessage('Stopping screen mirroring…', 'info');
+    }
+
+    updateMirroringState(isMirroring) {
+        this.isMirroring = Boolean(isMirroring);
+        const stopMirrorBtn = document.getElementById('stopMirrorBtn');
+        if (stopMirrorBtn) {
+            if (this.isMirroring) {
+                stopMirrorBtn.classList.remove('btn-quiet');
+                stopMirrorBtn.classList.add('btn-danger', 'is-active-mirror');
+                stopMirrorBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Mirroring (Active)';
+                stopMirrorBtn.disabled = false;
+                stopMirrorBtn.title = 'Active screen mirroring session. Click to stop.';
+            } else {
+                stopMirrorBtn.classList.add('btn-quiet');
+                stopMirrorBtn.classList.remove('btn-danger', 'is-active-mirror');
+                stopMirrorBtn.innerHTML = '<i class="fas fa-stop"></i> Stop mirroring';
+                stopMirrorBtn.disabled = true;
+                stopMirrorBtn.title = 'No active screen mirroring session';
+            }
+        }
+    }
+
     // Status log
     addStatusMessage(message, type = 'info') {
         const statusContainer = document.getElementById('statusMessages');
@@ -415,6 +452,9 @@ class AirFlutterWebview {
                     break;
                 case 'recordingState':
                     this.updateRecordingState(message.isRecording, message.duration);
+                    break;
+                case 'mirroringState':
+                    this.updateMirroringState(message.isMirroring);
                     break;
                 case 'openAgentScaffoldModal':
                     this.openAgentScaffoldModal(message.projectPath);

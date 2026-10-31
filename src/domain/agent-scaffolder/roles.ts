@@ -1,4 +1,4 @@
-import { AgentRole, ToolAccessLevel } from './types';
+import { AgentRole, ToolAccessLevel, AgentFramework, CustomAgentDetails } from './types';
 
 export interface RoleDefinition {
   title: string;
@@ -13,40 +13,336 @@ export interface RoleDefinition {
   verification: string;
 }
 
+export interface AntigravityToolMeta {
+  name: string;
+  category: string;
+  scope: string;
+  description: string;
+}
+
 /**
- * Returns list of tools based on access level.
+ * Official Google Antigravity supported tools dictionary (strictly matching Antigravity component registry).
  */
-export function getToolList(level: ToolAccessLevel, customTools?: string): string[] {
+export const ANTIGRAVITY_SUPPORTED_TOOLS: Record<string, AntigravityToolMeta> = {
+  read_file: {
+    name: 'read_file',
+    category: 'File Operations',
+    scope: 'Read-Only (Workspace)',
+    description: 'Reads contents of a file within the workspace with optional line ranges.',
+  },
+  write_file: {
+    name: 'write_file',
+    category: 'File Operations',
+    scope: 'Write / Create (Workspace)',
+    description: 'Creates a new file or completely writes over an existing file.',
+  },
+  replace_file_content: {
+    name: 'replace_file_content',
+    category: 'File Operations',
+    scope: 'Edit / Mutation (Workspace)',
+    description: 'Performs precise, targeted replacements of code blocks or lines inside an existing file.',
+  },
+  list_dir: {
+    name: 'list_dir',
+    category: 'File Operations',
+    scope: 'Read-Only (Workspace)',
+    description: 'Lists files and subdirectories within a specified workspace path.',
+  },
+  find_by_name: {
+    name: 'find_by_name',
+    category: 'Search & Discovery',
+    scope: 'Read-Only (Pattern Match)',
+    description: 'Searches for file paths matching a glob pattern or file name within the project.',
+  },
+  grep_search: {
+    name: 'grep_search',
+    category: 'Search & Discovery',
+    scope: 'Read-Only (Codebase Search)',
+    description: 'Fast regex or literal text search across all files in the project workspace.',
+  },
+  run_command: {
+    name: 'run_command',
+    category: 'Execution & Terminal',
+    scope: 'Terminal Shell Execution',
+    description: 'Executes terminal shell commands for compilation, testing, static analysis, and git workflows.',
+  },
+  search_web: {
+    name: 'search_web',
+    category: 'Web & Browser',
+    scope: 'External Web Query',
+    description: 'Performs online web searches for up-to-date documentation, API references, and libraries.',
+  },
+  read_url_content: {
+    name: 'read_url_content',
+    category: 'Web & Browser',
+    scope: 'External HTTP Read',
+    description: 'Fetches and reads documentation or external web resources.',
+  },
+  invoke_subagent: {
+    name: 'invoke_subagent',
+    category: 'Subagent Orchestration',
+    scope: 'Subagent Lifecycle',
+    description: 'Spawns and executes an isolated, specialized subagent in the background.',
+  },
+  send_message: {
+    name: 'send_message',
+    category: 'Subagent Orchestration',
+    scope: 'Inter-Agent Communication',
+    description: 'Sends deliverables, operational directives, or feedback messages between agents.',
+  },
+  manage_subagents: {
+    name: 'manage_subagents',
+    category: 'Subagent Orchestration',
+    scope: 'Process Management',
+    description: 'Lists, inspects live state, or terminates active background subagent processes.',
+  },
+};
+
+/**
+ * Normalization map for common aliases to canonical Antigravity registry tool names.
+ */
+export const ANTIGRAVITY_TOOL_ALIASES: Record<string, string> = {
+  view_file: 'read_file',
+  read: 'read_file',
+  write: 'write_file',
+  write_to_file: 'write_file',
+  edit_file: 'replace_file_content',
+  edit: 'replace_file_content',
+  list_directory: 'list_dir',
+  dir: 'list_dir',
+  search_files: 'find_by_name',
+  find: 'find_by_name',
+  code_search: 'grep_search',
+  execute_command: 'run_command',
+  terminal_command: 'run_command',
+  git_operations: 'run_command',
+  run_tests: 'run_command',
+  flutter_test: 'run_command',
+  dart_analyze: 'run_command',
+  web_search: 'search_web',
+  fetch_web_page: 'read_url_content',
+  browse_web: 'read_url_content',
+  delete_file: 'run_command',
+  spawn_subagent: 'invoke_subagent',
+  message_agent: 'send_message',
+  kill_subagent: 'manage_subagents',
+  search_marketplace: 'search_web',
+};
+
+/**
+ * Normalizes and filters custom tools strictly to supported Antigravity tools.
+ */
+export function sanitizeAntigravityTools(rawTools: string[]): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of rawTools) {
+    const cleaned = raw.trim().toLowerCase();
+    if (!cleaned) continue;
+
+    const mapped = ANTIGRAVITY_TOOL_ALIASES[cleaned] || cleaned;
+    if (ANTIGRAVITY_SUPPORTED_TOOLS[mapped] && !seen.has(mapped)) {
+      seen.add(mapped);
+      result.push(mapped);
+    }
+  }
+
+  return result.length > 0
+    ? result
+    : [
+        'read_file',
+        'write_file',
+        'replace_file_content',
+        'list_dir',
+        'grep_search',
+        'find_by_name',
+        'run_command'
+      ];
+}
+
+/**
+ * Returns list of tools based on access level, framework, and role.
+ */
+export function getToolList(
+  level: ToolAccessLevel,
+  customTools?: string,
+  framework: AgentFramework = 'antigravity',
+  role?: AgentRole,
+  agentToolsMap?: Record<string, string[]>
+): string[] {
+  if (role && agentToolsMap && agentToolsMap[role] && agentToolsMap[role].length > 0) {
+    return sanitizeAntigravityTools(agentToolsMap[role]);
+  }
+
+  if (framework === 'antigravity') {
+    switch (level) {
+      case 'read_only':
+        return [
+          'read_file',
+          'list_dir',
+          'grep_search',
+          'find_by_name',
+          'search_web',
+          'read_url_content'
+        ];
+
+      case 'standard':
+        switch (role) {
+          case 'planner':
+            return [
+              'read_file',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'search_web',
+              'read_url_content'
+            ];
+          case 'architect':
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'search_web',
+              'read_url_content'
+            ];
+          case 'developer':
+          case 'qa':
+          case 'flutter_state':
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'run_command'
+            ];
+          case 'flutter_ui':
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'run_command'
+            ];
+          case 'custom':
+          default:
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'run_command'
+            ];
+        }
+
+      case 'full':
+        // Tailored strictly by role responsibilities (worker subagents should never be assigned orchestrator tools)
+        switch (role) {
+          case 'planner':
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'search_web',
+              'read_url_content'
+            ];
+          case 'architect':
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'search_web',
+              'read_url_content'
+            ];
+          case 'developer':
+          case 'qa':
+          case 'flutter_state':
+          case 'flutter_ui':
+          case 'custom':
+          default:
+            return [
+              'read_file',
+              'write_file',
+              'replace_file_content',
+              'list_dir',
+              'grep_search',
+              'find_by_name',
+              'run_command',
+              'search_web',
+              'read_url_content'
+            ];
+        }
+
+      case 'custom':
+        if (customTools && customTools.trim().length > 0) {
+          const raw = customTools
+            .split(/[\n,]/)
+            .map(t => t.trim())
+            .filter(t => t.length > 0);
+          return sanitizeAntigravityTools(raw);
+        }
+        return [
+          'read_file',
+          'write_file',
+          'replace_file_content',
+          'list_dir',
+          'grep_search',
+          'find_by_name',
+          'run_command'
+        ];
+    }
+  }
+
+  // Non-Antigravity frameworks (CrewAI, Herdr, Generic)
   switch (level) {
     case 'read_only':
-      return ['read_file', 'search_files', 'list_dir']
+      return ['read_file', 'search_files', 'list_directory'];
     case 'standard':
-      return ['read_file', 'edit_file', 'write_file', 'search_files', 'list_dir']
+      return ['read_file', 'write_file', 'replace_file_content', 'search_files', 'list_directory', 'run_command'];
     case 'full':
       return [
         'read_file',
-        'edit_file',
         'write_file',
-        'run_command',
+        'replace_file_content',
+        'delete_file',
         'search_files',
-        'list_dir',
-        'search_marketplace'
-      ]
+        'list_directory',
+        'run_command'
+      ];
     case 'custom':
       if (customTools && customTools.trim().length > 0) {
         return customTools
           .split(/[\n,]/)
           .map(t => t.trim())
-          .filter(t => t.length > 0)
+          .filter(t => t.length > 0);
       }
-      return ['read_file', 'edit_file', 'write_file']
+      return ['read_file', 'write_file', 'replace_file_content'];
   }
 }
 
 /**
  * Generates role definition metadata and instructions.
  */
-export function getRoleDefinition(role: AgentRole, customName?: string, customDesc?: string): RoleDefinition {
+export function getRoleDefinition(
+  role: AgentRole,
+  customName?: string,
+  customDesc?: string,
+  customDetails?: CustomAgentDetails
+): RoleDefinition {
   switch (role) {
     case 'planner':
       return {
@@ -165,32 +461,66 @@ You ensure deterministic state transitions, reactive streams, offline caching, a
       }
 
     case 'custom':
-    default:
+    default: {
+      const title = customDetails?.name || customName || 'Custom Domain Agent';
+      const rawId = customDetails?.id || customDetails?.name || customName || 'custom_agent';
+      const id = rawId.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const llm = customDetails?.model || 'Gemini 1.5 Pro / Claude 3.5 Sonnet';
+      const purpose = customDetails?.purpose || customDesc || 'Specialized AI sub-agent configured for custom project workflows.';
+      const prompt = customDetails?.systemPrompt || `You are the ${title}.\n${purpose}\nFollow the operational loop, respect tool permissions, and ensure deterministic outputs.`;
+      const inputs = customDetails?.inputs || 'Project domain inputs and orchestrator prompts.';
+      const processing = customDetails?.processing || '1. Parse input artifacts; 2. Apply domain logic; 3. Generate verified outputs.';
+      const handoff = customDetails?.handoff || 'Hands verified artifacts back to the primary orchestrator.';
+      const rules = (customDetails?.rules && customDetails.rules.length > 0)
+        ? customDetails.rules
+        : [
+            'Adhere strictly to designated tool boundaries.',
+            'Validate all assumptions before executing mutating operations.'
+          ];
+      const verification = customDetails?.verification || 'Perform self-verification against domain rules prior to completion.';
+
       return {
-        title: customName || 'Custom Domain Agent',
-        id: (customName || 'custom_agent').toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-        llm: 'Gemini 1.5 Pro / Claude 3.5 Sonnet',
-        purpose: customDesc || 'Specialized AI sub-agent configured for custom project workflows.',
-        prompt: `You are the ${customName || 'Custom AI Agent'}.
-${customDesc || 'Perform specialized domain operations with precision and adherence to project conventions.'}
-Follow the operational loop, respect tool permissions, and ensure deterministic outputs.`,
-        inputs: 'Project domain inputs and orchestrator prompts.',
-        processing: '1. Parse input artifacts; 2. Apply domain logic; 3. Generate verified outputs.',
-        handoff: 'Hands verified artifacts back to the primary orchestrator.',
-        rules: [
-          'Adhere strictly to designated tool boundaries.',
-          'Validate all assumptions before executing mutating operations.'
-        ],
-        verification: 'Perform self-verification against domain rules prior to completion.'
-      }
+        title,
+        id,
+        llm,
+        purpose,
+        prompt,
+        inputs,
+        processing,
+        handoff,
+        rules,
+        verification
+      };
+    }
   }
 }
 
 /**
- * Generates tool permission table rows based on selected permission level.
+ * Generates formatted Markdown tool permission table rows.
  */
-export function generateToolsTable(level: ToolAccessLevel, customTools?: string): string {
-  const tools = getToolList(level, customTools)
-  return tools.map(t => `| \`${t}\` | Allowed | Core operational capability |`).join('\n')
+export function generateToolsTable(
+  toolsOrLevel: string[] | ToolAccessLevel,
+  customTools?: string,
+  framework: AgentFramework = 'antigravity',
+  role?: AgentRole
+): string {
+  const tools: string[] = Array.isArray(toolsOrLevel)
+    ? toolsOrLevel
+    : getToolList(toolsOrLevel, customTools, framework, role);
+
+  const header = [
+    '| Tool Name | Category | Scope / Access Level | Purpose & Responsibility |',
+    '| :--- | :--- | :--- | :--- |'
+  ];
+
+  const rows = tools.map(t => {
+    const meta = ANTIGRAVITY_SUPPORTED_TOOLS[t];
+    if (meta) {
+      return `| \`${meta.name}\` | ${meta.category} | ${meta.scope} | ${meta.description} |`;
+    }
+    return `| \`${t}\` | General Operation | Allowed | Operational tool capability |`;
+  });
+
+  return [...header, ...rows].join('\n');
 }
 

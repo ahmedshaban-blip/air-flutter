@@ -369,6 +369,26 @@ samp {
     color: #fff;
 }
 
+.btn-danger {
+    border-color: var(--err, #A3231C);
+    background: var(--err, #A3231C);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    border-color: #8b1e18;
+    background: #8b1e18;
+    color: #fff;
+}
+
+.btn-danger.is-active-mirror {
+    border-color: var(--err, #e03131);
+    background: #e03131;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(224, 49, 49, 0.4);
+    animation: sf-pulse 1.2s ease-in-out infinite;
+}
+
 .btn-block {
     width: 100%;
     margin-top: 10px;
