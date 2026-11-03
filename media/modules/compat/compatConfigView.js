@@ -26,6 +26,12 @@ window.AirFlutterCompatConfigModule = class AirFlutterCompatConfigModule {
             agpSelect.value = '8.5.2';
         }
 
+        if (gradleSelect) {
+            gradleSelect.innerHTML = versions.gradle.map(v => `<option value="${v}">Gradle ${v}</option>`).join('');
+            const curGradle = report.gradle ? report.gradle.gradleVersion : null;
+            gradleSelect.value = curGradle && versions.gradle.includes(curGradle) ? curGradle : versions.gradle[0];
+        }
+
         // Fill Kotlin
         if (kotlinSelect) {
             kotlinSelect.innerHTML = versions.kotlin.map(v => `<option value="${v}">${v}</option>`).join('');
@@ -57,74 +63,112 @@ window.AirFlutterCompatConfigModule = class AirFlutterCompatConfigModule {
             }
         }
 
-        // Trigger cascading logic
-        this.onConfigAgpChanged();
+        this.syncAndroidStack('agp');
     }
 
     onConfigAgpChanged() {
-        const agpSelect = document.getElementById('configAgpSelect');
-        const gradleSelect = document.getElementById('configGradleSelect');
-        const javaSelect = document.getElementById('configJavaSelect');
-        const kotlinSelect = document.getElementById('configKotlinSelect');
-        if (!agpSelect || !gradleSelect) return;
-
-        const selectedAgp = agpSelect.value;
-        const versions = this.compatAvailableVersions || {
-            gradle: ["8.7", "8.6", "8.5", "8.4", "8.2.1", "8.0.2", "7.6.4", "7.5"]
-        };
-
-        // Find rule
-        const rule = (this.compatRules || []).find(r => {
-            const range = r.agpRange;
-            if (selectedAgp.startsWith('8.5') && range.includes('8.5')) return true;
-            if ((selectedAgp.startsWith('8.2') || selectedAgp.startsWith('8.3') || selectedAgp.startsWith('8.4')) && range.includes('8.2')) return true;
-            if ((selectedAgp.startsWith('8.0') || selectedAgp.startsWith('8.1')) && range.includes('8.0')) return true;
-            if (selectedAgp.startsWith('7.4') && range.includes('7.4')) return true;
-            if (selectedAgp.startsWith('7.') && range.includes('7.0')) return true;
-            return false;
-        });
-
-        // Smart Filter Gradle
-        const isGradleCompatible = (gVer) => {
-            if (!rule) return true;
-            const expr = rule.compatibleGradle;
-            if (expr.startsWith('>=8.7')) return parseFloat(gVer) >= 8.7;
-            if (expr.includes('8.2') && expr.includes('8.7')) return parseFloat(gVer) >= 8.2 && parseFloat(gVer) <= 8.7;
-            if (expr.includes('8.0') && expr.includes('8.4')) return parseFloat(gVer) >= 8.0 && parseFloat(gVer) <= 8.4;
-            if (expr.includes('7.5') && expr.includes('7.6')) return parseFloat(gVer) >= 7.5 && parseFloat(gVer) <= 7.6;
-            if (expr.includes('7.0') && expr.includes('7.4')) return parseFloat(gVer) >= 7.0 && parseFloat(gVer) <= 7.4;
-            return true;
-        };
-
-        const currentGradle = gradleSelect.value;
-        gradleSelect.innerHTML = versions.gradle.map(g => {
-            const compat = isGradleCompatible(g);
-            const isRec = rule && rule.recommendedGradle === g;
-            return `<option value="${g}" ${compat ? '' : 'disabled'}>Gradle ${g}${isRec ? ' (Recommended for AGP ' + selectedAgp + ')' : (compat ? '' : ' (Incompatible)')}</option>`;
-        }).join('');
-
-        if (rule && rule.recommendedGradle) {
-            if (!isGradleCompatible(currentGradle)) {
-                gradleSelect.value = rule.recommendedGradle;
-            } else {
-                gradleSelect.value = currentGradle;
-            }
-        }
-
-        // Auto-sync Java JDK baseline
-        if (javaSelect && rule) {
-            javaSelect.value = String(rule.minJava || 17);
-        }
-
-        // Auto-sync Kotlin if applicable
-        if (kotlinSelect && rule && rule.recommendedKotlin) {
-            kotlinSelect.value = rule.recommendedKotlin;
-        }
-
-        this.updateConfigStatusBanner();
+        this.syncAndroidStack('agp');
     }
 
-    updateConfigStatusBanner() {
+    syncAndroidStack(changedField) {
+        const agpSelect = document.getElementById('configAgpSelect');
+        const gradleSelect = document.getElementById('configGradleSelect');
+        const kotlinSelect = document.getElementById('configKotlinSelect');
+        const javaSelect = document.getElementById('configJavaSelect');
+        if (!agpSelect || !gradleSelect || !kotlinSelect || !javaSelect) return;
+
+        const versions = this.compatAvailableVersions;
+        const rules = this.compatRules || [];
+        if (!versions || rules.length === 0) return;
+
+        const selectedValue = {
+            agp: agpSelect.value,
+            gradle: gradleSelect.value,
+            kotlin: kotlinSelect.value,
+            java: javaSelect.value
+        }[changedField];
+        const rule = this.findRuleForSelection(changedField, selectedValue, rules, versions);
+        if (!rule) {
+            this.updateConfigStatusBanner(false, changedField);
+            return;
+        }
+
+        if (changedField !== 'agp') {
+            agpSelect.value = versions.agp.find(version => this.versionSatisfies(version, rule.agpRange)) || agpSelect.value;
+        }
+        if (changedField !== 'gradle') {
+            gradleSelect.value = this.pickRecommendedVersion(versions.gradle, rule.compatibleGradle, rule.recommendedGradle);
+        }
+        if (changedField !== 'kotlin') {
+            kotlinSelect.value = this.pickRecommendedVersion(versions.kotlin, rule.compatibleKotlin, rule.recommendedKotlin);
+        }
+        if (changedField !== 'java') {
+            javaSelect.value = String(rule.minJava);
+        }
+
+        this.updateConfigStatusBanner(true, changedField);
+    }
+
+    findRuleForSelection(changedField, selectedValue, rules, versions) {
+        if (changedField === 'agp') {
+            return rules.find(rule => this.versionSatisfies(selectedValue, rule.agpRange));
+        }
+        if (changedField === 'gradle') {
+            return rules.find(rule =>
+                this.versionSatisfies(selectedValue, rule.compatibleGradle) &&
+                versions.agp.some(version => this.versionSatisfies(version, rule.agpRange))
+            );
+        }
+        if (changedField === 'kotlin') {
+            return rules.find(rule =>
+                this.versionSatisfies(selectedValue, rule.compatibleKotlin) &&
+                versions.agp.some(version => this.versionSatisfies(version, rule.agpRange))
+            );
+        }
+        const selectedJava = Number(selectedValue);
+        return rules.find(rule =>
+            selectedJava >= rule.minJava &&
+            versions.agp.some(version => this.versionSatisfies(version, rule.agpRange))
+        );
+    }
+
+    pickRecommendedVersion(availableVersions, compatibleRange, recommendedVersion) {
+        if (availableVersions.includes(recommendedVersion) && this.versionSatisfies(recommendedVersion, compatibleRange)) {
+            return recommendedVersion;
+        }
+        const compatibleVersions = availableVersions
+            .filter(version => this.versionSatisfies(version, compatibleRange))
+            .sort((left, right) => this.compareVersions(left, right));
+        return compatibleVersions.find(version => this.compareVersions(version, recommendedVersion) >= 0)
+            || compatibleVersions[compatibleVersions.length - 1]
+            || availableVersions[0];
+    }
+
+    versionSatisfies(version, rangeExpression) {
+        return rangeExpression.trim().split(/\s+/).every(clause => {
+            const match = clause.match(/^([><=]+)?(.+)$/);
+            if (!match) return true;
+            const comparison = this.compareVersions(version, match[2]);
+            const operator = match[1] || '=';
+            if (operator === '>=') return comparison >= 0;
+            if (operator === '>') return comparison > 0;
+            if (operator === '<=') return comparison <= 0;
+            if (operator === '<') return comparison < 0;
+            return comparison === 0;
+        });
+    }
+
+    compareVersions(leftVersion, rightVersion) {
+        const left = leftVersion.split('.').map(Number);
+        const right = rightVersion.split('.').map(Number);
+        for (let index = 0; index < 3; index += 1) {
+            const difference = (left[index] || 0) - (right[index] || 0);
+            if (difference !== 0) return difference < 0 ? -1 : 1;
+        }
+        return 0;
+    }
+
+    updateConfigStatusBanner(isCompatible = true, changedField = '') {
         const banner = document.getElementById('configStatusBanner');
         const textEl = document.getElementById('configStatusText');
         const agpSelect = document.getElementById('configAgpSelect');
@@ -139,10 +183,16 @@ window.AirFlutterCompatConfigModule = class AirFlutterCompatConfigModule {
         const java = javaSelect ? javaSelect.value : '17';
         const kotlin = kotlinSelect ? kotlinSelect.value : '1.9.24';
 
-        banner.className = 'compat-status-card is-success';
+        banner.className = `compat-status-card ${isCompatible ? 'is-success' : 'is-error'}`;
         banner.style.padding = '10px 14px';
         banner.style.marginTop = '10px';
-        textEl.innerHTML = `<strong>Verified Compatible Stack:</strong> AGP ${agp} &harr; Gradle ${gradle} &harr; JDK ${java} &harr; Kotlin ${kotlin}`;
+        if (!isCompatible) {
+            textEl.textContent = 'No verified compatible stack was found for this selection.';
+            return;
+        }
+        const sourceLabels = { agp: 'AGP', gradle: 'Gradle', kotlin: 'Kotlin', java: 'Java' };
+        const syncNote = changedField ? `Auto-synced from ${sourceLabels[changedField]}. ` : '';
+        textEl.innerHTML = `<strong>${syncNote}Verified Compatible Stack:</strong> AGP ${agp} &harr; Gradle ${gradle} &harr; JDK ${java} &harr; Kotlin ${kotlin}`;
     }
 
     prepareCustomStackDiffs() {

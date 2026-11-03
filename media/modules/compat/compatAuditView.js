@@ -81,6 +81,8 @@ window.AirFlutterCompatAuditModule = class AirFlutterCompatAuditModule {
         // Configurator change listeners
         const agpSelect = document.getElementById('configAgpSelect');
         const gradleSelect = document.getElementById('configGradleSelect');
+        const kotlinSelect = document.getElementById('configKotlinSelect');
+        const javaSelect = document.getElementById('configJavaSelect');
 
         if (agpSelect) {
             agpSelect.addEventListener('change', () => {
@@ -89,7 +91,17 @@ window.AirFlutterCompatAuditModule = class AirFlutterCompatAuditModule {
         }
         if (gradleSelect) {
             gradleSelect.addEventListener('change', () => {
-                this.updateConfigStatusBanner();
+                this.syncAndroidStack('gradle');
+            });
+        }
+        if (kotlinSelect) {
+            kotlinSelect.addEventListener('change', () => {
+                this.syncAndroidStack('kotlin');
+            });
+        }
+        if (javaSelect) {
+            javaSelect.addEventListener('change', () => {
+                this.syncAndroidStack('java');
             });
         }
 

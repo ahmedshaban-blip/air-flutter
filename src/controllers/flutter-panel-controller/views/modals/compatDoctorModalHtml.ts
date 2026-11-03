@@ -99,7 +99,7 @@ export function getCompatDoctorModalHtml(): string {
                     <!-- TAB 2: Version Configurator & Auto-Sync -->
                     <div id="tabContentCompatConfig" style="display: none;">
                         <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted);">
-                            Customize your project build stack with real-time smart cascading compatibility enforcement. Incompatible options are automatically filtered or disabled to guarantee build stability.
+                            Change any Android version below. Auto-Sync keeps your choice and immediately adjusts the other three fields to a verified compatible stack.
                         </p>
 
                         <div class="compat-config-grid">
@@ -179,4 +179,3 @@ export function getCompatDoctorModalHtml(): string {
         </div>
 `;
 }
-

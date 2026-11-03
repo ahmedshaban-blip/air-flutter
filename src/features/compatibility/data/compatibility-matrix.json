@@ -42,7 +42,7 @@
       },
       {
         "agpRange": ">=7.4.0 <8.0.0",
-        "compatibleGradle": ">=7.5 <=7.6",
+        "compatibleGradle": ">=7.5 <7.7",
         "minJava": 11,
         "recommendedGradle": "7.5",
         "recommendedKotlin": "1.8.0",
