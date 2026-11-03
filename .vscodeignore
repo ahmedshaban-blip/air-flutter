@@ -11,3 +11,9 @@ vsc-extension-quickstart.md
 
 # Authoring notes, not part of the shipped extension
 PRODUCT.md
+
+# Docs assets live on GitHub; README points at raw.githubusercontent.com URLs
+screenshots/**
+
+# Build artifacts
+**/*.vsix

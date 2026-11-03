@@ -19,6 +19,10 @@
     display: none !important;
 }
 
+.modal-card [hidden] {
+    display: none !important;
+}
+
 .modal-card {
     background: var(--paper);
     color: var(--ink);

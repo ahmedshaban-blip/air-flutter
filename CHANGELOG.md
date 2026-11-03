@@ -9,6 +9,12 @@ update channel with any other extension.
 
 ### Features & Fixes
 
+- **Version Configurator Four-Way Auto-Sync**: Changing any of AGP, Gradle, Kotlin, or Java/JDK in the Compatibility Doctor now keeps that selection and instantly re-syncs the other three fields to the nearest verified-compatible stack from the matrix, with a status banner naming the field that started the sync. Also fixed the AGP 7.4 matrix range so Gradle `7.6.4` resolves as compatible (`>=7.5 <7.7`).
+- **GitHub Workflow Builder — Releases, Retention & Timeout**: New options to publish successful builds to a uniquely tagged GitHub Release, set artifact retention in days, and configure a per-job timeout in minutes; all three flow into the generated workflow and `SECRETS_SETUP.md`.
+- **Android Signing Key Studio**: Guided keystore wizard (file name, alias, certificate identity, validity, RSA key size) that runs `keytool` with passwords passed through temporary environment variables — never written to the activity log — and returns `key.properties` snippets, Git ignore entries, and the GitHub Secrets Base64 command.
+- **Per-Phone Wake Targeting**: Wake-screen actions now target a specific connected device from its panel row instead of a single global wake.
+- **Compatibility Doctor from the Sidebar**: Open and auto-scan the Doctor directly from the sidebar tool button.
+- **Modal Visibility Fix**: Elements inside modal cards carrying the `hidden` attribute (for example the Flavors empty state) are now reliably hidden by stylesheet rules instead of relying on browser defaults.
 - **Screen Recording Integrity & Playability**: Resolved unplayable MP4 recording bug caused by missing `moov atom` by sending targeted `SIGINT` signals to `screenrecord` and awaiting graceful container finalization before pulling from the device.
 - **Sidebar Live Recording Indicator & Toggle Control**: Added active recording state to the sidebar "Record Video" tool button with live pulsing effect, real-time duration timer (`REC mm:ss`), and 1-click toggle to stop recording immediately.
 - **Architectural Refactoring & Modularization**: Cleanly partitioned monolithic files into focused, maintainable modules:
