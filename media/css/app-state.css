@@ -1,0 +1,46 @@
+/* --- Reset app state (Deep storage & cache wiper) ----------------------- */
+.app-state-pkg {
+    margin: 9px 0 0;
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 10.5px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.app-state-pkg[data-state='ready'] {
+    color: var(--ink-soft, var(--ink));
+}
+
+.app-state-actions {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.app-state-help {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+.app-state-status {
+    margin-top: 8px;
+    padding: 7px 9px;
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--ok, #2C6E49);
+    border-radius: 2px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.app-state-status.is-error {
+    border-left-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+}
+
+.app-state-status.is-busy {
+    border-left-color: var(--accent);
+    color: var(--accent);
+}

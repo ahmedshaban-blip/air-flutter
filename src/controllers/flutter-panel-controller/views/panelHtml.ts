@@ -6,6 +6,7 @@ import { getProxyModalHtml } from './modals/proxyModalHtml';
 import { getAgentScaffoldModalHtml } from './modals/agentScaffoldModalHtml';
 import { getCompatDoctorModalHtml } from './modals/compatDoctorModalHtml';
 import { getSigningKeyModalHtml } from './modals/signingKeyModalHtml';
+import { LOCALHOST_BRIDGE_PRESETS } from '../../../domain/localhost-bridge';
 
 /**
  * Generates the full HTML markup for the main Air Flutter panel webview.
@@ -22,6 +23,12 @@ export function getPanelWebviewContent(
   const stepperUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'stepper.css')));
   const compatUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'compat.css')));
   const signingKeyCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'signing-key.css')));
+  const assetAssistantCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'asset-assistant.css')));
+  const codeCleanupCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'code-cleanup.css')));
+  const permissionManagerCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'permission-manager.css')));
+  const appStateCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'app-state.css')));
+  const deepLinkCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'deep-link-studio.css')));
+  const localhostBridgeCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'localhost-bridge.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
   const proxyModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'proxyModule.js')));
@@ -31,7 +38,16 @@ export function getPanelWebviewContent(
   const compatConfigUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'compat', 'compatConfigView.js')));
   const compatDoctorModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'compatDoctorModule.js')));
   const signingKeyModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'signingKeyModule.js')));
+  const assetAssistantModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'assetAssistantModule.js')));
+  const codeCleanupModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'codeCleanupModule.js')));
+  const permissionManagerModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'permissionManagerModule.js')));
+  const appStateModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'appStateModule.js')));
+  const deepLinkModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'deepLinkStudioModule.js')));
+  const localhostBridgeModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'localhostBridgeModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
+  const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
+    .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
+    .join('');
 
   return `<!DOCTYPE html>
     <html lang="en">
@@ -49,6 +65,12 @@ export function getPanelWebviewContent(
         <link href="${stepperUri}" rel="stylesheet">
         <link href="${compatUri}" rel="stylesheet">
         <link href="${signingKeyCssUri}" rel="stylesheet">
+        <link href="${assetAssistantCssUri}" rel="stylesheet">
+        <link href="${codeCleanupCssUri}" rel="stylesheet">
+        <link href="${permissionManagerCssUri}" rel="stylesheet">
+        <link href="${appStateCssUri}" rel="stylesheet">
+        <link href="${deepLinkCssUri}" rel="stylesheet">
+        <link href="${localhostBridgeCssUri}" rel="stylesheet">
     </head>
     <body>
         <div class="ff-shell">
@@ -72,6 +94,15 @@ export function getPanelWebviewContent(
                 </div>
             </header>
 
+            <nav class="ff-tabs" role="tablist" aria-label="Air Flutter tools">
+                <button class="ff-tab is-active" type="button" role="tab" aria-selected="true" data-panel-tab="workspace">Workspace</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="assets">Assets &amp; Media</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="cleanup">Code Cleanup</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="permissions">Android Permissions</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="deep-links">Deep Links</button>
+            </nav>
+
+            <div data-panel-view="workspace">
             <div class="ff-grid">
                 <!-- Devices -->
                 <section class="ff-col" aria-label="Devices">
@@ -125,6 +156,51 @@ export function getPanelWebviewContent(
                                 <i class="fas fa-tools"></i> Device setup guide
                             </button>
                         </div>
+                    </div>
+
+                    <div class="ff-section localhost-bridge" aria-label="Localhost Bridge">
+                        <div class="ff-section-head">
+                            <h2>Localhost Bridge</h2>
+                            <button class="link-btn" id="refreshLocalhostBridgeBtn" type="button">Refresh</button>
+                        </div>
+                        <p class="localhost-bridge-help">Expose a computer localhost port to a selected Android device via <span class="mono">adb reverse</span>.</p>
+                        <label class="localhost-bridge-field" for="localhostBridgeDevice">
+                            <span>Target device</span>
+                            <select id="localhostBridgeDevice"><option value="">No online device</option></select>
+                        </label>
+                        <div class="localhost-presets" aria-label="Quick port presets">
+                            ${localhostPresetButtons}
+                        </div>
+                        <form id="localhostBridgeForm" class="localhost-custom-row">
+                            <input id="localhostBridgePort" type="number" min="1" max="65535" step="1" inputmode="numeric" placeholder="Custom port" aria-label="Custom localhost port">
+                            <button class="btn btn-primary" type="submit">Link</button>
+                        </form>
+                        <div class="localhost-active-head">
+                            <span>Active forwards</span>
+                            <button class="link-btn link-danger" id="removeAllLocalhostBridgesBtn" type="button">Remove all</button>
+                        </div>
+                        <div id="localhostBridgeRules" class="localhost-rules" aria-live="polite"><p class="empty">No active forwards</p></div>
+                    </div>
+
+                    <div class="ff-section" aria-label="Reset app state">
+                        <div class="ff-section-head">
+                            <h2>Reset app state</h2>
+                            <button class="link-btn" id="pickAppPackageBtn" type="button">Package</button>
+                        </div>
+                        <p class="app-state-pkg" id="appStatePackage" data-state="empty">detecting package…</p>
+                        <div class="app-state-actions">
+                            <button class="btn btn-quiet btn-block" id="clearAppCacheBtn" type="button">
+                                <i class="fas fa-broom"></i> Clear cache
+                            </button>
+                            <button class="btn btn-quiet btn-block" id="resetAppDatabasesBtn" type="button">
+                                <i class="fas fa-database"></i> Reset database
+                            </button>
+                            <button class="btn btn-danger btn-block" id="factoryResetAppBtn" type="button">
+                                <i class="fas fa-triangle-exclamation"></i> Factory reset (pm clear)
+                            </button>
+                        </div>
+                        <p class="app-state-help">Wipes cache, databases or the whole sandbox over ADB — no reinstall needed. A confirmation is required before anything is erased.</p>
+                        <p class="app-state-status" id="appStateStatus" role="status" hidden></p>
                     </div>
                 </section>
 
@@ -300,6 +376,153 @@ export function getPanelWebviewContent(
                     </div>
                 </aside>
             </div>
+            </div>
+
+            <section data-panel-view="deep-links" hidden aria-label="Deep Link and Intent Studio">
+                <div class="deep-link-layout">
+                    <div class="ff-section deep-link-console">
+                        <div class="ff-section-head">
+                            <div>
+                                <h2>Deep Link &amp; Intent Studio</h2>
+                                <p class="deep-link-kicker">android.intent.action.VIEW</p>
+                            </div>
+                            <span class="ff-section-note">ADB · am start -W</span>
+                        </div>
+
+                        <form id="deepLinkForm" class="deep-link-form">
+                            <label class="deep-link-field deep-link-field-wide" for="deepLinkUriInput">
+                                <span>URL / URI</span>
+                                <input id="deepLinkUriInput" class="deep-link-input mono" type="text" spellcheck="false" autocomplete="off" placeholder="myapp://products/42" required>
+                            </label>
+
+                            <label class="deep-link-field" for="deepLinkSuggestionSelect">
+                                <span>Detected in AndroidManifest.xml</span>
+                                <select id="deepLinkSuggestionSelect" class="deep-link-input">
+                                    <option value="">No detected links yet</option>
+                                </select>
+                            </label>
+
+                            <label class="deep-link-field" for="deepLinkDeviceSelect">
+                                <span>Target device</span>
+                                <select id="deepLinkDeviceSelect" class="deep-link-input">
+                                    <option value="">Use active device</option>
+                                </select>
+                            </label>
+
+                            <label class="deep-link-field deep-link-field-wide" for="deepLinkPackageInput">
+                                <span>Package <em>optional · limits resolution</em></span>
+                                <input id="deepLinkPackageInput" class="deep-link-input mono" type="text" spellcheck="false" autocomplete="off" placeholder="com.example.app">
+                            </label>
+
+                            <button class="btn btn-primary deep-link-dispatch" id="deepLinkDispatchBtn" type="submit">
+                                <i class="fas fa-paper-plane"></i> Dispatch to Phone
+                            </button>
+                        </form>
+
+                        <div id="deepLinkResult" class="deep-link-result" role="status" aria-live="polite" data-state="idle">
+                            <span class="deep-link-result-mark">READY</span>
+                            <span>Enter a URI, then dispatch it to a connected Android device.</span>
+                        </div>
+                    </div>
+
+                    <aside class="deep-link-library">
+                        <div class="ff-section">
+                            <div class="ff-section-head"><h2>Recent</h2><span class="ff-section-note">workspace · 10 max</span></div>
+                            <div id="deepLinkRecentList" class="deep-link-list"><p class="empty">No links dispatched yet</p></div>
+                        </div>
+                        <div class="ff-section">
+                            <div class="ff-section-head"><h2>Named presets</h2><span class="ff-section-note">global</span></div>
+                            <div class="deep-link-save-row">
+                                <input id="deepLinkPresetName" class="deep-link-input" type="text" maxlength="80" placeholder="Product Details">
+                                <button id="deepLinkSavePresetBtn" class="btn btn-quiet" type="button">Save current</button>
+                            </div>
+                            <div id="deepLinkPresetList" class="deep-link-list"><p class="empty">No saved presets</p></div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <section data-panel-view="assets" hidden aria-label="Assets and media">
+                <div class="asset-assistant-layout">
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Assets &amp; Media</h2>
+                            <span class="ff-section-note">assets/</span>
+                        </div>
+                        <div class="asset-actions">
+                            <button class="btn btn-primary btn-block" id="scanSyncAssetsBtn" type="button">
+                                <i class="fas fa-arrows-rotate"></i> Scan &amp; Sync Pubspec
+                            </button>
+                            <button class="btn btn-quiet btn-block" id="generateAssetConstantsBtn" type="button">
+                                <i class="fas fa-code"></i> Generate Asset Constants
+                            </button>
+                        </div>
+                        <p class="asset-help">Scans nested files, flags assets over 1 MB, detects unsafe names and formats, and preserves pubspec comments while syncing.</p>
+                        <p class="asset-status" id="assetAssistantStatus" role="status">Open this tab to scan the current Flutter project.</p>
+                    </div>
+
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Asset file tree</h2>
+                            <span class="ff-section-note">size audit</span>
+                        </div>
+                        <div class="asset-summary" id="assetAssistantSummary">
+                            <span><strong>0</strong> files</span>
+                        </div>
+                        <div class="asset-tree" id="assetFileTree">
+                            <p class="empty"><i class="fas fa-folder-tree"></i><span>Waiting for asset scan</span></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section data-panel-view="cleanup" hidden aria-label="Code cleanup">
+                <div class="cleanup-toolbar">
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Code Cleanup</h2>
+                            <span class="ff-section-note">static analysis</span>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="runCodeCleanupBtn" type="button">
+                            <i class="fas fa-magnifying-glass-chart"></i> Scan Code &amp; Packages
+                        </button>
+                        <p class="asset-help">Uses Dart Analyzer plus project import-graph checks. Package findings are suggestions because some plugins are used from native configuration.</p>
+                        <p class="asset-status" id="codeCleanupStatus" role="status">Run a scan to find cleanup candidates.</p>
+                    </div>
+                    <div class="ff-section cleanup-summary" id="codeCleanupSummary">
+                        <span><strong>0</strong> findings</span>
+                    </div>
+                </div>
+                <div class="ff-section cleanup-results" id="codeCleanupResults">
+                    <p class="empty"><i class="fas fa-code"></i><span>Waiting for code cleanup scan</span></p>
+                </div>
+            </section>
+
+            <section data-panel-view="permissions" hidden aria-label="Android permissions">
+                <div class="permission-manager-layout">
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Android Permissions</h2>
+                            <span class="ff-section-note">AndroidManifest.xml</span>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="addPermissionsBtn" type="button" disabled>
+                            <i class="fas fa-plus"></i> Add to Manifest
+                        </button>
+                        <p class="permission-help">Select one or more permissions. Permissions already declared in the main Android manifest cannot be selected again.</p>
+                        <p class="permission-status" id="permissionStatus" role="status">Open this tab to inspect AndroidManifest.xml.</p>
+                    </div>
+
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Permission catalog</h2>
+                            <span class="ff-section-note">multi-select</span>
+                        </div>
+                        <div class="permission-catalog" id="permissionCatalog">
+                            <p class="empty"><i class="fas fa-shield-halved"></i><span>Waiting for manifest pre-check</span></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <footer class="ff-footer">
                 <span>Built by <a href="https://www.linkedin.com/in/ahmed-shaban-front-cross" target="_blank" rel="noreferrer">Ahmed Shaban</a></span>
@@ -442,6 +665,12 @@ ${getSigningKeyModalHtml()}
         <script src="${compatConfigUri}"></script>
         <script src="${compatDoctorModuleUri}"></script>
         <script src="${signingKeyModuleUri}"></script>
+        <script src="${assetAssistantModuleUri}"></script>
+        <script src="${codeCleanupModuleUri}"></script>
+        <script src="${permissionManagerModuleUri}"></script>
+        <script src="${appStateModuleUri}"></script>
+        <script src="${deepLinkModuleUri}"></script>
+        <script src="${localhostBridgeModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>
     </html>`;

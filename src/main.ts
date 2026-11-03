@@ -9,6 +9,7 @@ import { FlutterCommandsController } from './controllers/flutter-controller'
 import { FlutterPanelController } from './controllers/flutter-panel-controller'
 import { SidebarController } from './controllers/sidebar-controller'
 import { StatusBarController } from './controllers/status-bar-controller'
+import { BugReportController } from './controllers/bug-report-controller'
 
 import { NetHelpers } from './domain/net-helpers'
 import { ADBConnection } from './domain/adb-wrapper'
@@ -17,7 +18,11 @@ import { FirebaseManagerChannel } from './domain/firebase-channel'
 import { ConsoleInterface } from './domain/console/console-interface'
 import { ADBResolver } from './domain/adb-resolver'
 import { CompatibilityModule } from './features/compatibility'
+import { AndroidDeviceManager } from './domain/android-device-manager'
+import { LocalhostBridge } from './domain/localhost-bridge'
 import * as os from 'os'
+
+let activeLocalhostBridge: LocalhostBridge | undefined
 
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
@@ -51,13 +56,20 @@ export async function activate(context: vscode.ExtensionContext) {
         
         // 1. First, initialize the main Flutter Panel Controller (handles most commands)
         console.log('📱 Air Flutter: Initializing Flutter Panel Controller...')
-        const flutterPanelController = new FlutterPanelController(context)
+        const deviceManager = new AndroidDeviceManager(context.globalState)
+        const localhostBridge = new LocalhostBridge(context.globalState, deviceManager)
+        activeLocalhostBridge = localhostBridge
+        context.subscriptions.push({
+            dispose: () => { void localhostBridge.shutdown() }
+        })
+
+        const flutterPanelController = new FlutterPanelController(context, deviceManager, localhostBridge)
         await flutterPanelController.onInit()
         console.log('✅ Flutter Panel Controller initialized')
         
         // 2. Sidebar launcher view (webview, styled in the same identity)
         console.log('🗂️ Air Flutter: Initializing Sidebar Controller...')
-        const sidebarController = new SidebarController(context)
+        const sidebarController = new SidebarController(context, deviceManager, localhostBridge)
         context.subscriptions.push(sidebarController.register())
         context.subscriptions.push(
             flutterPanelController.onRecordingStateChanged(state => {
@@ -94,6 +106,10 @@ export async function activate(context: vscode.ExtensionContext) {
         )
         await adbPathController.onInit()
         console.log('✅ ADB Path Controller initialized')
+
+        const bugReportController = new BugReportController(context)
+        await bugReportController.onInit()
+        console.log('✅ Bug Report Packager initialized')
 
         // 5. Initialize Compatibility Doctor & Auto-Fixer Module
         console.log('🩺 Air Flutter: Initializing Compatibility Doctor Module...')
@@ -203,6 +219,8 @@ function setupFlutterProjectWatcher(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {
+export async function deactivate() {
+  await activeLocalhostBridge?.shutdown()
+  activeLocalhostBridge = undefined
   console.log('🔌 Air Flutter Extension Deactivated')
 }

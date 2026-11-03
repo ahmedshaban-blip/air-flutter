@@ -29,7 +29,15 @@ import { PanelNetworkHandler, PanelDeviceContext } from './handlers/panelNetwork
 import { PanelWorkflowHandler } from './handlers/panelWorkflowHandler';
 import { PanelAgentHandler } from './handlers/panelAgentHandler';
 import { PanelSigningKeyHandler } from './handlers/panelSigningKeyHandler';
+import { PanelAssetHandler } from './handlers/panelAssetHandler';
+import { PanelCodeCleanupHandler } from './handlers/panelCodeCleanupHandler';
+import { PanelPermissionHandler } from './handlers/panelPermissionHandler';
+import { PanelAppStateHandler } from './handlers/panelAppStateHandler';
+import { PanelDeepLinkHandler } from './handlers/panelDeepLinkHandler';
 import { SigningKeyOptions } from '../../domain/signing-key-generator';
+import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper';
+import { DeepLinkIntentStudio } from '../../domain/deep-link-intent-studio';
+import { LocalhostBridge } from '../../domain/localhost-bridge';
 
 interface Device {
   id: string;
@@ -48,6 +56,7 @@ export class FlutterPanelController extends ADBBaseController {
   private networkDevices: NetworkDevice[] = [];
   private adbConnection: ADBConnection;
   private deviceManager: AndroidDeviceManager;
+  private readonly localhostBridge: LocalhostBridge;
   private screenMirrorManager: ScreenMirrorManager;
   private screenRecorder = new ScreenRecorder();
   private recordingTimer?: NodeJS.Timeout;
@@ -68,16 +77,29 @@ export class FlutterPanelController extends ADBBaseController {
   private readonly workflowHandler: PanelWorkflowHandler;
   private readonly agentHandler: PanelAgentHandler;
   private readonly signingKeyHandler: PanelSigningKeyHandler;
+  private readonly assetHandler: PanelAssetHandler;
+  private readonly codeCleanupHandler: PanelCodeCleanupHandler;
+  private readonly permissionHandler: PanelPermissionHandler;
+  private readonly appStateHandler: PanelAppStateHandler;
+  private readonly deepLinkHandler: PanelDeepLinkHandler;
 
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(
+    context: vscode.ExtensionContext,
+    deviceManager = new AndroidDeviceManager(context.globalState),
+    localhostBridge = new LocalhostBridge(context.globalState, deviceManager)
+  ) {
     super(context);
     
     // Initialize ADB connection
     const consoleInterface = new ConsoleInterface();
     const netHelper = new NetHelpers();
     this.adbConnection = new ADBConnection(consoleInterface, context.globalState, netHelper);
-    this.deviceManager = new AndroidDeviceManager(context.globalState);
+    this.deviceManager = deviceManager;
+    this.localhostBridge = localhostBridge;
+    context.subscriptions.push(
+      this.localhostBridge.onDidChange(() => this.pushLocalhostBridgeState())
+    );
     this.screenMirrorManager = new ScreenMirrorManager(context);
     this.screenMirrorManager.onMirroringStateChanged(event => {
       this.notifyMirroringState(event.isMirroring);
@@ -101,6 +123,16 @@ export class FlutterPanelController extends ADBBaseController {
     this.workflowHandler = new PanelWorkflowHandler(handlerCtx);
     this.agentHandler = new PanelAgentHandler(handlerCtx);
     this.signingKeyHandler = new PanelSigningKeyHandler(handlerCtx);
+    this.assetHandler = new PanelAssetHandler(handlerCtx);
+    this.codeCleanupHandler = new PanelCodeCleanupHandler(handlerCtx);
+    this.permissionHandler = new PanelPermissionHandler(handlerCtx);
+    this.appStateHandler = new PanelAppStateHandler(handlerCtx, new AppStateWiper(context.globalState, this.deviceManager));
+    this.deepLinkHandler = new PanelDeepLinkHandler(
+      handlerCtx,
+      context.workspaceState,
+      context.globalState,
+      new DeepLinkIntentStudio(() => this.deviceManager.getADBExecutable())
+    );
   }
 
   async onInit() {
@@ -134,6 +166,10 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.toggleScreenRecording', () => this.toggleScreenRecording())
       .registerCommand('airFlutter.openAgentScaffoldingModal', () => this.openAgentScaffoldModal())
       .registerCommand('airFlutter.openCompatDoctorModal', () => this.openCompatDoctorModal())
+      .registerCommand('airFlutter.resetAppState', () => this.openAppStateQuickPick())
+      .registerCommand('airFlutter.clearAppCache', () => this.handleWipe('cache'))
+      .registerCommand('airFlutter.resetAppDatabases', () => this.handleWipe('databases'))
+      .registerCommand('airFlutter.factoryResetApp', () => this.handleWipe('factory'))
     
     console.log('✅ FlutterPanelController: Essential commands registered successfully')
   }
@@ -326,9 +362,75 @@ export class FlutterPanelController extends ADBBaseController {
             case 'applyCustomStack':
               await this.handleApplyCustomStack(message.projectPath, message.diffs);
               break;
+            case 'scanAssets':
+              await this.assetHandler.handleScanAssets();
+              break;
+            case 'scanAndSyncAssets':
+              await this.assetHandler.handleScanAndSyncAssets();
+              break;
+            case 'generateAssetConstants':
+              await this.assetHandler.handleGenerateAssetConstants();
+              break;
+            case 'deleteUnusedAsset':
+              await this.assetHandler.deleteUnusedAsset(message.file);
+              break;
+            case 'runCodeCleanupScan':
+              await this.codeCleanupHandler.scan();
+              break;
+            case 'openCodeCleanupTarget':
+              await this.codeCleanupHandler.openTarget(message.file, message.line, message.column);
+              break;
+            case 'deleteUnusedDartFile':
+              await this.codeCleanupHandler.deleteUnusedDartFile(message.file);
+              break;
+            case 'loadAndroidPermissions':
+              await this.permissionHandler.handleLoadPermissions();
+              break;
+            case 'addAndroidPermissions':
+              await this.permissionHandler.handleAddPermissions(message.selectedPermissions);
+              break;
+            case 'clearAppCache':
+              await this.handleWipe('cache', message.deviceId, message.packageId);
+              break;
+            case 'resetAppDatabases':
+              await this.handleWipe('databases', message.deviceId, message.packageId);
+              break;
+            case 'factoryResetApp':
+              await this.handleWipe('factory', message.deviceId, message.packageId);
+              break;
+            case 'clearAllAppData':
+              await this.handleWipe('all-data', message.deviceId, message.packageId);
+              break;
+            case 'pickAppPackage':
+              await this.pickAppPackage(message.deviceId);
+              break;
+            case 'loadDeepLinkStudio':
+              this.deepLinkHandler.load();
+              break;
+            case 'dispatchDeepLink':
+              await this.deepLinkHandler.dispatch(message.uri, message.deviceId, message.packageName);
+              break;
+            case 'saveDeepLinkPreset':
+              await this.deepLinkHandler.savePreset(message.name, message.uri, message.packageName);
+              break;
+            case 'deleteDeepLinkPreset':
+              await this.deepLinkHandler.deletePreset(message.name);
+              break;
             case 'disconnectDevice':
               console.log('❌ FlutterPanelController: Disconnecting device...')
               await this.handleDisconnectDevice(message.deviceId);
+              break;
+            case 'applyLocalhostBridge':
+              await this.applyLocalhostBridge(message.deviceId, Number(message.port));
+              break;
+            case 'refreshLocalhostBridge':
+              await this.refreshLocalhostBridge();
+              break;
+            case 'removeLocalhostBridge':
+              await this.removeLocalhostBridge(message.deviceId, Number(message.port));
+              break;
+            case 'removeAllLocalhostBridges':
+              await this.removeAllLocalhostBridges(message.deviceId);
               break;
             case 'showTroubleshootingGuide':
               console.log('🔧 FlutterPanelController: Showing troubleshooting guide...')
@@ -363,10 +465,27 @@ export class FlutterPanelController extends ADBBaseController {
     // Initial device refresh
     console.log('🔄 FlutterPanelController: Performing initial device refresh...')
     await this.refreshConnectedDevices();
+    this.pushLocalhostBridgeState();
 
     this.notifyMirroringState(this.screenMirrorManager.isMirroring());
+    await this.pushAppStatePackage();
+    this.deepLinkHandler.load();
     
     console.log('✅ FlutterPanelController: Panel opened successfully')
+  }
+
+  /** Detects the applicationId and forwards it so the wiper card can show it. */
+  private async pushAppStatePackage(deviceId?: string): Promise<void> {
+    const serial = deviceId || this.getActiveDeviceSerial();
+    const projectPath = this.getInitialProjectPath();
+    const detected = projectPath ? AppStateWiper.readApplicationId(projectPath) : undefined;
+    if (detected && !AppStateWiper.isLikelySystemPackage(detected)) {
+      this.currentPanel?.webview.postMessage({
+        command: 'appStatePackageSelected',
+        deviceId: serial,
+        packageId: detected
+      });
+    }
   }
 
   private getWebviewContent(panel: vscode.WebviewPanel): string {
@@ -599,6 +718,7 @@ export class FlutterPanelController extends ADBBaseController {
     console.log(`❌ FlutterPanelController: handleDisconnectDevice called for device: ${deviceId}`)
     
     try {
+      await this.localhostBridge.cleanupDevice(deviceId);
       await this.deviceManager.disconnectDevice(deviceId);
       
       // Remove the device from our list
@@ -617,7 +737,7 @@ export class FlutterPanelController extends ADBBaseController {
           type: 'success'
         });
       }
-      
+
       console.log(`✅ FlutterPanelController: Successfully disconnected device: ${deviceId}`)
       this.showSuccessMessage(`Disconnected device: ${deviceId}`);
       
@@ -677,6 +797,12 @@ export class FlutterPanelController extends ADBBaseController {
           devices: this.networkDevices
         });
       }
+
+      const onlineDeviceIds = deviceList
+        .filter(device => device.state === 'device')
+        .map(device => device.id);
+      await this.localhostBridge.refresh(onlineDeviceIds);
+      this.pushLocalhostBridgeState();
       
       console.log('✅ FlutterPanelController: Device list refreshed successfully');
     } catch (error) {
@@ -1145,9 +1271,113 @@ export class FlutterPanelController extends ADBBaseController {
     return this.networkHandler.handleClearPrivateDns();
   }
 
+  // --- App State Wiper Handler Delegations ---
+  private async handleWipe(
+    operation: WipeOperation,
+    deviceId?: string,
+    packageId?: string
+  ) {
+    return this.appStateHandler.handleWipeRequest(operation, deviceId, packageId);
+  }
+
+  private async openAppStateQuickPick(deviceId?: string) {
+    await this.openFlutterPanel();
+    return this.appStateHandler.openWipeQuickPick(deviceId);
+  }
+
+  private async pickAppPackage(deviceId?: string) {
+    const serial = deviceId || this.getActiveDeviceSerial();
+    if (!serial) {
+      this.showErrorMessage('No online device connected.');
+      return;
+    }
+    const packageId = await this.appStateHandler.pickPackageId(serial);
+    if (packageId) {
+      this.currentPanel?.webview.postMessage({
+        command: 'appStatePackageSelected',
+        deviceId: serial,
+        packageId
+      });
+    }
+  }
+
   private getActiveDeviceSerial(): string | undefined {
     return this.connectedDevices.find(d => d.status === 'online')?.id ||
       this.usbDevices.find(d => d.status === 'online')?.id;
+  }
+
+  private getBridgeDevices(): Device[] {
+    return [...this.connectedDevices, ...this.usbDevices].filter(device => device.status === 'online');
+  }
+
+  private pushLocalhostBridgeState(): void {
+    this.currentPanel?.webview.postMessage({
+      command: 'localhostBridgeState',
+      devices: this.getBridgeDevices(),
+      rules: this.localhostBridge.getRules()
+    });
+  }
+
+  private async refreshLocalhostBridge(): Promise<void> {
+    try {
+      const deviceIds = this.getBridgeDevices().map(device => device.id);
+      if (deviceIds.length > 0) {
+        await this.localhostBridge.refresh(deviceIds);
+      }
+      this.pushLocalhostBridgeState();
+    } catch (error) {
+      this.reportLocalhostBridgeError('Could not inspect reverse ports', error);
+    }
+  }
+
+  private async applyLocalhostBridge(deviceId: string, port: number): Promise<void> {
+    try {
+      this.requireBridgeDevice(deviceId);
+      await this.localhostBridge.apply(deviceId, port);
+      const message = `Localhost tcp:${port} is linked to ${deviceId}.`;
+      this.postStatus(`✅ ${message}`, 'success');
+      this.currentPanel?.webview.postMessage({ command: 'showToast', message, type: 'success' });
+    } catch (error) {
+      this.reportLocalhostBridgeError(`Could not link tcp:${port}`, error);
+    }
+  }
+
+  private async removeLocalhostBridge(deviceId: string, port: number): Promise<void> {
+    try {
+      this.requireBridgeDevice(deviceId);
+      await this.localhostBridge.remove(deviceId, port);
+      const message = `Unlinked tcp:${port} from ${deviceId}.`;
+      this.postStatus(`✅ ${message}`, 'success');
+      this.currentPanel?.webview.postMessage({ command: 'showToast', message, type: 'success' });
+    } catch (error) {
+      this.reportLocalhostBridgeError(`Could not unlink tcp:${port}`, error);
+    }
+  }
+
+  private async removeAllLocalhostBridges(deviceId: string): Promise<void> {
+    try {
+      this.requireBridgeDevice(deviceId);
+      await this.localhostBridge.removeAll(deviceId);
+      const message = `Removed all reverse ports from ${deviceId}.`;
+      this.postStatus(`✅ ${message}`, 'success');
+      this.currentPanel?.webview.postMessage({ command: 'showToast', message, type: 'success' });
+    } catch (error) {
+      this.reportLocalhostBridgeError('Could not remove reverse ports', error);
+    }
+  }
+
+  private requireBridgeDevice(deviceId: string): void {
+    if (!deviceId || !this.getBridgeDevices().some(device => device.id === deviceId)) {
+      throw new Error('Select an online Android device and try again.');
+    }
+  }
+
+  private reportLocalhostBridgeError(prefix: string, error: unknown): void {
+    const detail = error instanceof Error ? error.message : String(error);
+    const message = `${prefix}: ${detail}`;
+    this.postStatus(`❌ ${message}`, 'error');
+    this.currentPanel?.webview.postMessage({ command: 'showToast', message, type: 'error' });
+    vscode.window.showErrorMessage(message);
   }
 
   private notifyRecordingState(isRecording: boolean, duration: number) {

@@ -768,3 +768,125 @@ body.vscode-high-contrast .sf-log {
 }
 
 
+
+
+/* --- media/css/sidebar/wipe.css --- */
+/* --- Deep storage & cache wiper ---------------------------------------- */
+.sf-wipe-pkg {
+    margin: 9px 0 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.sf-wipe-pkg[data-state='ready'] {
+    color: var(--ink-soft);
+}
+
+.sf-wipe-grid {
+    margin-top: 8px;
+}
+
+/* Destructive action: reserved for the one control that erases everything. */
+.sf-tool-danger {
+    border-color: var(--err, #A3231C);
+}
+
+.sf-tool-danger:hover {
+    border-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+}
+
+.sf-tool-danger .sf-tool-name {
+    color: var(--err, #A3231C);
+    font-weight: 600;
+}
+
+.sf-tool-danger .sf-tool-note {
+    color: var(--err, #A3231C);
+}
+
+.sf-tool-danger.is-busy {
+    border-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+}
+
+/* --- Localhost Bridge --------------------------------------------------- */
+.sf-bridge-device {
+    margin-top: 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    overflow-wrap: anywhere;
+}
+
+.sf-bridge-presets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.sf-bridge-presets button,
+.sf-bridge-active-head button,
+.sf-bridge-rule button {
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    cursor: pointer;
+}
+
+.sf-bridge-presets button { height: 27px; }
+.sf-bridge-presets button:hover { border-color: var(--accent); color: var(--accent); }
+
+.sf-bridge-custom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.sf-bridge-custom input {
+    min-width: 0;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+}
+
+.sf-bridge-active-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.sf-bridge-active-head button,
+.sf-bridge-rule button { padding: 2px 5px; color: var(--err); }
+.sf-bridge-active-head button[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.sf-bridge-rule {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}

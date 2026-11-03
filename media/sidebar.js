@@ -257,24 +257,32 @@ const vscode = acquireVsCodeApi();
         });
 
         // --- tools ---
-        function setBusy(tool, busy) {
+        function findToolButtons(tool) {
+            if (tool === 'wipe') {
+                return Array.from(document.querySelectorAll('[data-wipe]'));
+            }
+            if (tool === 'localhostBridge') {
+                return Array.from(document.querySelectorAll('[data-bridge-port], [data-bridge-action]'));
+            }
             const button = document.querySelector('[data-tool="' + tool + '"]');
-            if (button) {
+            return button ? [button] : [];
+        }
+
+        function setBusy(tool, busy) {
+            findToolButtons(tool).forEach(function (button) {
                 button.classList.toggle('is-busy', busy);
                 button.disabled = busy;
                 if (busy) {
                     button.classList.remove('is-done');
                 }
-            }
+            });
         }
 
         function markDone(tool) {
-            const button = document.querySelector('[data-tool="' + tool + '"]');
-            if (!button) {
-                return;
-            }
-            button.classList.add('is-done');
-            setTimeout(function () { button.classList.remove('is-done'); }, 2600);
+            findToolButtons(tool).forEach(function (button) {
+                button.classList.add('is-done');
+                setTimeout(function () { button.classList.remove('is-done'); }, 2600);
+            });
         }
 
         let toolMessageTimer;
@@ -368,6 +376,114 @@ const vscode = acquireVsCodeApi();
             });
         });
 
+        // --- deep storage & cache wiper ---
+        let wipePackage = '';
+
+        function renderWipePackage(packageId) {
+            wipePackage = packageId || '';
+            const line = document.getElementById('wipePackage');
+            if (!line) {
+                return;
+            }
+            if (wipePackage) {
+                line.textContent = wipePackage;
+                line.title = wipePackage;
+                line.setAttribute('data-state', 'ready');
+            } else {
+                line.textContent = 'no package detected — pick one';
+                line.removeAttribute('title');
+                line.setAttribute('data-state', 'empty');
+            }
+        }
+
+        document.querySelectorAll('[data-wipe]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (!wipePackage) {
+                    showToolMessage('Pick a target package first.', false, true);
+                    vscode.postMessage({ command: 'pickWipePackage' });
+                    return;
+                }
+                showToolMessage('', true);
+                vscode.postMessage({
+                    command: 'wipeApp',
+                    operation: button.getAttribute('data-wipe'),
+                    packageId: wipePackage
+                });
+            });
+        });
+
+        const pickWipeBtn = document.getElementById('pickWipePackageBtn');
+        if (pickWipeBtn) {
+            pickWipeBtn.addEventListener('click', function () {
+                vscode.postMessage({ command: 'pickWipePackage' });
+            });
+        }
+
+        // --- Localhost Bridge ---
+        document.querySelectorAll('[data-bridge-port]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                vscode.postMessage({
+                    command: 'applyLocalhostBridge',
+                    port: Number(button.getAttribute('data-bridge-port'))
+                });
+            });
+        });
+
+        document.getElementById('bridgeCustomForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const input = document.getElementById('bridgeCustomPort');
+            const port = Number(input.value);
+            if (!Number.isInteger(port) || port < 1 || port > 65535) {
+                showToolMessage('Enter a whole port number from 1 to 65535.', false, true);
+                return;
+            }
+            vscode.postMessage({ command: 'applyLocalhostBridge', port: port });
+        });
+
+        document.getElementById('refreshBridgeBtn').addEventListener('click', function () {
+            vscode.postMessage({ command: 'refreshLocalhostBridge' });
+        });
+
+        document.getElementById('removeAllBridgesBtn').addEventListener('click', function () {
+            vscode.postMessage({ command: 'removeAllLocalhostBridges' });
+        });
+
+        document.getElementById('bridgeRules').addEventListener('click', function (event) {
+            const button = event.target.closest('[data-remove-bridge-port]');
+            if (button) {
+                vscode.postMessage({
+                    command: 'removeLocalhostBridge',
+                    port: Number(button.getAttribute('data-remove-bridge-port'))
+                });
+            }
+        });
+
+        function renderLocalhostBridge(deviceId, rules) {
+            document.getElementById('bridgeDevice').textContent = deviceId || 'No online phone';
+            const list = document.getElementById('bridgeRules');
+            list.replaceChildren();
+            if (!rules.length) {
+                const empty = document.createElement('p');
+                empty.className = 'sf-empty';
+                empty.textContent = 'No active forwards';
+                list.append(empty);
+            } else {
+                rules.forEach(function (rule) {
+                    const row = document.createElement('div');
+                    row.className = 'sf-bridge-rule';
+                    const port = document.createElement('span');
+                    port.textContent = 'tcp:' + rule.port + ' → tcp:' + rule.port;
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.setAttribute('data-remove-bridge-port', String(rule.port));
+                    remove.textContent = 'Unlink';
+                    row.append(port, remove);
+                    list.append(row);
+                });
+            }
+            document.getElementById('removeAllBridgesBtn').disabled = !deviceId || !rules.length;
+        }
+
         // --- host messages ---
         window.addEventListener('message', function (event) {
             const message = event.data || {};
@@ -409,6 +525,12 @@ const vscode = acquireVsCodeApi();
                     break;
                 case 'recordingState':
                     handleRecordingState(Boolean(message.isRecording), message.duration || 0);
+                    break;
+                case 'wipeState':
+                    renderWipePackage(message.packageId || '');
+                    break;
+                case 'localhostBridgeState':
+                    renderLocalhostBridge(message.deviceId || '', message.rules || []);
                     break;
                 case 'toolResult':
                     showToolMessage(message.message, message.ok);

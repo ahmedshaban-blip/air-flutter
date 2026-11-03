@@ -5,6 +5,18 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
+## [Unreleased]
+
+### Features
+
+- **Deep Storage & Cache Wiper (Reset App State)**: Reset the app's cache, local databases or entire sandbox over ADB without uninstalling and reinstalling.
+  - **Auto package resolution**: Detects `applicationId` from `android/app/build.gradle` or `build.gradle.kts`, with a QuickPick fallback that lists installed third-party packages (`pm list packages -3`) and offers manual entry.
+  - **Scoped operations**: `Clear cache` (`cache/*`), `Reset databases` (`databases/*`) and `Factory reset app` (`adb shell pm clear`). Cache/database removal runs through `run-as` (debug builds) and falls back to `pm clear` with an explicit warning when the build is not debuggable — no root required.
+  - **Guardrails & confirmation**: Package ids are validated, `pm path` verifies installation, system/OEM packages are refused, and a modal confirmation names exactly what will be erased before any destructive action.
+  - **Auto-restart**: An app that was running before the wipe is relaunched to a fresh state.
+  - **Single-device safety**: Every command targets the selected serial via `adb -s <serial>`.
+  - **UI in both surfaces**: A dedicated "Reset App State" card in the main panel and a "Reset app state" section in the sidebar, with live status spinner and success/error feedback, plus four command-palette entries.
+
 ## [1.1.0] - 2026-10-31
 
 ### Features & Fixes

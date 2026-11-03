@@ -107,6 +107,36 @@ export class AndroidDeviceManager {
     }
   }
 
+  public async addReversePort(serial: string, port: number): Promise<void> {
+    this.validateReverseTarget(serial, port)
+    await this.runADB(['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`])
+  }
+
+  public async listReversePorts(serial: string): Promise<number[]> {
+    this.validateSerial(serial)
+    const { stdout } = await this.runADB(['-s', serial, 'reverse', '--list'])
+    const ports = new Set<number>()
+
+    for (const line of stdout.split(/\r?\n/)) {
+      const match = line.match(/\btcp:(\d+)\s+tcp:(\d+)\b/)
+      if (match && match[1] === match[2]) {
+        ports.add(Number(match[1]))
+      }
+    }
+
+    return Array.from(ports).sort((a, b) => a - b)
+  }
+
+  public async removeReversePort(serial: string, port: number): Promise<void> {
+    this.validateReverseTarget(serial, port)
+    await this.runADB(['-s', serial, 'reverse', '--remove', `tcp:${port}`])
+  }
+
+  public async removeAllReversePorts(serial: string): Promise<void> {
+    this.validateSerial(serial)
+    await this.runADB(['-s', serial, 'reverse', '--remove-all'])
+  }
+
   public async getADBExecutable(): Promise<string> {
     if (this.adbExecutable) {
       return this.adbExecutable
@@ -346,6 +376,11 @@ export class AndroidDeviceManager {
 
   private validatePort(port: string): void {
     return NetworkUtils.validatePort(port)
+  }
+
+  private validateReverseTarget(serial: string, port: number): void {
+    this.validateSerial(serial)
+    this.validatePort(String(port))
   }
 
   private validateEndpoint(endpoint: string): void {

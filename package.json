@@ -2,7 +2,7 @@
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
   "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",
@@ -287,6 +287,33 @@
         "command": "airFlutter.upgradeBuildStack",
         "title": "Upgrade Flutter Build Stack (Auto-Fixer)",
         "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.resetAppState",
+        "title": "Reset App State (Cache, Database, Factory)",
+        "category": "Air Flutter",
+        "icon": "$(history)"
+      },
+      {
+        "command": "airFlutter.clearAppCache",
+        "title": "Clear App Cache Only",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.resetAppDatabases",
+        "title": "Reset App Databases Only",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.factoryResetApp",
+        "title": "Factory Reset App (pm clear)",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.packageBugReport",
+        "title": "Package Bug Report (Screenshot + Logs)",
+        "category": "Air Flutter",
+        "icon": "$(bug)"
       }
     ],
     "menus": {
@@ -297,6 +324,26 @@
         },
         {
           "command": "airFlutter.upgradeBuildStack",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.resetAppState",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.clearAppCache",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.resetAppDatabases",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.factoryResetApp",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.packageBugReport",
           "when": "workspaceHasAirFlutter"
         },
         {
@@ -325,6 +372,11 @@
           "command": "airFlutter.openFlutterPanel",
           "when": "view == air-flutter-panel",
           "group": "navigation"
+        },
+        {
+          "command": "airFlutter.packageBugReport",
+          "when": "view == air-flutter-panel && workspaceHasAirFlutter",
+          "group": "navigation@2"
         }
       ]
     },

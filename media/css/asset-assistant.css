@@ -1,0 +1,124 @@
+.ff-tabs {
+    display: flex;
+    gap: 0;
+    margin: 22px 0 20px;
+    border-bottom: 1px solid var(--ink);
+}
+
+.ff-tab {
+    padding: 9px 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
+
+.ff-tab:hover,
+.ff-tab.is-active {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+}
+
+.asset-assistant-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.7fr) minmax(360px, 1.3fr);
+    gap: 28px;
+}
+
+.asset-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.asset-help,
+.asset-status {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 11.5px;
+    line-height: 1.55;
+}
+
+.asset-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+}
+
+.asset-summary strong {
+    color: var(--ink);
+}
+
+.asset-summary-warning strong {
+    color: var(--warn);
+}
+
+.asset-tree {
+    max-height: 560px;
+    overflow-y: auto;
+}
+
+.asset-file-row {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 9px;
+    align-items: start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.asset-file-row > i {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.asset-file-info,
+.asset-file-warnings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.asset-file-info {
+    flex-direction: column;
+}
+
+.asset-file-path,
+.asset-file-size {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+}
+
+.asset-file-path {
+    overflow-wrap: anywhere;
+}
+
+.asset-file-size {
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.asset-warning {
+    padding: 2px 5px;
+    border: 1px solid var(--warn);
+    border-radius: 2px;
+    color: var(--warn);
+    font-size: 9.5px;
+}
+
+@media (max-width: 760px) {
+    .asset-assistant-layout {
+        grid-template-columns: 1fr;
+    }
+}

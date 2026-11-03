@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import { LOCALHOST_BRIDGE_PRESETS } from '../../domain/localhost-bridge';
 
 export function getSidebarWebviewHtml(
   webview: vscode.Webview,
@@ -8,6 +9,9 @@ export function getSidebarWebviewHtml(
   version: string
 ): string {
   const nonce = crypto.randomBytes(16).toString('base64');
+  const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
+    .map(port => `<button type="button" data-bridge-port="${port}">${port}</button>`)
+    .join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -70,6 +74,24 @@ export function getSidebarWebviewHtml(
                 <div><dt>Screen</dt><dd id="devScreen">&mdash;</dd></div>
             </dl>
         </div>
+    </section>
+
+    <!-- Localhost reverse port forwarding -->
+    <section class="sf-card sf-bridge" aria-label="Localhost Bridge">
+        <div class="sf-card-head">
+            <h2 class="sf-label">Localhost Bridge</h2>
+            <button class="sf-icon-btn" type="button" id="refreshBridgeBtn" title="Refresh reverse ports" aria-label="Refresh reverse ports">&#8635;</button>
+        </div>
+        <p class="sf-bridge-device" id="bridgeDevice">No online phone</p>
+        <div class="sf-bridge-presets" aria-label="Quick port presets">
+            ${localhostPresetButtons}
+        </div>
+        <form id="bridgeCustomForm" class="sf-bridge-custom">
+            <input id="bridgeCustomPort" type="number" min="1" max="65535" step="1" inputmode="numeric" placeholder="Custom port" aria-label="Custom localhost port">
+            <button class="sf-ghost" type="submit" data-bridge-action>Link</button>
+        </form>
+        <div class="sf-bridge-active-head"><span>Active</span><button id="removeAllBridgesBtn" type="button" data-bridge-action>Remove all</button></div>
+        <div id="bridgeRules" class="sf-bridge-rules" aria-live="polite"><p class="sf-empty">No active forwards</p></div>
     </section>
 
     <!-- Developer tools -->
@@ -138,6 +160,29 @@ export function getSidebarWebviewHtml(
             </button>
         </div>
         <p class="sf-tool-msg" id="toolMessage" hidden></p>
+    </section>
+
+    <!-- Deep storage & cache wiper -->
+    <section class="sf-card" id="wipeCard" aria-label="Reset app state">
+        <div class="sf-card-head">
+            <h2 class="sf-label">Reset app state</h2>
+            <button class="sf-icon-btn" type="button" id="pickWipePackageBtn" title="Choose target package" aria-label="Choose target package">&#9776;</button>
+        </div>
+        <p class="sf-wipe-pkg" id="wipePackage" title="Detected applicationId">detecting package…</p>
+        <div class="sf-tool-grid sf-wipe-grid">
+            <button class="sf-tool" type="button" id="wipeCache" data-wipe="cache" title="Clear cached files only; preferences are kept on debug builds">
+                <span class="sf-tool-name">Clear cache</span>
+                <span class="sf-tool-note">keep prefs &amp; db</span>
+            </button>
+            <button class="sf-tool" type="button" id="wipeDatabases" data-wipe="databases" title="Delete local databases only; preferences are kept">
+                <span class="sf-tool-name">Reset database</span>
+                <span class="sf-tool-note">keep prefs</span>
+            </button>
+            <button class="sf-tool sf-tool-wide sf-tool-danger" type="button" id="wipeFactory" data-wipe="factory" title="Erase everything via pm clear, like a fresh install">
+                <span class="sf-tool-name">Factory reset app</span>
+                <span class="sf-tool-note">pm clear &middot; erases all data</span>
+            </button>
+        </div>
     </section>
 
     <!-- Logcat -->

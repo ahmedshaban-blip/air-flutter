@@ -49,6 +49,12 @@ class AirFlutterWebview {
             this.initAgentScaffoldModal();
             this.initCompatDoctorModal();
             this.initSigningKeyModal();
+            this.initAssetAssistant();
+            this.initCodeCleanup();
+            this.initPermissionManager();
+            this.initAppStateWiper();
+            this.initDeepLinkStudio();
+            this.initLocalhostBridge();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -145,6 +151,7 @@ class AirFlutterWebview {
             devicesList.innerHTML = `
                 <p class="empty"><i class="fas fa-mobile-screen"></i><span>No device connected</span></p>
             `;
+            if (this.updateDeepLinkDevices) this.updateDeepLinkDevices([]);
             return;
         }
 
@@ -182,6 +189,7 @@ class AirFlutterWebview {
             </div>
         `;
         }).join('');
+        if (this.updateDeepLinkDevices) this.updateDeepLinkDevices(devices);
     }
 
     updateUsbDevicesList(devices) {
@@ -507,6 +515,74 @@ class AirFlutterWebview {
                 case 'compatDoctorReport':
                     this.renderCompatReport(message.report, message.availableVersions, message.rules, message.error);
                     break;
+                case 'assetAssistantLoading':
+                    this.setAssetAssistantLoading(message.loading);
+                    break;
+                case 'assetAssistantReport':
+                    this.renderAssetAssistantReport(message.report);
+                    break;
+                case 'assetConstantsGenerated':
+                    this.renderAssetAssistantReport(message.report);
+                    this.showToast(`Generated ${message.generatedCount} constants in ${message.outputPath}`, 'success');
+                    break;
+                case 'assetAssistantError':
+                    this.setAssetAssistantLoading(false);
+                    this.showToast(message.message || 'Asset Assistant failed', 'error');
+                    const assetStatus = document.getElementById('assetAssistantStatus');
+                    if (assetStatus) assetStatus.textContent = message.message || 'Asset Assistant failed.';
+                    break;
+                case 'codeCleanupLoading':
+                    this.setCodeCleanupLoading(message.loading);
+                    break;
+                case 'codeCleanupReport':
+                    this.renderCodeCleanupReport(message.report);
+                    break;
+                case 'codeCleanupError':
+                    this.setCodeCleanupLoading(false);
+                    this.showToast(message.message || 'Code cleanup scan failed', 'error');
+                    const cleanupStatus = document.getElementById('codeCleanupStatus');
+                    if (cleanupStatus) cleanupStatus.textContent = message.message || 'Code cleanup scan failed.';
+                    break;
+                case 'permissionCatalogLoaded':
+                    this.renderPermissionCatalog(message.catalog, message.declaredPermissions);
+                    break;
+                case 'permissionsAdded':
+                    this.handlePermissionsAdded(message);
+                    break;
+                case 'permissionsUnchanged':
+                    this.handlePermissionsUnchanged(message);
+                    break;
+                case 'permissionCatalogError':
+                    this.setPermissionLoading(false);
+                    this.showToast(message.message || 'Unable to inspect AndroidManifest.xml.', 'error');
+                    const permissionStatus = document.getElementById('permissionStatus');
+                    if (permissionStatus) permissionStatus.textContent = message.message || 'Unable to inspect AndroidManifest.xml.';
+                    break;
+                case 'appStateStatus':
+                    this.handleAppStateStatus(message);
+                    break;
+                case 'appStatePackageSelected':
+                    this.renderAppStatePackage(message.packageId);
+                    this.setAppStateStatus(`Target package set to ${message.packageId}.`, 'done');
+                    break;
+                case 'appStateCancelled':
+                    this.setAppStateStatus('Reset cancelled — nothing was erased.');
+                    break;
+                case 'deepLinkStudioState':
+                    this.renderDeepLinkStudio(message);
+                    break;
+                case 'deepLinkDispatchResult':
+                    this.handleDeepLinkDispatchResult(message.result, message.recentUris);
+                    break;
+                case 'deepLinkDispatchError':
+                    this.handleDeepLinkDispatchError(message.message);
+                    break;
+                case 'deepLinkPresetsUpdated':
+                    this.renderDeepLinkPresets(message.presets);
+                    break;
+                case 'localhostBridgeState':
+                    this.renderLocalhostBridgeState(message.devices || [], message.rules || []);
+                    break;
                 default:
                     console.warn('⚠️ Unknown message command:', message.command);
                     break;
@@ -536,6 +612,12 @@ mixinModule(AirFlutterWebview, window.AirFlutterRecorderModule);
 mixinModule(AirFlutterWebview, window.AirFlutterAgentScaffoldModule);
 mixinModule(AirFlutterWebview, window.AirFlutterCompatDoctorModule);
 mixinModule(AirFlutterWebview, window.AirFlutterSigningKeyModule);
+mixinModule(AirFlutterWebview, window.AirFlutterAssetAssistantModule);
+mixinModule(AirFlutterWebview, window.AirFlutterCodeCleanupModule);
+mixinModule(AirFlutterWebview, window.AirFlutterPermissionManagerModule);
+mixinModule(AirFlutterWebview, window.AirFlutterAppStateModule);
+mixinModule(AirFlutterWebview, window.AirFlutterDeepLinkStudioModule);
+mixinModule(AirFlutterWebview, window.AirFlutterLocalhostBridgeModule);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();

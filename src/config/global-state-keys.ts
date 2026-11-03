@@ -13,3 +13,6 @@ export function lastUsedPort() {
 export function customADBPathKey() {
   return 'user_adb_path'
 }
+export function localhostBridgeRules() {
+  return 'localhost_bridge_rules'
+}

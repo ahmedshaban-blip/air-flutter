@@ -185,6 +185,20 @@ Detect breaking version mismatches, configure custom build stacks, and apply ver
 
 ---
 
+### 12. 🧽 Deep Storage &amp; Cache Wiper (Reset App State)
+Reset auth tokens, local databases and cache **without uninstalling and reinstalling** the app. Available from both the panel and the sidebar:
+- **Auto Package Detection**: Reads `applicationId` from `android/app/build.gradle` or `build.gradle.kts`, or pick from the list of installed third-party packages on the device (`pm list packages -3`).
+- **Three Scoped Actions**:
+  - **Clear cache** — removes `cache/` only, keeping preferences and databases.
+  - **Reset database** — removes `databases/` (SQLite files) only, keeping preferences intact.
+  - **Factory reset app** — runs `adb shell pm clear <package>` for a fresh-install state.
+- **Graceful Fallback**: Targetted cache/database removal uses `run-as` (works on debug builds) and transparently falls back to `pm clear` with a clear warning when the build is not debuggable — no root required.
+- **Guardrails**: The package id is validated, `pm path` confirms it is installed, and system/OEM packages are refused. A modal confirmation always names exactly what will be erased.
+- **Auto-restart**: If the app was running before the wipe, it is relaunched to a clean state via its launcher intent.
+- **Single-Device Safety**: Every command targets the selected device with `adb -s <serial>`, so other connected phones are never touched.
+
+---
+
 ## Getting Started
 
 1. Install **Air Flutter** in VS Code / Antigravity IDE.

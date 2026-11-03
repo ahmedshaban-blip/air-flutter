@@ -1,0 +1,40 @@
+/* --- Deep storage & cache wiper ---------------------------------------- */
+.sf-wipe-pkg {
+    margin: 9px 0 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.sf-wipe-pkg[data-state='ready'] {
+    color: var(--ink-soft);
+}
+
+.sf-wipe-grid {
+    margin-top: 8px;
+}
+
+/* Destructive action: reserved for the one control that erases everything. */
+.sf-tool-danger {
+    border-color: var(--err, #A3231C);
+}
+
+.sf-tool-danger:hover {
+    border-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+}
+
+.sf-tool-danger .sf-tool-name {
+    color: var(--err, #A3231C);
+    font-weight: 600;
+}
+
+.sf-tool-danger .sf-tool-note {
+    color: var(--err, #A3231C);
+}
+
+.sf-tool-danger.is-busy {
+    border-color: var(--err, #A3231C);
+    color: var(--err, #A3231C);
+}

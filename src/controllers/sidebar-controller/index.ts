@@ -5,6 +5,8 @@ import * as crypto from 'crypto'
 import { AndroidDeviceManager } from '../../domain/android-device-manager'
 import { DeviceToolsService, DeviceInfoSnapshot } from '../../domain/device-tools'
 import { LogcatService, LogcatLine, LogPriority, DEFAULT_LOG_PRIORITY } from '../../domain/logcat'
+import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper'
+import { LocalhostBridge } from '../../domain/localhost-bridge'
 
 interface SidebarMessage {
   command?: string
@@ -15,6 +17,9 @@ interface SidebarMessage {
   query?: string
   text?: string
   priority?: LogPriority
+  operation?: WipeOperation
+  packageId?: string
+  port?: number
 }
 
 /**
@@ -29,17 +34,30 @@ export class SidebarController {
   private readonly deviceManager: AndroidDeviceManager
   private readonly deviceTools: DeviceToolsService
   private readonly logcat: LogcatService
+  private readonly wiper: AppStateWiper
+  private readonly localhostBridge: LocalhostBridge
 
   private infoTimer?: NodeJS.Timeout
   private infoInFlight = false
   private watchedSerial?: string
   private lastInfoJson = ''
   private lastRecordingState: { isRecording: boolean; duration: number } = { isRecording: false, duration: 0 }
+  /** Last package the user confirmed for the watched device, shown in the UI. */
+  private lastWipePackage?: string
 
-  constructor(private readonly context: vscode.ExtensionContext) {
-    this.deviceManager = new AndroidDeviceManager(context.globalState)
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    deviceManager = new AndroidDeviceManager(context.globalState),
+    localhostBridge = new LocalhostBridge(context.globalState, deviceManager)
+  ) {
+    this.deviceManager = deviceManager
+    this.localhostBridge = localhostBridge
     this.deviceTools = new DeviceToolsService(context.globalState, this.deviceManager)
     this.logcat = new LogcatService(context.globalState)
+    this.wiper = new AppStateWiper(context.globalState, this.deviceManager)
+    context.subscriptions.push(
+      this.localhostBridge.onDidChange(() => this.pushLocalhostBridgeState())
+    )
   }
 
   register(): vscode.Disposable {
@@ -138,6 +156,8 @@ export class SidebarController {
       case 'ready':
         await this.pollDeviceInfo(true)
         this.pushLogState()
+        this.pushWipeState()
+        this.pushLocalhostBridgeState()
         this.view?.webview.postMessage({
           command: 'recordingState',
           isRecording: this.lastRecordingState.isRecording,
@@ -229,9 +249,212 @@ export class SidebarController {
       case 'compatDoctor':
         await this.openCompatDoctorInPanel()
         break
+      case 'wipeApp':
+        await this.runWipe(
+          (message.operation as WipeOperation) || 'cache',
+          message.packageId
+        )
+        break
+      case 'pickWipePackage':
+        await this.runPickWipePackage()
+        break
+      case 'applyLocalhostBridge':
+        await this.runLocalhostBridge('apply', message.port)
+        break
+      case 'refreshLocalhostBridge':
+        await this.refreshLocalhostBridge()
+        break
+      case 'removeLocalhostBridge':
+        await this.runLocalhostBridge('remove', message.port)
+        break
+      case 'removeAllLocalhostBridges':
+        await this.runLocalhostBridge('removeAll')
+        break
       default:
         break
     }
+  }
+
+  // --- Deep storage & cache wiper ------------------------------------------
+
+  /**
+   * Resolves the package to wipe, then runs the requested operation on the
+   * watched device. The package comes from the webview when the user picked
+   * one; otherwise it is auto-detected from android/app/build.gradle.
+   */
+  private async runWipe(operation: WipeOperation, packageId?: string): Promise<void> {
+    const serial = await this.deviceTools.listConnectedSerial()
+    if (!serial) {
+      this.post({ command: 'toolResult', ok: false, message: 'No online phone found.' })
+      return
+    }
+
+    let target = packageId || this.lastWipePackage
+    if (!target) {
+      target = await this.resolveWipePackage(serial)
+      if (!target) {
+        return
+      }
+    }
+
+    const confirmed = await this.confirmWipe(operation, target, serial)
+    if (!confirmed) {
+      this.post({ command: 'toolResult', ok: true, message: 'Reset cancelled.' })
+      return
+    }
+
+    this.post({ command: 'toolBusy', tool: 'wipe', busy: true })
+    this.post({ command: 'toolProgress', message: `Resetting ${target} (${operation})…` })
+
+    try {
+      const result =
+        operation === 'factory' || operation === 'all-data'
+          ? await this.wiper.clearAllData(serial, target, { restart: true })
+          : operation === 'cache'
+            ? await this.wiper.clearCache(serial, target, { restart: true })
+            : await this.wiper.clearDatabases(serial, target, { restart: true })
+
+      this.lastWipePackage = target
+      const detail = result.warnings.length > 0
+        ? `${result.message} ${result.warnings.join(' ')}`
+        : result.message
+
+      this.post({
+        command: 'toolResult',
+        ok: result.warnings.length === 0,
+        message: detail
+      })
+      this.post({ command: 'wipeState', packageId: target })
+      this.lastInfoJson = ''
+      await this.pollDeviceInfo(true)
+    } catch (error) {
+      this.post({
+        command: 'toolResult',
+        ok: false,
+        message: `Reset failed: ${error instanceof Error ? error.message : String(error)}`
+      })
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'wipe', busy: false })
+    }
+  }
+
+  private async runPickWipePackage(): Promise<void> {
+    const serial = await this.deviceTools.listConnectedSerial()
+    if (!serial) {
+      this.post({ command: 'toolResult', ok: false, message: 'No online phone found.' })
+      return
+    }
+    const picked = await this.resolveWipePackage(serial)
+    if (picked) {
+      this.lastWipePackage = picked
+      this.post({ command: 'wipeState', packageId: picked })
+      this.post({ command: 'toolResult', ok: true, message: `Target package set to ${picked}.` })
+    }
+  }
+
+  /**
+   * Auto-detects the applicationId from the workspace, falling back to a picker
+   * that lists installed third-party packages and a manual entry option.
+   */
+  private async resolveWipePackage(serial: string): Promise<string | undefined> {
+    const projectPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    const detected = projectPath ? AppStateWiper.readApplicationId(projectPath) : undefined
+
+    const items: Array<vscode.QuickPickItem & { value?: string; action?: string }> = []
+    if (detected && !AppStateWiper.isLikelySystemPackage(detected)) {
+      items.push({
+        label: `$(rocket) ${detected}`,
+        description: 'detected from android/app/build.gradle',
+        value: detected
+      })
+    }
+    items.push({
+      label: '$(list-unordered) Choose from installed packages…',
+      description: 'pm list packages -3',
+      action: 'list'
+    })
+    items.push({
+      label: '$(pencil) Enter package manually…',
+      description: 'type an applicationId',
+      action: 'manual'
+    })
+
+    const choice = await vscode.window.showQuickPick(items, {
+      title: 'Select the app package to reset',
+      placeHolder: detected ? `Detected: ${detected}` : 'Pick a package for the Wiper',
+      ignoreFocusOut: true
+    })
+    if (!choice) {
+      return undefined
+    }
+    if (choice.value) {
+      return choice.value
+    }
+    if (choice.action === 'manual') {
+      return this.promptManualPackage(detected)
+    }
+
+    try {
+      const installed = await this.wiper.listInstalledPackages(serial, true)
+      if (installed.length === 0) {
+        return this.promptManualPackage(detected)
+      }
+      const picked = await vscode.window.showQuickPick(
+        installed.map(pkg => ({ label: `$(package) ${pkg.id}`, description: pkg.shortName, value: pkg.id })),
+        { title: 'Installed packages on the device', ignoreFocusOut: true, matchOnDescription: true }
+      )
+      return picked?.value
+    } catch (error) {
+      this.post({
+        command: 'toolResult',
+        ok: false,
+        message: `Could not list packages: ${error instanceof Error ? error.message : String(error)}`
+      })
+      return undefined
+    }
+  }
+
+  private async promptManualPackage(detected?: string): Promise<string | undefined> {
+    const input = await vscode.window.showInputBox({
+      title: 'Enter the applicationId to reset',
+      prompt: 'For example com.example.myapp',
+      value: detected || '',
+      ignoreFocusOut: true,
+      validateInput: value => {
+        if (!AppStateWiper.isValidPackageId(value.trim())) {
+          return 'Enter a valid Android package id (letters, digits, dots).'
+        }
+        if (AppStateWiper.isLikelySystemPackage(value.trim())) {
+          return 'That looks like a system package and cannot be reset.'
+        }
+        return undefined
+      }
+    })
+    const trimmed = input?.trim()
+    return trimmed ? trimmed : undefined
+  }
+
+  private async confirmWipe(
+    operation: WipeOperation,
+    packageId: string,
+    serial: string
+  ): Promise<boolean> {
+    const destructive = operation === 'factory' || operation === 'all-data'
+    const label = destructive
+      ? 'Factory reset (pm clear)'
+      : operation === 'cache'
+        ? 'Clear cache only'
+        : 'Reset databases only'
+    const detail = destructive
+      ? `Erases ALL app data for ${packageId} on ${serial}, like a fresh install. This cannot be undone.`
+      : `Targets ${operation === 'cache' ? 'cache/' : 'databases/'} for ${packageId} on ${serial}. Falls back to a full pm clear when the build is not debuggable.`
+
+    const picked = await vscode.window.showWarningMessage(
+      `${label} — ${packageId}?`,
+      { modal: true, detail },
+      destructive ? 'Erase everything' : 'Continue'
+    )
+    return picked === (destructive ? 'Erase everything' : 'Continue')
   }
 
   private async openCompatDoctorInPanel(): Promise<void> {
@@ -265,9 +488,16 @@ export class SidebarController {
 
       if (!serial) {
         if (force || this.watchedSerial) {
+          const disconnectedSerial = this.watchedSerial
           this.watchedSerial = undefined
           this.lastInfoJson = ''
+          this.lastWipePackage = undefined
           this.post({ command: 'deviceInfo', info: null })
+          this.pushWipeState()
+          if (disconnectedSerial) {
+            await this.localhostBridge.cleanupDevice(disconnectedSerial)
+          }
+          this.pushLocalhostBridgeState()
         }
         return
       }
@@ -275,6 +505,10 @@ export class SidebarController {
       if (this.watchedSerial !== serial) {
         this.watchedSerial = serial
         this.lastInfoJson = ''
+        // A different phone is now active; its remembered package no longer applies.
+        this.lastWipePackage = undefined
+        this.pushWipeState()
+        await this.refreshLocalhostBridge()
       }
 
       const info = await this.deviceTools.getDeviceInfo(serial)
@@ -356,6 +590,82 @@ export class SidebarController {
       priority: this.logcat.getPriority(),
       lines: this.logcat.buffer.slice(-400)
     })
+  }
+
+  /** Sends the package the Wiper will target, auto-detecting it when unset. */
+  private pushWipeState(): void {
+    let packageId = this.lastWipePackage
+    if (!packageId) {
+      const projectPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+      const detected = projectPath ? AppStateWiper.readApplicationId(projectPath) : undefined
+      if (detected && !AppStateWiper.isLikelySystemPackage(detected)) {
+        packageId = detected
+      }
+    }
+    this.post({ command: 'wipeState', packageId: packageId || '' })
+  }
+
+  private pushLocalhostBridgeState(): void {
+    this.post({
+      command: 'localhostBridgeState',
+      deviceId: this.watchedSerial || '',
+      rules: this.watchedSerial
+        ? this.localhostBridge.getRules().filter(rule => rule.deviceId === this.watchedSerial)
+        : []
+    })
+  }
+
+  private async refreshLocalhostBridge(): Promise<void> {
+    if (!this.watchedSerial) {
+      this.pushLocalhostBridgeState()
+      return
+    }
+    try {
+      await this.localhostBridge.refreshDevice(this.watchedSerial)
+      this.pushLocalhostBridgeState()
+    } catch (error) {
+      this.reportLocalhostBridgeError('Could not inspect reverse ports', error)
+    }
+  }
+
+  private async runLocalhostBridge(
+    action: 'apply' | 'remove' | 'removeAll',
+    port?: number
+  ): Promise<void> {
+    const serial = this.watchedSerial || await this.deviceTools.listConnectedSerial()
+    if (!serial) {
+      this.reportLocalhostBridgeError('Localhost Bridge', new Error('No online phone found.'))
+      return
+    }
+
+    this.post({ command: 'toolBusy', tool: 'localhostBridge', busy: true })
+    try {
+      if (action === 'apply') {
+        await this.localhostBridge.apply(serial, Number(port))
+      } else if (action === 'remove') {
+        await this.localhostBridge.remove(serial, Number(port))
+      } else {
+        await this.localhostBridge.removeAll(serial)
+      }
+      const message = action === 'apply'
+        ? `Localhost tcp:${port} linked to ${serial}.`
+        : action === 'remove'
+          ? `Unlinked tcp:${port} from ${serial}.`
+          : `Removed all reverse ports from ${serial}.`
+      this.post({ command: 'toolResult', ok: true, message })
+      vscode.window.showInformationMessage(message)
+    } catch (error) {
+      this.reportLocalhostBridgeError('Localhost Bridge failed', error)
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'localhostBridge', busy: false })
+    }
+  }
+
+  private reportLocalhostBridgeError(prefix: string, error: unknown): void {
+    const detail = error instanceof Error ? error.message : String(error)
+    const message = `${prefix}: ${detail}`
+    this.post({ command: 'toolResult', ok: false, message })
+    vscode.window.showErrorMessage(message)
   }
 
   /** Currently selected verbosity, remembered for the next start. */

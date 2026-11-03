@@ -220,6 +220,36 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
     category: 'Air Flutter',
     description: 'Interactively apply verified stable upgrades to Gradle, AGP, and iOS deployment target'
   },
+  {
+    id: 'airFlutter.resetAppState',
+    title: '🧽 Reset App State (Cache, Database, Factory)',
+    category: 'Air Flutter',
+    description: 'Wipe app cache, databases, or all data without reinstalling the Flutter app'
+  },
+  {
+    id: 'airFlutter.clearAppCache',
+    title: '🗑️ Clear App Cache Only',
+    category: 'Air Flutter',
+    description: 'Remove cached files for the app while keeping preferences and databases'
+  },
+  {
+    id: 'airFlutter.resetAppDatabases',
+    title: '🗄️ Reset App Databases Only',
+    category: 'Air Flutter',
+    description: 'Delete local databases for the app while keeping preferences intact'
+  },
+  {
+    id: 'airFlutter.factoryResetApp',
+    title: '💣 Factory Reset App (pm clear)',
+    category: 'Air Flutter',
+    description: 'Erase all app data via adb shell pm clear, like a fresh install'
+  },
+  {
+    id: 'airFlutter.packageBugReport',
+    title: '🐞 Package Bug Report',
+    category: 'Air Flutter',
+    description: 'Capture a screenshot, filtered Logcat, and device diagnostics for a GitHub report'
+  },
 
   // Firebase Commands
   {
