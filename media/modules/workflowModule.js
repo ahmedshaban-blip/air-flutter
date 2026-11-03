@@ -46,9 +46,22 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
 
                 const enableSigning = document.getElementById('workflowEnableSigning')?.checked ?? false;
                 const enableCache = document.getElementById('workflowEnableCache')?.checked ?? true;
+                const publishToReleases = document.getElementById('workflowPublishToReleases')?.checked ?? false;
+                const retentionDays = Number(document.getElementById('workflowRetentionDays')?.value ?? 14);
+                const timeoutMinutes = Number(document.getElementById('workflowTimeoutMinutes')?.value ?? 60);
 
                 if (!projectPath) {
                     this.showToast('Please select a valid project path', 'error');
+                    return;
+                }
+
+                if (!Number.isInteger(retentionDays) || retentionDays < 1) {
+                    this.showToast('Artifact retention must be a positive integer', 'error');
+                    return;
+                }
+
+                if (!Number.isInteger(timeoutMinutes) || timeoutMinutes < 1 || timeoutMinutes > 360) {
+                    this.showToast('Job timeout must be an integer between 1 and 360 minutes', 'error');
                     return;
                 }
 
@@ -64,7 +77,10 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                     buildTarget,
                     buildMode,
                     enableSigning,
-                    enableCache
+                    enableCache,
+                    publishToReleases,
+                    retentionDays,
+                    timeoutMinutes
                 });
             });
         }

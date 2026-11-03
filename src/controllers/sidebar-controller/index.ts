@@ -211,6 +211,9 @@ export class SidebarController {
       case 'workflow':
         await vscode.commands.executeCommand('airFlutter.generateWorkflow')
         break
+      case 'signingKey':
+        await vscode.commands.executeCommand('airFlutter.openSigningKeyModal')
+        break
       case 'record':
         await vscode.commands.executeCommand('airFlutter.toggleScreenRecording')
         break
@@ -401,19 +404,13 @@ export class SidebarController {
   }
 
   private async runWakeScreen(): Promise<void> {
-    const serial = await this.deviceTools.listConnectedSerial()
-    if (!serial) {
-      this.post({ command: 'toolResult', ok: false, message: 'No online phone found.' })
-      return
-    }
-
     this.post({ command: 'toolBusy', tool: 'wake', busy: true })
     try {
-      await this.deviceTools.wakeScreen(serial)
+      const serial = await vscode.commands.executeCommand<string>('airFlutter.wakeScreen')
       this.post({
         command: 'toolResult',
         ok: true,
-        message: 'Screen woken. (💡 If display stays dark during eco mirror, press Alt+Shift+O in mirror window or stop mirror)'
+        message: `Screen woken for ${serial}.`
       })
       this.lastInfoJson = ''
       await this.pollDeviceInfo(true)

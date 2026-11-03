@@ -107,7 +107,8 @@
     margin-top: -3px;
 }
 
-.modal-field input[type="text"] {
+.modal-field input[type="text"],
+.modal-field input[type="number"] {
     padding: 8px 10px;
     border: 1px solid var(--rule-strong);
     border-radius: 3px;
@@ -119,7 +120,8 @@
     transition: border-color 130ms;
 }
 
-.modal-field input[type="text"]:focus {
+.modal-field input[type="text"]:focus,
+.modal-field input[type="number"]:focus {
     border-color: var(--accent);
 }
 

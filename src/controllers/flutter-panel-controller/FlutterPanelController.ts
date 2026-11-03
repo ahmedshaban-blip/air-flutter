@@ -28,6 +28,8 @@ import { PanelFlavorHandler } from './handlers/panelFlavorHandler';
 import { PanelNetworkHandler, PanelDeviceContext } from './handlers/panelNetworkHandler';
 import { PanelWorkflowHandler } from './handlers/panelWorkflowHandler';
 import { PanelAgentHandler } from './handlers/panelAgentHandler';
+import { PanelSigningKeyHandler } from './handlers/panelSigningKeyHandler';
+import { SigningKeyOptions } from '../../domain/signing-key-generator';
 
 interface Device {
   id: string;
@@ -65,6 +67,7 @@ export class FlutterPanelController extends ADBBaseController {
   private readonly networkHandler: PanelNetworkHandler;
   private readonly workflowHandler: PanelWorkflowHandler;
   private readonly agentHandler: PanelAgentHandler;
+  private readonly signingKeyHandler: PanelSigningKeyHandler;
 
 
   constructor(context: vscode.ExtensionContext) {
@@ -97,6 +100,7 @@ export class FlutterPanelController extends ADBBaseController {
     this.networkHandler = new PanelNetworkHandler(handlerCtx);
     this.workflowHandler = new PanelWorkflowHandler(handlerCtx);
     this.agentHandler = new PanelAgentHandler(handlerCtx);
+    this.signingKeyHandler = new PanelSigningKeyHandler(handlerCtx);
   }
 
   async onInit() {
@@ -119,10 +123,12 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.mirrorWithKeyboard', () => this.selectDeviceToMirror({ displayOff: true, hardwareKeyboard: true }))
       .registerCommand('airFlutter.mirrorWirelessDisplay', () => this.selectDeviceToMirror({ wirelessDisplay: true }))
       .registerCommand('airFlutter.stopScreenMirroring', () => this.stopMirroring())
+      .registerCommand('airFlutter.wakeScreen', (deviceId?: string) => this.wakeDeviceScreen(deviceId))
       .registerCommand('airFlutter.installApk', () => this.installApkToDevice())
       .registerCommand('airFlutter.sendTextToDevice', () => this.sendTextToDevice())
       .registerCommand('airFlutter.setScrcpyPath', () => this.setScrcpyPath())
       .registerCommand('airFlutter.generateWorkflow', () => this.openWorkflowModal())
+      .registerCommand('airFlutter.openSigningKeyModal', () => this.openSigningKeyModal())
       .registerCommand('airFlutter.openFlavorsModal', () => this.openFlavorsModal())
       .registerCommand('airFlutter.openProxyModal', () => this.openProxyModal())
       .registerCommand('airFlutter.toggleScreenRecording', () => this.toggleScreenRecording())
@@ -180,7 +186,7 @@ export class FlutterPanelController extends ADBBaseController {
 
     this.currentPanel.webview.onDidReceiveMessage(
       async (message) => {
-        console.log('📨 FlutterPanelController: Received message:', message)
+        console.log('📨 FlutterPanelController: Received command:', message?.command)
         
         try {
           switch (message.command) {
@@ -215,6 +221,9 @@ export class FlutterPanelController extends ADBBaseController {
                 wirelessDisplay: message.mode === 'virtual-display'
               });
               break;
+            case 'wakeDevice':
+              await this.wakeDeviceScreen(message.deviceId);
+              break;
             case 'stopMirroring':
               await this.stopMirroring();
               break;
@@ -241,6 +250,15 @@ export class FlutterPanelController extends ADBBaseController {
               break;
             case 'generateWorkflow':
               await this.handleGenerateWorkflow(message as unknown as WorkflowOptions);
+              break;
+            case 'openSigningKeyModal':
+              await this.openSigningKeyModal();
+              break;
+            case 'selectSigningKeyProject':
+              await this.selectSigningKeyProject();
+              break;
+            case 'createSigningKey':
+              await this.createSigningKey(message as unknown as SigningKeyOptions);
               break;
             case 'openFlavorsModal':
               await this.openFlavorsModal();
@@ -847,9 +865,10 @@ export class FlutterPanelController extends ADBBaseController {
 
   private async stopMirroring() {
     try {
+      const mirroredSerial = this.screenMirrorManager.getActiveDeviceSerial();
       const stopped = await this.screenMirrorManager.stop();
       // Wake up phone screen if it was turned off during mirror
-      const serial = this.getActiveDeviceSerial();
+      const serial = mirroredSerial || this.getActiveDeviceSerial();
       if (serial) {
         try {
           const adbPath = await this.deviceManager.getADBExecutable();
@@ -870,6 +889,29 @@ export class FlutterPanelController extends ADBBaseController {
       this.showErrorMessage(error instanceof Error ? error.message : String(error));
       this.notifyMirroringState(this.screenMirrorManager.isMirroring());
     }
+  }
+
+  private async wakeDeviceScreen(deviceId?: string): Promise<string> {
+    const targetSerial = deviceId || this.screenMirrorManager.getActiveDeviceSerial() || this.getActiveDeviceSerial();
+    if (!targetSerial) {
+      throw new Error('No online phone or active mirror session was found.');
+    }
+    if (!/^[A-Za-z0-9._:-]+$/.test(targetSerial)) {
+      throw new Error('Invalid Android device serial.');
+    }
+
+    const adbPath = await this.deviceManager.getADBExecutable();
+    await new Promise<void>((resolve, reject) => {
+      execFile(
+        adbPath,
+        ['-s', targetSerial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'],
+        { windowsHide: true, timeout: 10000 },
+        error => error ? reject(error) : resolve()
+      );
+    });
+
+    this.postStatus(`✅ Screen woken for ${targetSerial}`, 'success');
+    return targetSerial;
   }
 
   private async installApkToDevice(deviceId?: string) {
@@ -1000,6 +1042,19 @@ export class FlutterPanelController extends ADBBaseController {
 
   private async handleGenerateWorkflow(options: WorkflowOptions) {
     return this.workflowHandler.handleGenerateWorkflow(options);
+  }
+
+  // --- Signing Key Handler Delegations ---
+  private async openSigningKeyModal() {
+    return this.signingKeyHandler.openSigningKeyModal();
+  }
+
+  private async selectSigningKeyProject() {
+    return this.signingKeyHandler.selectSigningKeyProject();
+  }
+
+  private async createSigningKey(options: SigningKeyOptions) {
+    return this.signingKeyHandler.createSigningKey(options);
   }
 
   // --- Agent Scaffold Handler Delegations ---

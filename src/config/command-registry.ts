@@ -155,6 +155,12 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
     description: 'Stop active screen mirroring session'
   },
   {
+    id: 'airFlutter.wakeScreen',
+    title: '☀️ Wake Device Screen',
+    category: 'Air Flutter',
+    description: 'Wake the active mirrored device or a connected phone display'
+  },
+  {
     id: 'airFlutter.installApk',
     title: '📦 Install APK to Device',
     category: 'Air Flutter',
@@ -171,6 +177,12 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
     title: '🚀 Generate GitHub Actions CI/CD Workflow',
     category: 'Air Flutter',
     description: 'Build Android APK / AAB with GitHub Actions workflow'
+  },
+  {
+    id: 'airFlutter.openSigningKeyModal',
+    title: '🔐 Create Android Signing Key',
+    category: 'Air Flutter',
+    description: 'Create and configure a secure Android upload keystore for a Flutter project'
   },
   {
     id: 'airFlutter.openFlavorsModal',

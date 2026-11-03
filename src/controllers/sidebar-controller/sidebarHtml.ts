@@ -112,6 +112,10 @@ export function getSidebarWebviewHtml(
                 <span class="sf-tool-name">GitHub Workflow</span>
                 <span class="sf-tool-note">CI/CD APK build action</span>
             </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolSigningKey" data-tool="signingKey" title="Create an Android upload signing key">
+                <span class="sf-tool-name">Signing Key Studio</span>
+                <span class="sf-tool-note">create Android upload key</span>
+            </button>
             <button class="sf-tool" type="button" id="toolRecord" data-tool="record" title="Record device screen to MP4">
                 <span class="sf-tool-name">Record Video</span>
                 <span class="sf-tool-note">start MP4 recording</span>

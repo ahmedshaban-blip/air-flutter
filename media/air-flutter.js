@@ -48,6 +48,7 @@ class AirFlutterWebview {
             this.initRecording();
             this.initAgentScaffoldModal();
             this.initCompatDoctorModal();
+            this.initSigningKeyModal();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -173,6 +174,10 @@ class AirFlutterWebview {
                         <span class="mirror-btn-title">Screen Off + Keys</span>
                         <span class="mirror-btn-desc">Phone dark, keyboard active</span>
                     </button>
+                    <button class="mirror-btn" data-device-action="wake" data-device-id="${this.escapeHtml(device.id)}" title="Wake this phone's physical display" ${offline}>
+                        <span class="mirror-btn-title">Wake screen</span>
+                        <span class="mirror-btn-desc">Turn this display on</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -257,6 +262,9 @@ class AirFlutterWebview {
                 this.sendMessage('mirrorDevice', { deviceId, mode: 'screen-off' });
             } else if (action === 'mirror-keys') {
                 this.sendMessage('mirrorDevice', { deviceId, mode: 'keyboard' });
+            } else if (action === 'wake') {
+                this.sendMessage('wakeDevice', { deviceId });
+                this.addStatusMessage(`Waking screen: ${deviceId}`, 'info');
             } else if (action === 'mirror-virtual') {
                 this.sendMessage('mirrorDevice', { deviceId, mode: 'virtual-display' });
             } else if (action === 'disconnect') {
@@ -438,6 +446,19 @@ class AirFlutterWebview {
                         genSubmitBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Workflow';
                     }
                     break;
+                case 'openSigningKeyModal':
+                    this.openSigningKeyModal(message.projectPath);
+                    break;
+                case 'signingKeyProjectPath':
+                    const signingProjectInput = document.getElementById('signingKeyProjectPath');
+                    if (signingProjectInput) signingProjectInput.value = message.path || '';
+                    break;
+                case 'signingKeyCreated':
+                    this.handleSigningKeyCreated(message.result);
+                    break;
+                case 'signingKeyFailed':
+                    this.handleSigningKeyFailed(message.message);
+                    break;
                 case 'openFlavorsModal':
                     this.openFlavorsModal(message.projectPath);
                     break;
@@ -514,6 +535,7 @@ mixinModule(AirFlutterWebview, window.AirFlutterProxyModule);
 mixinModule(AirFlutterWebview, window.AirFlutterRecorderModule);
 mixinModule(AirFlutterWebview, window.AirFlutterAgentScaffoldModule);
 mixinModule(AirFlutterWebview, window.AirFlutterCompatDoctorModule);
+mixinModule(AirFlutterWebview, window.AirFlutterSigningKeyModule);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();
@@ -536,4 +558,3 @@ document.addEventListener('keydown', (e) => {
         airFlutter.refreshDevices();
     }
 });
-

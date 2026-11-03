@@ -1,0 +1,301 @@
+.signing-key-modal-card {
+    max-width: 760px;
+}
+
+.signing-key-modal-card [hidden] {
+    display: none !important;
+}
+
+.signing-key-head {
+    align-items: flex-start;
+}
+
+.signing-key-head p {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.signing-key-body {
+    gap: 18px;
+}
+
+#signingKeyFormView {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.signing-key-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 11px 12px;
+    color: var(--ink-soft);
+    background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--rule));
+    border-radius: 4px;
+}
+
+.signing-key-intro > i {
+    margin-top: 2px;
+    color: var(--ok);
+}
+
+.signing-key-intro div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+}
+
+.signing-key-intro strong {
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.signing-key-mode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.signing-key-mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+}
+
+.signing-key-mode-btn:hover,
+.signing-key-mode-btn.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.signing-key-mode-btn.is-active {
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.signing-key-mode-btn > i {
+    width: 18px;
+    text-align: center;
+}
+
+.signing-key-mode-btn span {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.signing-key-mode-btn strong {
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.signing-key-mode-btn small {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.signing-key-section {
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+}
+
+.signing-key-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 11px;
+}
+
+.signing-key-section-head h3 {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.signing-key-section-head > span {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.signing-key-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.signing-key-grid-wide {
+    grid-column: 1 / -1;
+}
+
+.signing-key-modal-card input[type="password"],
+.signing-key-modal-card select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+}
+
+.signing-key-modal-card input:focus,
+.signing-key-modal-card select:focus {
+    border-color: var(--accent);
+}
+
+.signing-key-text-action {
+    padding: 3px 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.signing-key-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.signing-key-check input {
+    accent-color: var(--accent);
+}
+
+.signing-key-final-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px 0 0;
+    color: var(--warn);
+    font-size: 11px;
+}
+
+.signing-key-result {
+    text-align: center;
+}
+
+.signing-key-success-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--ok);
+    border-radius: 50%;
+    color: var(--ok);
+    font-size: 18px;
+}
+
+.signing-key-result-title {
+    margin: 10px 0 14px;
+}
+
+.signing-key-result-title h3 {
+    font-size: 17px;
+}
+
+.signing-key-result-title p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.signing-key-result-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.signing-key-steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: signing-step;
+    text-align: left;
+}
+
+.signing-key-steps li {
+    position: relative;
+    padding: 12px 0 12px 38px;
+    border-top: 1px solid var(--rule);
+    counter-increment: signing-step;
+}
+
+.signing-key-steps li::before {
+    content: counter(signing-step);
+    position: absolute;
+    top: 12px;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.signing-key-steps strong {
+    font-size: 12px;
+}
+
+.signing-key-steps p {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.signing-key-steps pre {
+    margin: 8px 0 0;
+    padding: 9px 10px;
+    overflow-x: auto;
+    border: 1px solid var(--well-rule);
+    border-radius: 3px;
+    background: var(--well);
+    color: var(--well-ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+.signing-key-steps code {
+    font-size: 10px;
+}
+
+@media (max-width: 620px) {
+    .signing-key-mode,
+    .signing-key-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .signing-key-grid-wide {
+        grid-column: auto;
+    }
+
+    .signing-key-result-actions {
+        flex-direction: column;
+    }
+}

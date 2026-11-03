@@ -69,7 +69,7 @@
 /* Mirror modes sit on their own row so every device exposes them directly. */
 .device-mirror {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     margin-top: 8px;
 }
@@ -129,7 +129,7 @@
 
 @media (max-width: 340px) {
     .device-mirror {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
     }
 }
 

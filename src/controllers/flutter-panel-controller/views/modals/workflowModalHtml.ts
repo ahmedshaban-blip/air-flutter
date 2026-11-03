@@ -67,6 +67,20 @@ export function getWorkflowModalHtml(): string {
                         </div>
                     </div>
 
+                    <!-- Build Limits -->
+                    <div class="modal-options-grid">
+                        <div class="modal-field">
+                            <label for="workflowRetentionDays">Artifact Retention (Days)</label>
+                            <input type="number" id="workflowRetentionDays" value="14" min="1" step="1" />
+                            <span class="field-desc">Enter any positive number of days</span>
+                        </div>
+                        <div class="modal-field">
+                            <label for="workflowTimeoutMinutes">Job Timeout (Minutes)</label>
+                            <input type="number" id="workflowTimeoutMinutes" value="60" min="1" max="360" step="1" />
+                            <span class="field-desc">Cancel the build after 1–360 minutes</span>
+                        </div>
+                    </div>
+
                     <!-- Build Mode -->
                     <div class="modal-field">
                         <label>Build Mode</label>
@@ -112,6 +126,14 @@ export function getWorkflowModalHtml(): string {
                             <span>Enable Dependency Caching (Gradle &amp; Flutter Pub)</span>
                         </label>
                     </div>
+
+                    <div class="modal-field">
+                        <label class="modal-option-card">
+                            <input type="checkbox" id="workflowPublishToReleases" />
+                            <span>Publish builds to GitHub Releases with a unique tag</span>
+                        </label>
+                        <span class="field-desc">Attaches the APK/AAB files to a tagged release after a successful build.</span>
+                    </div>
                 </div>
                 <div class="modal-foot">
                     <button class="btn btn-quiet" id="cancelWorkflowModalBtn" type="button">Cancel</button>
@@ -122,4 +144,3 @@ export function getWorkflowModalHtml(): string {
             </div>
         </div>`;
 }
-

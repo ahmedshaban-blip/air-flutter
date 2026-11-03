@@ -339,7 +339,7 @@ const vscode = acquireVsCodeApi();
 
         [
             ['toolScreenshot', 'screenshot'],
-            ['toolWake', 'wake'],
+            ['toolWake', 'wakeScreen'],
             ['toolWifi', 'fixWifi'],
             ['toolMirror', 'mirror'],
             ['toolMirrorKeys', 'mirrorKeys'],
@@ -347,6 +347,7 @@ const vscode = acquireVsCodeApi();
             ['toolSendText', 'sendText'],
             ['toolInstallApk', 'installApk'],
             ['toolWorkflow', 'workflow'],
+            ['toolSigningKey', 'signingKey'],
             ['toolRecord', 'record'],
             ['toolFlavors', 'flavors'],
             ['toolProxy', 'proxy'],

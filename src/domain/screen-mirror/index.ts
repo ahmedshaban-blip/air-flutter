@@ -19,6 +19,7 @@ export interface MirrorOptions {
 export class ScreenMirrorManager {
   private scrcpyExecutable: string | undefined
   private activeProcesses: Map<string, ChildProcess> = new Map()
+  private lastActiveSerial: string | undefined
   private readonly _onMirroringStateChanged = new vscode.EventEmitter<{ isMirroring: boolean; serial?: string }>()
   public readonly onMirroringStateChanged = this._onMirroringStateChanged.event
 
@@ -174,10 +175,14 @@ export class ScreenMirrorManager {
 
       child.once('spawn', () => {
         this.activeProcesses.set(deviceSerial, child)
+        this.lastActiveSerial = deviceSerial
         this._onMirroringStateChanged.fire({ isMirroring: true, serial: deviceSerial })
         child.once('exit', () => {
           if (this.activeProcesses.get(deviceSerial) === child) {
             this.activeProcesses.delete(deviceSerial)
+            if (this.lastActiveSerial === deviceSerial) {
+              this.lastActiveSerial = this.activeProcesses.keys().next().value
+            }
             this._onMirroringStateChanged.fire({ isMirroring: this.activeProcesses.size > 0, serial: deviceSerial })
           }
         })
@@ -204,6 +209,9 @@ export class ScreenMirrorManager {
         }
       }
       this.activeProcesses.delete(deviceSerial)
+      if (this.lastActiveSerial === deviceSerial) {
+        this.lastActiveSerial = this.activeProcesses.keys().next().value
+      }
     } else {
       for (const [, proc] of this.activeProcesses) {
         try {
@@ -214,6 +222,7 @@ export class ScreenMirrorManager {
         }
       }
       this.activeProcesses.clear()
+      this.lastActiveSerial = undefined
     }
 
     // Ensure any orphaned scrcpy processes are terminated
@@ -250,6 +259,10 @@ export class ScreenMirrorManager {
       return this.activeProcesses.has(deviceSerial)
     }
     return this.activeProcesses.size > 0
+  }
+
+  public getActiveDeviceSerial(): string | undefined {
+    return this.lastActiveSerial
   }
 
   public async selectScrcpyExecutable(): Promise<string | undefined> {

@@ -5,6 +5,7 @@ import { getFlavorsModalHtml } from './modals/flavorsModalHtml';
 import { getProxyModalHtml } from './modals/proxyModalHtml';
 import { getAgentScaffoldModalHtml } from './modals/agentScaffoldModalHtml';
 import { getCompatDoctorModalHtml } from './modals/compatDoctorModalHtml';
+import { getSigningKeyModalHtml } from './modals/signingKeyModalHtml';
 
 /**
  * Generates the full HTML markup for the main Air Flutter panel webview.
@@ -20,6 +21,7 @@ export function getPanelWebviewContent(
   const modalsUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'modals.css')));
   const stepperUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'stepper.css')));
   const compatUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'compat.css')));
+  const signingKeyCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'signing-key.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
   const proxyModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'proxyModule.js')));
@@ -28,6 +30,7 @@ export function getPanelWebviewContent(
   const compatAuditUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'compat', 'compatAuditView.js')));
   const compatConfigUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'compat', 'compatConfigView.js')));
   const compatDoctorModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'compatDoctorModule.js')));
+  const signingKeyModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'signingKeyModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
 
   return `<!DOCTYPE html>
@@ -45,6 +48,7 @@ export function getPanelWebviewContent(
         <link href="${modalsUri}" rel="stylesheet">
         <link href="${stepperUri}" rel="stylesheet">
         <link href="${compatUri}" rel="stylesheet">
+        <link href="${signingKeyCssUri}" rel="stylesheet">
     </head>
     <body>
         <div class="ff-shell">
@@ -182,6 +186,11 @@ export function getPanelWebviewContent(
                                 <span><span class="cmd-label">GitHub Workflow</span><span class="cmd-run">CI/CD APK Builder</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
+                            <button class="cmd" type="button" data-command="signingKey" onclick="airFlutter.openSigningKeyModal()">
+                                <i class="cmd-icon fas fa-key"></i>
+                                <span><span class="cmd-label">Signing Key Studio</span><span class="cmd-run">create Android upload key</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
                             <button class="cmd" id="screenRecordBtn" type="button" data-command="toggleRecording" onclick="airFlutter.toggleRecording()">
                                 <i class="cmd-icon fas fa-video"></i>
                                 <span><span class="cmd-label">Record Screen</span><span class="cmd-run">record phone MP4</span></span>
@@ -248,6 +257,9 @@ export function getPanelWebviewContent(
                             </button>
                             <button class="rail-item" type="button" onclick="airFlutter.openWorkflowModal()">
                                 <i class="fab fa-github"></i> GitHub CI/CD Workflow
+                            </button>
+                            <button class="rail-item" type="button" onclick="airFlutter.openSigningKeyModal()">
+                                <i class="fas fa-key"></i> Android Signing Key
                             </button>
                             <button class="rail-item" type="button" onclick="airFlutter.toggleRecording()">
                                 <i class="fas fa-video"></i> Record Screen (MP4)
@@ -320,6 +332,7 @@ ${getFlavorsModalHtml()}
 ${getProxyModalHtml()}
 ${getAgentScaffoldModalHtml()}
 ${getCompatDoctorModalHtml()}
+${getSigningKeyModalHtml()}
 
         <script>
             window.addEventListener('DOMContentLoaded', () => {
@@ -350,6 +363,13 @@ ${getCompatDoctorModalHtml()}
                             airFlutter.openWorkflowModal();
                         } else if (window.vscode) {
                             window.vscode.postMessage({ command: 'openWorkflowModal' });
+                        }
+                    },
+                    openSigningKeyModal: function () {
+                        if (typeof airFlutter !== 'undefined' && airFlutter.openSigningKeyModal) {
+                            airFlutter.openSigningKeyModal();
+                        } else if (window.vscode) {
+                            window.vscode.postMessage({ command: 'openSigningKeyModal' });
                         }
                     },
                     openFlavorsModal: function () {
@@ -421,6 +441,7 @@ ${getCompatDoctorModalHtml()}
         <script src="${compatAuditUri}"></script>
         <script src="${compatConfigUri}"></script>
         <script src="${compatDoctorModuleUri}"></script>
+        <script src="${signingKeyModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>
     </html>`;

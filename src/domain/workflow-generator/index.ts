@@ -12,6 +12,9 @@ export interface WorkflowOptions {
   buildMode: 'release' | 'debug'
   enableSigning: boolean
   enableCache: boolean
+  publishToReleases?: boolean
+  retentionDays?: number
+  timeoutMinutes?: number
   javaVersion?: string
   flutterVersion?: string
 }
@@ -48,6 +51,8 @@ export class WorkflowGenerator {
     const javaVer = options.javaVersion || '17'
     const flutterVer = options.flutterVersion || 'stable'
     const mode = options.buildMode || 'release'
+    const retentionDays = this.getIntegerOption(options.retentionDays, 14, 1, undefined, 'Retention days')
+    const timeoutMinutes = this.getIntegerOption(options.timeoutMinutes, 60, 1, 360, 'Timeout minutes')
 
     let buildSteps = ''
     let artifactSteps = ''
@@ -60,7 +65,7 @@ export class WorkflowGenerator {
         with:
           name: flutter-${mode}-apk
           path: build/app/outputs/flutter-apk/*.apk
-          retention-days: 14`
+          retention-days: ${retentionDays}`
     } else if (options.buildTarget === 'split_apk') {
       buildSteps = `      - name: Build Split-per-ABI APKs (${mode})
         run: flutter build apk --${mode} --split-per-abi`
@@ -69,16 +74,16 @@ export class WorkflowGenerator {
         with:
           name: flutter-${mode}-split-apks
           path: build/app/outputs/flutter-apk/*.apk
-          retention-days: 14`
+          retention-days: ${retentionDays}`
     } else if (options.buildTarget === 'appbundle') {
       buildSteps = `      - name: Build Android App Bundle (${mode})
         run: flutter build appbundle --${mode}`
       artifactSteps = `      - name: Upload App Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-${mode}-aab
+          name: App Bundle
           path: build/app/outputs/bundle/${mode}/*.aab
-          retention-days: 14`
+          retention-days: ${retentionDays}`
     } else {
       buildSteps = `      - name: Build Android APK (${mode})
         run: flutter build apk --${mode}
@@ -90,14 +95,36 @@ export class WorkflowGenerator {
         with:
           name: flutter-${mode}-apk
           path: build/app/outputs/flutter-apk/*.apk
-          retention-days: 14
+          retention-days: ${retentionDays}
 
       - name: Upload App Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-${mode}-aab
+          name: App Bundle
           path: build/app/outputs/bundle/${mode}/*.aab
-          retention-days: 14`
+          retention-days: ${retentionDays}`
+    }
+
+    let releaseStep = ''
+    if (options.publishToReleases) {
+      const releaseFiles = options.buildTarget === 'appbundle'
+        ? `build/app/outputs/bundle/${mode}/*.aab`
+        : options.buildTarget === 'both'
+          ? `build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/${mode}/*.aab`
+          : 'build/app/outputs/flutter-apk/*.apk'
+
+      releaseStep = `
+
+      - name: Publish GitHub Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-\${{ github.run_number }}-\${{ github.run_attempt }}
+          name: Flutter Build #\${{ github.run_number }}
+          generate_release_notes: true
+          files: |
+            ${releaseFiles}`
     }
 
     let signingSteps = ''
@@ -130,11 +157,14 @@ export class WorkflowGenerator {
 on:
 ${triggers.join('\n')}
 
-jobs:
+${options.publishToReleases ? `permissions:
+  contents: write
+
+` : ''}jobs:
   build:
     name: Build Android (${mode})
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: ${timeoutMinutes}
 
     steps:
       - name: Checkout repository
@@ -157,8 +187,23 @@ ${cacheStep}${signingSteps}      - name: Install dependencies
 
 ${buildSteps}
 
-${artifactSteps}
+${artifactSteps}${releaseStep}
 `
+  }
+
+  private static getIntegerOption(
+    value: number | undefined,
+    fallback: number,
+    min: number,
+    max: number | undefined,
+    label: string
+  ): number {
+    const resolvedValue = value ?? fallback
+    if (!Number.isInteger(resolvedValue) || resolvedValue < min || (max !== undefined && resolvedValue > max)) {
+      const range = max === undefined ? `at least ${min}` : `between ${min} and ${max}`
+      throw new Error(`${label} must be an integer ${range}.`)
+    }
+    return resolvedValue
   }
 
   public static generateSecretsGuide(): string {
@@ -272,4 +317,3 @@ android {
     return { workflowPath, secretsGuidePath }
   }
 }
-

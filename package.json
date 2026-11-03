@@ -234,6 +234,11 @@
         "category": "Air Flutter"
       },
       {
+        "command": "airFlutter.wakeScreen",
+        "title": "Wake Device Screen",
+        "category": "Air Flutter"
+      },
+      {
         "command": "airFlutter.installApk",
         "title": "Install APK to Device",
         "category": "Air Flutter"
@@ -246,6 +251,11 @@
       {
         "command": "airFlutter.generateWorkflow",
         "title": "Generate GitHub Actions CI/CD Workflow",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.openSigningKeyModal",
+        "title": "Create Android Signing Key",
         "category": "Air Flutter"
       },
       {
