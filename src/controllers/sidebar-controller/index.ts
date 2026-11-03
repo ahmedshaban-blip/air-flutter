@@ -227,10 +227,28 @@ export class SidebarController {
         await vscode.commands.executeCommand('airFlutter.openAgentScaffoldingModal')
         break
       case 'compatDoctor':
-        await vscode.commands.executeCommand('airFlutter.runCompatDoctor')
+        await this.openCompatDoctorInPanel()
         break
       default:
         break
+    }
+  }
+
+  private async openCompatDoctorInPanel(): Promise<void> {
+    this.post({ command: 'toolBusy', tool: 'compatDoctor', busy: true })
+    this.post({
+      command: 'toolProgress',
+      message: 'Opening Flutter Compatibility Doctor & Auto-Fixer…'
+    })
+    try {
+      await vscode.commands.executeCommand('airFlutter.openCompatDoctorModal')
+      this.post({
+        command: 'toolResult',
+        ok: true,
+        message: 'Flutter Compatibility Doctor & Auto-Fixer opened in the panel.'
+      })
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'compatDoctor', busy: false })
     }
   }
 
