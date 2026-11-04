@@ -333,7 +333,45 @@ section h2 {
         transition-duration: 0.01ms !important;
     }
 }
+.sf-operation-indicator {
+    position: sticky;
+    z-index: 1000;
+    top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+    border-radius: 7px;
+    background: var(--vscode-sideBar-background, #171717);
+    color: var(--vscode-sideBar-foreground, #f4f4f4);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    font-size: 11px;
+    font-weight: 650;
+}
 
+.sf-operation-indicator[hidden] {
+    display: none;
+}
+
+.sf-operation-spinner {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: sf-operation-spin 650ms linear infinite;
+}
+
+@keyframes sf-operation-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-operation-spinner { animation-duration: 1400ms; }
+}
 
 /* --- media/css/sidebar/device-card.css --- */
 /* --- Live device card --------------------------------------------------- */
@@ -454,14 +492,185 @@ section h2 {
     overflow-wrap: anywhere;
 }
 
+/* --- media/css/sidebar/bridge.css --- */
+/* --- Localhost Bridge --------------------------------------------------- */
+.sf-bridge-device {
+    margin-top: 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    overflow-wrap: anywhere;
+}
+
+.sf-bridge-presets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.sf-bridge-presets button,
+.sf-bridge-active-head button,
+.sf-bridge-rule button {
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    cursor: pointer;
+}
+
+.sf-bridge-presets button {
+    height: 27px;
+}
+
+.sf-bridge-presets button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.sf-bridge-custom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.sf-bridge-custom input {
+    min-width: 0;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+}
+
+.sf-bridge-active-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.sf-bridge-active-head button,
+.sf-bridge-rule button {
+    padding: 2px 5px;
+    color: var(--err);
+}
+
+.sf-bridge-active-head button[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.sf-bridge-rule {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
 
 /* --- media/css/sidebar/tools.css --- */
 /* --- Tools -------------------------------------------------------------- */
+.sf-tools-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sf-tools-hint {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.sf-tool-groups {
+    margin-top: 9px;
+    border-top: 1px solid var(--rule-strong);
+}
+
+.sf-tool-group {
+    border-bottom: 1px solid var(--rule-strong);
+}
+
+.sf-tool-group > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 38px;
+    padding: 7px 2px;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: color 130ms linear, padding 130ms ease-out;
+}
+
+.sf-tool-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sf-tool-group > summary:hover {
+    color: var(--accent);
+    padding-left: 4px;
+}
+
+.sf-tool-group-title {
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.sf-tool-group-meta {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.sf-tool-chevron {
+    width: 7px;
+    height: 7px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: rotate(45deg) translate(-1px, 1px);
+    transition: transform 160ms ease-out;
+}
+
+.sf-tool-group[open] > summary {
+    color: var(--accent);
+}
+
+.sf-tool-group[open] .sf-tool-chevron {
+    transform: rotate(225deg) translate(-1px, 1px);
+}
+
 .sf-tool-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-top: 10px;
+    padding: 2px 0 10px;
+    animation: sf-tools-reveal 170ms ease-out both;
 }
 
 .sf-tool {
@@ -558,11 +767,161 @@ section h2 {
     color: var(--err, #A3231C);
 }
 
+.sf-mirror-setup {
+    margin: 2px 0 12px;
+    padding: 12px 0 2px;
+    border-top: 1px solid var(--accent);
+    animation: sf-tools-reveal 180ms ease-out both;
+}
+
+.sf-mirror-setup-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sf-mirror-setup-head strong,
+.sf-mirror-setup-head span {
+    display: block;
+}
+
+.sf-mirror-setup-head strong {
+    font-size: 13px;
+}
+
+.sf-mirror-setup-head span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.sf-mirror-setup-head button {
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: 9px var(--font-mono);
+    cursor: pointer;
+}
+
+.sf-mirror-setup-head button:hover {
+    color: var(--accent);
+}
+
+.sf-mirror-choice {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 13px 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.sf-mirror-choice legend {
+    grid-column: 1 / -1;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font: 500 8.5px var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.sf-mirror-choice label {
+    position: relative;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.sf-mirror-choice input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.sf-mirror-choice label > span {
+    display: block;
+    min-height: 49px;
+    padding: 8px;
+    border: 1px solid var(--rule-strong);
+    transition: border-color 130ms linear, color 130ms linear, background-color 130ms linear;
+}
+
+.sf-mirror-choice label:hover > span,
+.sf-mirror-choice input:focus-visible + span {
+    border-color: var(--accent);
+}
+
+.sf-mirror-choice input:focus-visible + span {
+    outline: 1px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.sf-mirror-choice input:checked + span {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    color: var(--accent);
+}
+
+.sf-mirror-choice strong,
+.sf-mirror-choice small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.sf-mirror-choice strong {
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.sf-mirror-choice small {
+    margin-top: 3px;
+    color: var(--muted);
+    font: 8.5px/1.35 var(--font-mono);
+}
+
+.sf-mirror-profiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sf-mirror-launch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 11px;
+    padding: 9px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--accent-ink, #fff);
+    font: 600 11px var(--font-sans);
+    cursor: pointer;
+}
+
+.sf-mirror-launch:hover {
+    filter: brightness(1.08);
+}
+
 @keyframes sf-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
 }
 
+@keyframes sf-tools-reveal {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-tool-group > summary,
+    .sf-tool-chevron,
+    .sf-tool-grid {
+        transition: none;
+        animation: none;
+    }
+}
 
 /* --- media/css/sidebar/logcat.css --- */
 /* --- Logcat ------------------------------------------------------------- */
@@ -767,9 +1126,6 @@ body.vscode-high-contrast .sf-log {
     color: var(--muted);
 }
 
-
-
-
 /* --- media/css/sidebar/wipe.css --- */
 /* --- Deep storage & cache wiper ---------------------------------------- */
 .sf-wipe-pkg {
@@ -810,83 +1166,4 @@ body.vscode-high-contrast .sf-log {
 .sf-tool-danger.is-busy {
     border-color: var(--err, #A3231C);
     color: var(--err, #A3231C);
-}
-
-/* --- Localhost Bridge --------------------------------------------------- */
-.sf-bridge-device {
-    margin-top: 8px;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    overflow-wrap: anywhere;
-}
-
-.sf-bridge-presets {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin-top: 8px;
-}
-
-.sf-bridge-presets button,
-.sf-bridge-active-head button,
-.sf-bridge-rule button {
-    border: 1px solid var(--rule-strong);
-    border-radius: 2px;
-    background: transparent;
-    color: var(--ink-soft);
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    cursor: pointer;
-}
-
-.sf-bridge-presets button { height: 27px; }
-.sf-bridge-presets button:hover { border-color: var(--accent); color: var(--accent); }
-
-.sf-bridge-custom {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
-    margin-top: 7px;
-}
-
-.sf-bridge-custom input {
-    min-width: 0;
-    height: 30px;
-    padding: 0 8px;
-    border: 1px solid var(--rule-strong);
-    border-radius: 2px;
-    background: transparent;
-    color: var(--ink);
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-}
-
-.sf-bridge-active-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--rule);
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.sf-bridge-active-head button,
-.sf-bridge-rule button { padding: 2px 5px; color: var(--err); }
-.sf-bridge-active-head button[disabled] { opacity: 0.4; cursor: not-allowed; }
-
-.sf-bridge-rule {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 7px;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--rule);
-    font-family: var(--font-mono);
-    font-size: 10px;
 }

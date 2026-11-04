@@ -2,8 +2,13 @@ import { execFile, spawn, ChildProcess } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as vscode from 'vscode'
+import {
+  buildMirrorAudioArguments,
+  buildMirrorTuningArguments,
+  MirrorLaunchPreferences
+} from '../mirror-profile'
 
-export interface MirrorOptions {
+export interface MirrorOptions extends Partial<MirrorLaunchPreferences> {
   /** Turn the phone display off and keep it off for the whole session. */
   displayOff?: boolean
   /** Start an app by package name once mirroring is live. */
@@ -14,11 +19,15 @@ export interface MirrorOptions {
    * switching on the computer keyboard.
    */
   hardwareKeyboard?: boolean
+  /** Mirror into a separate Android virtual display. */
+  wirelessDisplay?: boolean
 }
 
 export class ScreenMirrorManager {
   private scrcpyExecutable: string | undefined
   private activeProcesses: Map<string, ChildProcess> = new Map()
+  private screenOffDevices: Set<string> = new Set()
+  private activeSessions: Map<string, { executable: string; args: string[]; adbPath: string }> = new Map()
   private lastActiveSerial: string | undefined
   private readonly _onMirroringStateChanged = new vscode.EventEmitter<{ isMirroring: boolean; serial?: string }>()
   public readonly onMirroringStateChanged = this._onMirroringStateChanged.event
@@ -55,18 +64,15 @@ export class ScreenMirrorManager {
     }
 
     const executable = await this.getScrcpyExecutable()
-    const configuration = vscode.workspace.getConfiguration('airFlutter')
-    const maxFps = configuration.get<number>('mirroringMaxFps', 60)
-    const bitRate = configuration.get<string>('mirroringVideoBitRate', '6M')
-    const enableAudio = configuration.get<boolean>('mirroringAudio', false)
+    const tuningArgs = this.getTuningArguments(options)
+    const audioArgs = this.getAudioArguments(options)
 
     const args: string[] = [
       '--serial',
       deviceSerial,
       '--new-display',
       '--video-codec=h264',
-      `--max-fps=${maxFps}`,
-      `--video-bit-rate=${bitRate}`,
+      ...tuningArgs,
       '--always-on-top',
       // The virtual display is the point of this mode, but the physical panel
       // has to go dark too, otherwise the phone stays lit on the desk.
@@ -79,9 +85,7 @@ export class ScreenMirrorManager {
       `Air Flutter - ${deviceName} (phone display off)`
     ]
 
-    if (!enableAudio) {
-      args.push('--no-audio')
-    }
+    args.push(...audioArgs)
     if (options.startApp) {
       args.push(`--start-app=${options.startApp}`)
     }
@@ -94,20 +98,13 @@ export class ScreenMirrorManager {
     deviceName: string,
     options: MirrorOptions
   ): string[] {
-    const configuration = vscode.workspace.getConfiguration('airFlutter')
-    const maxSize = configuration.get<number>('mirroringMaxSize', 1600)
-    const maxFps = configuration.get<number>('mirroringMaxFps', 60)
-    const bitRate = configuration.get<string>('mirroringVideoBitRate', '6M')
-    const enableAudio = configuration.get<boolean>('mirroringAudio', false)
+    const tuningArgs = this.getTuningArguments(options)
+    const audioArgs = this.getAudioArguments(options)
     const args: string[] = [
       '--serial',
       deviceSerial,
       '--video-codec=h264',
-      `--max-size=${maxSize}`,
-      `--max-fps=${maxFps}`,
-      `--video-bit-rate=${bitRate}`,
-      '--video-buffer=0',
-      '--no-mipmaps',
+      ...tuningArgs,
       '--always-on-top',
       '--stay-awake',
       '--window-title',
@@ -127,10 +124,30 @@ export class ScreenMirrorManager {
     if (options.startApp) {
       args.push(`--start-app=${options.startApp}`)
     }
-    if (!enableAudio) {
-      args.push('--no-audio')
-    }
+    args.push(...audioArgs)
     return args
+  }
+
+  private getTuningArguments(options: MirrorOptions): string[] {
+    if (options.performanceProfile) {
+      return buildMirrorTuningArguments(options.performanceProfile)
+    }
+    const configuration = vscode.workspace.getConfiguration('airFlutter')
+    return [
+      `--max-size=${configuration.get<number>('mirroringMaxSize', 1600)}`,
+      `--max-fps=${configuration.get<number>('mirroringMaxFps', 60)}`,
+      `--video-bit-rate=${configuration.get<string>('mirroringVideoBitRate', '6M')}`,
+      '--video-buffer=0'
+    ]
+  }
+
+  private getAudioArguments(options: MirrorOptions): string[] {
+    if (options.audioRoute) {
+      return buildMirrorAudioArguments(options.audioRoute)
+    }
+    return vscode.workspace.getConfiguration('airFlutter').get<boolean>('mirroringAudio', false)
+      ? ['--audio-source=output']
+      : ['--no-audio']
   }
 
   /** Opens the device's physical-keyboard layout picker so the mapping can be set. */
@@ -175,11 +192,19 @@ export class ScreenMirrorManager {
 
       child.once('spawn', () => {
         this.activeProcesses.set(deviceSerial, child)
+        this.activeSessions.set(deviceSerial, { executable, args: [...args], adbPath })
+        if (args.includes('--turn-screen-off')) {
+          this.screenOffDevices.add(deviceSerial)
+        } else {
+          this.screenOffDevices.delete(deviceSerial)
+        }
         this.lastActiveSerial = deviceSerial
         this._onMirroringStateChanged.fire({ isMirroring: true, serial: deviceSerial })
         child.once('exit', () => {
           if (this.activeProcesses.get(deviceSerial) === child) {
             this.activeProcesses.delete(deviceSerial)
+            this.activeSessions.delete(deviceSerial)
+            this.screenOffDevices.delete(deviceSerial)
             if (this.lastActiveSerial === deviceSerial) {
               this.lastActiveSerial = this.activeProcesses.keys().next().value
             }
@@ -209,6 +234,8 @@ export class ScreenMirrorManager {
         }
       }
       this.activeProcesses.delete(deviceSerial)
+      this.activeSessions.delete(deviceSerial)
+      this.screenOffDevices.delete(deviceSerial)
       if (this.lastActiveSerial === deviceSerial) {
         this.lastActiveSerial = this.activeProcesses.keys().next().value
       }
@@ -222,6 +249,8 @@ export class ScreenMirrorManager {
         }
       }
       this.activeProcesses.clear()
+      this.activeSessions.clear()
+      this.screenOffDevices.clear()
       this.lastActiveSerial = undefined
     }
 
@@ -263,6 +292,29 @@ export class ScreenMirrorManager {
 
   public getActiveDeviceSerial(): string | undefined {
     return this.lastActiveSerial
+  }
+
+  public wasPhysicalDisplayTurnedOff(deviceSerial: string): boolean {
+    return this.screenOffDevices.has(deviceSerial)
+  }
+
+  public markPhysicalDisplayOn(deviceSerial: string): void {
+    this.screenOffDevices.delete(deviceSerial)
+  }
+
+  public markPhysicalDisplayOff(deviceSerial: string): void {
+    this.screenOffDevices.add(deviceSerial)
+  }
+
+  public async restartWithPhysicalDisplayOff(deviceSerial: string): Promise<void> {
+    const session = this.activeSessions.get(deviceSerial)
+    if (!session) {
+      throw new Error('No active mirror session was found for this device.')
+    }
+    const args = session.args.includes('--turn-screen-off')
+      ? [...session.args]
+      : [...session.args, '--turn-screen-off']
+    await this.launchScrcpy(session.executable, args, session.adbPath, deviceSerial)
   }
 
   public async selectScrcpyExecutable(): Promise<string | undefined> {

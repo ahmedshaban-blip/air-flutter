@@ -8,3 +8,46 @@
 @import './css/modals.css';
 @import './css/stepper.css';
 @import './css/compat.css';
+/* Shared host-operation feedback. It stays visible until the extension host
+   confirms the matching async operation has actually settled. */
+.global-operation-indicator {
+    position: fixed;
+    z-index: 10000;
+    top: 12px;
+    right: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 9px 12px;
+    border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
+    border-radius: 8px;
+    background: var(--surface, var(--vscode-editor-background, #171717));
+    color: var(--text, var(--vscode-editor-foreground, #f4f4f4));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    font-size: 12px;
+    font-weight: 650;
+    pointer-events: none;
+}
+
+.global-operation-indicator[hidden] {
+    display: none;
+}
+
+.global-operation-spinner {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: air-flutter-spin 650ms linear infinite;
+}
+
+@keyframes air-flutter-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .global-operation-spinner { animation-duration: 1400ms; }
+}

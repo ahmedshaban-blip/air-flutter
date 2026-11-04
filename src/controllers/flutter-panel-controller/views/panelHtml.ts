@@ -3,6 +3,7 @@ import * as path from 'path';
 import { getWorkflowModalHtml } from './modals/workflowModalHtml';
 import { getFlavorsModalHtml } from './modals/flavorsModalHtml';
 import { getProxyModalHtml } from './modals/proxyModalHtml';
+import { getMirrorSetupModalHtml } from './modals/mirrorSetupModalHtml';
 import { getAgentScaffoldModalHtml } from './modals/agentScaffoldModalHtml';
 import { getCompatDoctorModalHtml } from './modals/compatDoctorModalHtml';
 import { getSigningKeyModalHtml } from './modals/signingKeyModalHtml';
@@ -44,6 +45,7 @@ export function getPanelWebviewContent(
   const appStateModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'appStateModule.js')));
   const deepLinkModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'deepLinkStudioModule.js')));
   const localhostBridgeModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'localhostBridgeModule.js')));
+  const mirrorSetupModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mirrorSetupModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
   const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
     .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
@@ -550,12 +552,18 @@ export function getPanelWebviewContent(
             </div>
         </div>
 
+        <div id="globalOperationIndicator" class="global-operation-indicator" role="status" aria-live="polite">
+            <span class="global-operation-spinner" aria-hidden="true"></span>
+            <span id="globalOperationLabel">Loading device state…</span>
+        </div>
+
 ${getWorkflowModalHtml()}
 ${getFlavorsModalHtml()}
 ${getProxyModalHtml()}
 ${getAgentScaffoldModalHtml()}
 ${getCompatDoctorModalHtml()}
 ${getSigningKeyModalHtml()}
+${getMirrorSetupModalHtml()}
 
         <script>
             window.addEventListener('DOMContentLoaded', () => {
@@ -671,6 +679,7 @@ ${getSigningKeyModalHtml()}
         <script src="${appStateModuleUri}"></script>
         <script src="${deepLinkModuleUri}"></script>
         <script src="${localhostBridgeModuleUri}"></script>
+        <script src="${mirrorSetupModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>
     </html>`;

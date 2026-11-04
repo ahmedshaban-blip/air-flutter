@@ -7,6 +7,12 @@ import { DeviceToolsService, DeviceInfoSnapshot } from '../../domain/device-tool
 import { LogcatService, LogcatLine, LogPriority, DEFAULT_LOG_PRIORITY } from '../../domain/logcat'
 import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper'
 import { LocalhostBridge } from '../../domain/localhost-bridge'
+import {
+  isMirrorAudioRoute,
+  isMirrorPerformanceProfile,
+  normalizeMirrorPerformanceProfile,
+  MirroringState
+} from '../../domain/mirror-profile'
 
 interface SidebarMessage {
   command?: string
@@ -20,6 +26,9 @@ interface SidebarMessage {
   operation?: WipeOperation
   packageId?: string
   port?: number
+  mode?: string
+  audioRoute?: string
+  performanceProfile?: string
 }
 
 /**
@@ -42,6 +51,7 @@ export class SidebarController {
   private watchedSerial?: string
   private lastInfoJson = ''
   private lastRecordingState: { isRecording: boolean; duration: number } = { isRecording: false, duration: 0 }
+  private lastMirroringState: MirroringState = { isMirroring: false, displayOff: false }
   /** Last package the user confirmed for the watched device, shown in the UI. */
   private lastWipePackage?: string
 
@@ -101,6 +111,11 @@ export class SidebarController {
     })
   }
 
+  public updateMirroringState(state: MirroringState): void {
+    this.lastMirroringState = state
+    this.view?.webview.postMessage({ command: 'mirroringState', ...state })
+  }
+
   private resolve(webviewView: vscode.WebviewView) {
     this.view = webviewView
 
@@ -122,11 +137,19 @@ export class SidebarController {
     webviewView.webview.html = this.html(webviewView.webview, styleUri, scriptUri)
 
     webviewView.webview.onDidReceiveMessage(async (message: SidebarMessage) => {
+      const tracked = this.shouldTrackSidebarOperation(message.command)
+      if (tracked) {
+        this.post({ command: 'sidebarOperation', loading: true, operation: message.command })
+      }
       try {
         await this.handleMessage(message)
       } catch (error) {
         const text = error instanceof Error ? error.message : String(error)
         this.post({ command: 'toolResult', ok: false, message: text })
+      } finally {
+        if (tracked) {
+          this.post({ command: 'sidebarOperation', loading: false, operation: message.command })
+        }
       }
     })
 
@@ -140,6 +163,15 @@ export class SidebarController {
   }
 
   // --- message handling ----------------------------------------------------
+
+  private shouldTrackSidebarOperation(command?: string): command is string {
+    return typeof command === 'string' && ![
+      'applyFilter',
+      'clearLog',
+      'copyLog',
+      'open'
+    ].includes(command)
+  }
 
   private async handleMessage(message: SidebarMessage): Promise<void> {
     switch (message.command) {
@@ -163,6 +195,7 @@ export class SidebarController {
           isRecording: this.lastRecordingState.isRecording,
           duration: this.lastRecordingState.duration
         })
+        this.updateMirroringState(this.lastMirroringState)
         break
       case 'refreshInfo':
         this.lastInfoJson = ''
@@ -203,6 +236,12 @@ export class SidebarController {
         break
       case 'wakeScreen':
         await this.runWakeScreen()
+        break
+      case 'toggleScreenPower':
+        await this.runToggleScreenPower()
+        break
+      case 'startMirror':
+        await this.runMirror(message.mode, message.audioRoute, message.performanceProfile)
         break
       case 'fixWifi':
         await this.runFixWifi()
@@ -751,6 +790,52 @@ export class SidebarController {
     } finally {
       this.post({ command: 'toolBusy', tool: 'wake', busy: false })
     }
+  }
+
+  private async runToggleScreenPower(): Promise<void> {
+    this.post({ command: 'toolBusy', tool: 'wake', busy: true })
+    try {
+      const state = await vscode.commands.executeCommand<MirroringState>('airFlutter.toggleScreenPower')
+      this.updateMirroringState(state)
+      this.lastInfoJson = ''
+      await this.pollDeviceInfo(true)
+      this.post({
+        command: 'toolResult',
+        ok: true,
+        message: state.displayOff ? 'Phone display turned off.' : 'Phone display woken.'
+      })
+    } catch (error) {
+      this.post({
+        command: 'toolResult',
+        ok: false,
+        message: `Could not change display power: ${error instanceof Error ? error.message : String(error)}`
+      })
+    } finally {
+      this.post({ command: 'toolBusy', tool: 'wake', busy: false })
+    }
+  }
+
+  private async runMirror(
+    mode?: string,
+    audioRoute?: string,
+    performanceProfile?: string
+  ): Promise<void> {
+    if (!isMirrorAudioRoute(audioRoute) || !isMirrorPerformanceProfile(performanceProfile)) {
+      throw new Error('Choose a valid audio route and mirroring profile.')
+    }
+    let command: string
+    if (mode === 'keyboard') {
+      command = 'airFlutter.mirrorWithKeyboard'
+    } else if (mode === 'standard') {
+      command = 'airFlutter.startScreenMirroring'
+    } else {
+      throw new Error('Unknown mirroring mode.')
+    }
+    await vscode.commands.executeCommand(command, {
+      audioRoute,
+      performanceProfile: normalizeMirrorPerformanceProfile(performanceProfile)
+    })
+    this.post({ command: 'toolResult', ok: true, message: 'Mirroring session launched.' })
   }
 
   private async runStopMirror(): Promise<void> {

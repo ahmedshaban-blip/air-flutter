@@ -67,6 +67,33 @@ export function getWorkflowModalHtml(): string {
                         </div>
                     </div>
 
+                    <div class="modal-field workflow-layout-field" id="workflowLayoutField" hidden>
+                        <div class="workflow-layout-heading">
+                            <label>Workflow File Layout</label>
+                            <span class="workflow-layout-badge">Both selected</span>
+                        </div>
+                        <span class="field-desc">Choose how APK and AAB builds are organized in GitHub Actions.</span>
+                        <div class="workflow-layout-options" role="radiogroup" aria-label="Workflow file layout">
+                            <label class="workflow-layout-option">
+                                <input type="radio" name="workflowLayout" value="single" checked />
+                                <span class="workflow-layout-copy">
+                                    <strong>One coordinated workflow</strong>
+                                    <small>Builds APK and AAB together in one run.</small>
+                                    <code>build_android.yml</code>
+                                </span>
+                                <span class="workflow-layout-recommended">Recommended</span>
+                            </label>
+                            <label class="workflow-layout-option">
+                                <input type="radio" name="workflowLayout" value="separate" />
+                                <span class="workflow-layout-copy">
+                                    <strong>Separate workflows</strong>
+                                    <small>Run and retry APK or AAB independently.</small>
+                                    <span class="workflow-file-list"><code>build_apk.yml</code><code>build_android.yml</code></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Build Limits -->
                     <div class="modal-options-grid">
                         <div class="modal-field">

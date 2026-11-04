@@ -10,6 +10,12 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
         const signingToggle = document.getElementById('workflowEnableSigning');
         const secretsBox = document.getElementById('workflowSecretsBox');
         const submitBtn = document.getElementById('generateWorkflowSubmitBtn');
+        const layoutField = document.getElementById('workflowLayoutField');
+
+        const syncWorkflowLayoutVisibility = () => {
+            const target = document.querySelector('input[name="workflowBuildTarget"]:checked')?.value;
+            if (layoutField) layoutField.hidden = target !== 'both';
+        };
 
         const closeModal = () => {
             modal.hidden = true;
@@ -17,6 +23,11 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
 
         if (closeBtn) closeBtn.addEventListener('click', closeModal);
         if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        document.querySelectorAll('input[name="workflowBuildTarget"]').forEach(input => {
+            input.addEventListener('change', syncWorkflowLayoutVisibility);
+        });
+        syncWorkflowLayoutVisibility();
 
         if (browseBtn) {
             browseBtn.addEventListener('click', () => {
@@ -40,6 +51,8 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
 
                 const targetRadio = document.querySelector('input[name="workflowBuildTarget"]:checked');
                 const buildTarget = targetRadio ? targetRadio.value : 'universal_apk';
+                const layoutRadio = document.querySelector('input[name="workflowLayout"]:checked');
+                const workflowLayout = buildTarget === 'both' && layoutRadio ? layoutRadio.value : 'single';
 
                 const modeRadio = document.querySelector('input[name="workflowBuildMode"]:checked');
                 const buildMode = modeRadio ? modeRadio.value : 'release';
@@ -75,6 +88,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                     triggerOnPr,
                     triggerManual,
                     buildTarget,
+                    workflowLayout,
                     buildMode,
                     enableSigning,
                     enableCache,

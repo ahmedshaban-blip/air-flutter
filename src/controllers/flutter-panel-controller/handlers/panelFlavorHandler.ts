@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { FlavorManager } from '../../../domain/flavor-manager';
 import { WorkflowGenerator } from '../../../domain/workflow-generator';
 import { PanelHandlerContext } from './panelCompatHandler';
+import { runVisibleTask } from '../../../infra/vscode/run-visible-task';
 
 export class PanelFlavorHandler {
   constructor(private readonly ctx: PanelHandlerContext) {}
@@ -83,14 +84,14 @@ export class PanelFlavorHandler {
       return;
     }
     const targetPath = projectPath || this.ctx.getInitialProjectPath();
-    const terminal = vscode.window.createTerminal(`Flutter Run - ${flavor}`);
-    terminal.show();
-    if (targetPath) {
-      terminal.sendText(`cd "${targetPath}"`);
-    }
     const targetArg = target ? ` -t ${target}` : '';
-    terminal.sendText(`flutter run --flavor ${flavor}${targetArg}`);
     this.ctx.postStatus(`▶️ Running flavor "${flavor}" in terminal...`, 'info');
+    try {
+      await runVisibleTask(`Run ${flavor}`, `flutter run --flavor ${flavor}${targetArg}`, targetPath);
+      this.ctx.postStatus(`✅ Flavor "${flavor}" finished.`, 'success');
+    } catch (error) {
+      this.reportTaskError(`Running flavor "${flavor}" failed`, error);
+    }
   }
 
   public async handleBuildFlavorApk(projectPath?: string, flavor?: string, target?: string): Promise<void> {
@@ -99,15 +100,15 @@ export class PanelFlavorHandler {
       return;
     }
     const targetPath = projectPath || this.ctx.getInitialProjectPath();
-    const terminal = vscode.window.createTerminal(`Flutter Build APK - ${flavor}`);
-    terminal.show();
-    if (targetPath) {
-      terminal.sendText(`cd "${targetPath}"`);
-    }
     const targetArg = target ? ` -t ${target}` : '';
-    terminal.sendText(`flutter build apk --flavor ${flavor}${targetArg}`);
     this.ctx.postStatus(`🚀 Building APK for flavor "${flavor}" in terminal...`, 'info');
-    await this.handleDetectFlavors(targetPath);
+    try {
+      await runVisibleTask(`Build APK - ${flavor}`, `flutter build apk --flavor ${flavor}${targetArg}`, targetPath);
+      this.ctx.postStatus(`✅ APK build for "${flavor}" completed.`, 'success');
+      await this.handleDetectFlavors(targetPath);
+    } catch (error) {
+      this.reportTaskError(`APK build for "${flavor}" failed`, error);
+    }
   }
 
   public async handleBuildAllFlavors(projectPath?: string, flavors?: string[]): Promise<void> {
@@ -116,15 +117,21 @@ export class PanelFlavorHandler {
       return;
     }
     const targetPath = projectPath || this.ctx.getInitialProjectPath();
-    const terminal = vscode.window.createTerminal(`Flutter Build All Flavors`);
-    terminal.show();
-    if (targetPath) {
-      terminal.sendText(`cd "${targetPath}"`);
-    }
-    for (const flavor of flavors) {
-      terminal.sendText(`flutter build apk --flavor ${flavor}`);
-    }
     this.ctx.postStatus(`🚀 Batch building ${flavors.length} flavors in terminal...`, 'info');
-    await this.handleDetectFlavors(targetPath);
+    try {
+      for (const flavor of flavors) {
+        await runVisibleTask(`Build APK - ${flavor}`, `flutter build apk --flavor ${flavor}`, targetPath);
+      }
+      this.ctx.postStatus(`✅ Built ${flavors.length} flavor APKs.`, 'success');
+      await this.handleDetectFlavors(targetPath);
+    } catch (error) {
+      this.reportTaskError('Batch flavor build failed', error);
+    }
+  }
+
+  private reportTaskError(prefix: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.ctx.showErrorMessage(`${prefix}: ${message}`);
+    this.ctx.postStatus(`❌ ${prefix}: ${message}`, 'error');
   }
 }

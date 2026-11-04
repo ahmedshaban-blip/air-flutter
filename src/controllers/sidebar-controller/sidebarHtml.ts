@@ -26,6 +26,10 @@ export function getSidebarWebviewHtml(
     <title>Air Flutter</title>
 </head>
 <body>
+    <div id="sidebarOperationIndicator" class="sf-operation-indicator" role="status" aria-live="polite">
+        <span class="sf-operation-spinner" aria-hidden="true"></span>
+        <span id="sidebarOperationLabel">Loading device state…</span>
+    </div>
     <header class="sf-masthead">
         <svg class="sf-mark" viewBox="0 0 32 32" aria-hidden="true">
             <rect x="0.75" y="0.75" width="30.5" height="30.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
@@ -95,9 +99,18 @@ export function getSidebarWebviewHtml(
     </section>
 
     <!-- Developer tools -->
-    <section>
-        <h2 class="sf-label">Tools</h2>
-        <div class="sf-tool-grid">
+    <section class="sf-tools" aria-labelledby="toolsHeading">
+        <div class="sf-tools-head">
+            <h2 class="sf-label" id="toolsHeading">Tools</h2>
+            <span class="sf-tools-hint">Select a category</span>
+        </div>
+        <div class="sf-tool-groups">
+        <details class="sf-tool-group" data-tool-group="device" open>
+            <summary>
+                <span class="sf-tool-group-title">Device controls</span>
+                <span class="sf-tool-group-meta"><span>5 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+            </summary>
+            <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolScreenshot" data-tool="screenshot" title="Capture device screenshot to workspace">
                 <span class="sf-tool-name">Screenshot</span>
                 <span class="sf-tool-note">to workspace</span>
@@ -110,6 +123,23 @@ export function getSidebarWebviewHtml(
                 <span class="sf-tool-name">Fix Wi-Fi</span>
                 <span class="sf-tool-note">reboot &amp; restore wireless ADB</span>
             </button>
+            <button class="sf-tool" type="button" id="toolSendText" data-tool="sendText" title="Send clipboard or text to phone's active input">
+                <span class="sf-tool-name">Send text</span>
+                <span class="sf-tool-note">paste to phone</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolInstallApk" data-tool="installApk" title="Install an APK file to connected phone">
+                <span class="sf-tool-name">Install APK</span>
+                <span class="sf-tool-note">select &amp; install</span>
+            </button>
+            </div>
+        </details>
+
+        <details class="sf-tool-group" data-tool-group="mirror">
+            <summary>
+                <span class="sf-tool-group-title">Mirror &amp; capture</span>
+                <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+            </summary>
+            <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolMirror" data-tool="mirror" title="Standard mirroring: Display on PC &amp; phone">
                 <span class="sf-tool-name">Mirror</span>
                 <span class="sf-tool-note">Display on PC &amp; phone</span>
@@ -122,42 +152,94 @@ export function getSidebarWebviewHtml(
                 <span class="sf-tool-name">Stop mirror</span>
                 <span class="sf-tool-note">close scrcpy session</span>
             </button>
-            <button class="sf-tool" type="button" id="toolSendText" data-tool="sendText" title="Send clipboard or text to phone's active input">
-                <span class="sf-tool-name">Send text</span>
-                <span class="sf-tool-note">paste to phone</span>
-            </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolInstallApk" data-tool="installApk" title="Install an APK file to connected phone">
-                <span class="sf-tool-name">Install APK</span>
-                <span class="sf-tool-note">select &amp; install to device</span>
-            </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolWorkflow" data-tool="workflow" title="Generate GitHub Actions CI/CD workflow for building APK">
-                <span class="sf-tool-name">GitHub Workflow</span>
-                <span class="sf-tool-note">CI/CD APK build action</span>
-            </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolSigningKey" data-tool="signingKey" title="Create an Android upload signing key">
-                <span class="sf-tool-name">Signing Key Studio</span>
-                <span class="sf-tool-note">create Android upload key</span>
-            </button>
             <button class="sf-tool" type="button" id="toolRecord" data-tool="record" title="Record device screen to MP4">
                 <span class="sf-tool-name">Record Video</span>
                 <span class="sf-tool-note">start MP4 recording</span>
             </button>
+            </div>
+            <form class="sf-mirror-setup" id="mirrorSetup" hidden>
+                <div class="sf-mirror-setup-head">
+                    <div>
+                        <strong id="mirrorSetupTitle">Start mirroring</strong>
+                        <span>Choose how this session should feel.</span>
+                    </div>
+                    <button type="button" id="mirrorSetupClose" aria-label="Close mirroring setup">Close</button>
+                </div>
+
+                <fieldset class="sf-mirror-choice">
+                    <legend>Audio route</legend>
+                    <label>
+                        <input type="radio" name="mirrorAudio" value="computer" checked>
+                        <span><strong>Computer only</strong><small>Mute phone · restore on stop</small></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="mirrorAudio" value="phone">
+                        <span><strong>Phone only</strong><small>No audio forwarding</small></span>
+                    </label>
+                </fieldset>
+
+                <fieldset class="sf-mirror-choice sf-mirror-profiles">
+                    <legend>Performance</legend>
+                    <label>
+                        <input type="radio" name="mirrorProfile" value="speed">
+                        <span><strong>Fast</strong><small>120 FPS · 1024 px cap</small></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="mirrorProfile" value="balanced" checked>
+                        <span><strong>Balanced</strong><small>60 FPS · 1600 px cap</small></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="mirrorProfile" value="ultra">
+                        <span><strong>Ultra</strong><small>Native size · 16 Mbps · up to 120 FPS*</small></span>
+                    </label>
+                </fieldset>
+                <p class="sf-mirror-note">*Real FPS and quality depend on the device encoder, screen refresh rate and Wi&#8209;Fi. Audio forwarding needs Android 11+.</p>
+
+                <button class="sf-mirror-launch" type="submit">Launch session <span aria-hidden="true">→</span></button>
+            </form>
+        </details>
+
+        <details class="sf-tool-group" data-tool-group="build">
+            <summary>
+                <span class="sf-tool-group-title">Build &amp; release</span>
+                <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+            </summary>
+            <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolFlavors" data-tool="flavors" title="Manage, run, and build Flutter flavors">
                 <span class="sf-tool-name">Flavors</span>
                 <span class="sf-tool-note">manage &amp; build</span>
             </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolProxy" data-tool="proxy" title="Configure HTTP Proxy and Private DNS for network traffic inspection">
-                <span class="sf-tool-name">Proxy / DNS</span>
-                <span class="sf-tool-note">network inspector</span>
+            <button class="sf-tool" type="button" id="toolSigningKey" data-tool="signingKey" title="Create an Android upload signing key">
+                <span class="sf-tool-name">Signing Key</span>
+                <span class="sf-tool-note">Android upload key</span>
             </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolAgentEngine" data-tool="agentEngine" title="Scaffold AI Sub-Agents and Multi-Agent Workflows">
-                <span class="sf-tool-name">AI Agent Engine</span>
-                <span class="sf-tool-note">scaffold sub-agents &amp; teams</span>
+            <button class="sf-tool" type="button" id="toolWorkflow" data-tool="workflow" title="Generate GitHub Actions CI/CD workflow for building APK">
+                <span class="sf-tool-name">GitHub Workflow</span>
+                <span class="sf-tool-note">CI/CD APK build</span>
             </button>
-            <button class="sf-tool sf-tool-wide" type="button" id="toolCompatDoctor" data-tool="compatDoctor" title="Run Flutter Compatibility Doctor &amp; Auto-Fixer">
+            <button class="sf-tool" type="button" id="toolCompatDoctor" data-tool="compatDoctor" title="Run Flutter Compatibility Doctor &amp; Auto-Fixer">
                 <span class="sf-tool-name">Compat Doctor</span>
                 <span class="sf-tool-note">Gradle, AGP, Java &amp; iOS</span>
             </button>
+            </div>
+        </details>
+
+        <details class="sf-tool-group" data-tool-group="advanced">
+            <summary>
+                <span class="sf-tool-group-title">Network &amp; automation</span>
+                <span class="sf-tool-group-meta"><span>2 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+            </summary>
+            <div class="sf-tool-grid">
+            <button class="sf-tool" type="button" id="toolProxy" data-tool="proxy" title="Configure HTTP Proxy and Private DNS for network traffic inspection">
+                <span class="sf-tool-name">Proxy / DNS</span>
+                <span class="sf-tool-note">network inspector</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolAgentEngine" data-tool="agentEngine" title="Scaffold AI Sub-Agents and Multi-Agent Workflows">
+                <span class="sf-tool-name">AI Agent Engine</span>
+                <span class="sf-tool-note">sub-agents &amp; teams</span>
+            </button>
+            </div>
+        </details>
         </div>
         <p class="sf-tool-msg" id="toolMessage" hidden></p>
     </section>

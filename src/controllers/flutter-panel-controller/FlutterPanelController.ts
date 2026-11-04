@@ -12,7 +12,9 @@ import {
   AndroidDeviceManager,
   NetworkDevice
 } from '../../domain/android-device-manager';
-import { ScreenMirrorManager } from '../../domain/screen-mirror';
+import { MirrorOptions, ScreenMirrorManager } from '../../domain/screen-mirror';
+import { ScreenPowerService } from '../../domain/screen-power';
+import { MirrorLaunchPreferences, MirroringState } from '../../domain/mirror-profile';
 import { WorkflowGenerator, WorkflowOptions } from '../../domain/workflow-generator';
 import { FlavorManager } from '../../domain/flavor-manager';
 import { ScreenRecorder } from '../../domain/screen-recorder';
@@ -38,6 +40,7 @@ import { SigningKeyOptions } from '../../domain/signing-key-generator';
 import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper';
 import { DeepLinkIntentStudio } from '../../domain/deep-link-intent-studio';
 import { LocalhostBridge } from '../../domain/localhost-bridge';
+import { runVisibleTask } from '../../infra/vscode/run-visible-task';
 
 interface Device {
   id: string;
@@ -58,10 +61,13 @@ export class FlutterPanelController extends ADBBaseController {
   private deviceManager: AndroidDeviceManager;
   private readonly localhostBridge: LocalhostBridge;
   private screenMirrorManager: ScreenMirrorManager;
+  private readonly screenPower = new ScreenPowerService();
   private screenRecorder = new ScreenRecorder();
   private recordingTimer?: NodeJS.Timeout;
   private readonly _onRecordingStateChanged = new vscode.EventEmitter<{ isRecording: boolean; duration: number }>();
   public readonly onRecordingStateChanged = this._onRecordingStateChanged.event;
+  private readonly _onMirroringStateChanged = new vscode.EventEmitter<MirroringState>();
+  public readonly onMirroringStateChanged = this._onMirroringStateChanged.event;
 
   public isRecording(): boolean {
     return this.screenRecorder.isRecording();
@@ -82,6 +88,8 @@ export class FlutterPanelController extends ADBBaseController {
   private readonly permissionHandler: PanelPermissionHandler;
   private readonly appStateHandler: PanelAppStateHandler;
   private readonly deepLinkHandler: PanelDeepLinkHandler;
+  private operationSequence = 0;
+  private initialLoadPending = false;
 
 
   constructor(
@@ -102,7 +110,7 @@ export class FlutterPanelController extends ADBBaseController {
     );
     this.screenMirrorManager = new ScreenMirrorManager(context);
     this.screenMirrorManager.onMirroringStateChanged(event => {
-      this.notifyMirroringState(event.isMirroring);
+      this.publishMirroringState(event.serial);
     });
     this.extensionVersion = (context.extension.packageJSON.version as string) || 'unknown';
 
@@ -140,38 +148,50 @@ export class FlutterPanelController extends ADBBaseController {
     
     // Only register essential commands - remove all others
     this.registerCommand('airFlutter.openFlutterPanel', () => this.openFlutterPanel())
-      .registerCommand('airFlutter.connectWirelessDevice', () => this.connectWirelessDevice())
-      .registerCommand('airFlutter.showConnectedDevices', () => this.showConnectedDevices())
+      .registerCommand('airFlutter.connectWirelessDevice', () => this.withNativeProgress('Connecting wireless device…', () => this.connectWirelessDevice()))
+      .registerCommand('airFlutter.showConnectedDevices', () => this.withNativeProgress('Refreshing connected devices…', () => this.showConnectedDevices()))
       .registerCommand('airFlutter.showTroubleshootingGuide', () => this.showTroubleshootingGuide())
-      .registerCommand('airFlutter.runFlutterDoctor', () => this.flutterDoctor())
-      .registerCommand('airFlutter.getPackages', () => this.getPackages())
-      .registerCommand('airFlutter.upgradePackages', () => this.upgradePackages())
-      .registerCommand('airFlutter.cleanProject', () => this.cleanProject())
-      .registerCommand('airFlutter.runFlutterApp', () => this.runFlutterApp())
-      .registerCommand('airFlutter.buildAPK', () => this.buildAPK())
-      .registerCommand('airFlutter.buildAppBundle', () => this.buildAAB())
-      .registerCommand('airFlutter.startScreenMirroring', () => this.selectDeviceToMirror())
-      .registerCommand('airFlutter.mirrorWithScreenOff', () => this.selectDeviceToMirror({ displayOff: true }))
-      .registerCommand('airFlutter.mirrorWithKeyboard', () => this.selectDeviceToMirror({ displayOff: true, hardwareKeyboard: true }))
-      .registerCommand('airFlutter.mirrorWirelessDisplay', () => this.selectDeviceToMirror({ wirelessDisplay: true }))
-      .registerCommand('airFlutter.stopScreenMirroring', () => this.stopMirroring())
-      .registerCommand('airFlutter.wakeScreen', (deviceId?: string) => this.wakeDeviceScreen(deviceId))
-      .registerCommand('airFlutter.installApk', () => this.installApkToDevice())
-      .registerCommand('airFlutter.sendTextToDevice', () => this.sendTextToDevice())
-      .registerCommand('airFlutter.setScrcpyPath', () => this.setScrcpyPath())
+      .registerCommand('airFlutter.runFlutterDoctor', () => this.withNativeProgress('Running Flutter Doctor…', () => this.flutterDoctor()))
+      .registerCommand('airFlutter.getPackages', () => this.withNativeProgress('Getting Flutter packages…', () => this.getPackages()))
+      .registerCommand('airFlutter.upgradePackages', () => this.withNativeProgress('Upgrading Flutter packages…', () => this.upgradePackages()))
+      .registerCommand('airFlutter.cleanProject', () => this.withNativeProgress('Cleaning Flutter project…', () => this.cleanProject()))
+      .registerCommand('airFlutter.runFlutterApp', () => this.withNativeProgress('Running Flutter app…', () => this.runFlutterApp()))
+      .registerCommand('airFlutter.buildAPK', () => this.withNativeProgress('Building APK…', () => this.buildAPK()))
+      .registerCommand('airFlutter.buildAppBundle', () => this.withNativeProgress('Building App Bundle…', () => this.buildAAB()))
+      .registerCommand('airFlutter.startScreenMirroring', (preferences?: MirrorLaunchPreferences) => this.withNativeProgress('Starting screen mirroring…', () => this.selectDeviceToMirror(preferences)))
+      .registerCommand('airFlutter.mirrorWithScreenOff', (preferences?: MirrorLaunchPreferences) => this.withNativeProgress('Starting screen mirroring…', () => this.selectDeviceToMirror({ ...preferences, displayOff: true })))
+      .registerCommand('airFlutter.mirrorWithKeyboard', (preferences?: MirrorLaunchPreferences) => this.withNativeProgress('Starting keyboard mirroring…', () => this.selectDeviceToMirror({ ...preferences, displayOff: true, hardwareKeyboard: true })))
+      .registerCommand('airFlutter.mirrorWirelessDisplay', () => this.withNativeProgress('Starting virtual display…', () => this.selectDeviceToMirror({ wirelessDisplay: true })))
+      .registerCommand('airFlutter.stopScreenMirroring', () => this.withNativeProgress('Stopping screen mirroring…', () => this.stopMirroring()))
+      .registerCommand('airFlutter.wakeScreen', (deviceId?: string) => this.withNativeProgress('Waking phone display…', () => this.wakeDeviceScreen(deviceId)))
+      .registerCommand('airFlutter.toggleScreenPower', () => this.withNativeProgress('Updating phone display…', () => this.toggleMirroredDisplay()))
+      .registerCommand('airFlutter.installApk', () => this.withNativeProgress('Installing APK…', () => this.installApkToDevice()))
+      .registerCommand('airFlutter.sendTextToDevice', () => this.withNativeProgress('Sending text to phone…', () => this.sendTextToDevice()))
+      .registerCommand('airFlutter.setScrcpyPath', () => this.withNativeProgress('Checking scrcpy…', () => this.setScrcpyPath()))
       .registerCommand('airFlutter.generateWorkflow', () => this.openWorkflowModal())
       .registerCommand('airFlutter.openSigningKeyModal', () => this.openSigningKeyModal())
-      .registerCommand('airFlutter.openFlavorsModal', () => this.openFlavorsModal())
-      .registerCommand('airFlutter.openProxyModal', () => this.openProxyModal())
-      .registerCommand('airFlutter.toggleScreenRecording', () => this.toggleScreenRecording())
+      .registerCommand('airFlutter.openFlavorsModal', () => this.withNativeProgress('Detecting Flutter flavors…', () => this.openFlavorsModal()))
+      .registerCommand('airFlutter.openProxyModal', () => this.withNativeProgress('Reading network settings…', () => this.openProxyModal()))
+      .registerCommand('airFlutter.toggleScreenRecording', () => this.withNativeProgress('Updating screen recording…', () => this.toggleScreenRecording()))
       .registerCommand('airFlutter.openAgentScaffoldingModal', () => this.openAgentScaffoldModal())
-      .registerCommand('airFlutter.openCompatDoctorModal', () => this.openCompatDoctorModal())
-      .registerCommand('airFlutter.resetAppState', () => this.openAppStateQuickPick())
-      .registerCommand('airFlutter.clearAppCache', () => this.handleWipe('cache'))
-      .registerCommand('airFlutter.resetAppDatabases', () => this.handleWipe('databases'))
-      .registerCommand('airFlutter.factoryResetApp', () => this.handleWipe('factory'))
+      .registerCommand('airFlutter.openCompatDoctorModal', () => this.withNativeProgress('Scanning Flutter compatibility…', () => this.openCompatDoctorModal()))
+      .registerCommand('airFlutter.resetAppState', () => this.withNativeProgress('Loading app state tools…', () => this.openAppStateQuickPick()))
+      .registerCommand('airFlutter.clearAppCache', () => this.withNativeProgress('Clearing app cache…', () => this.handleWipe('cache')))
+      .registerCommand('airFlutter.resetAppDatabases', () => this.withNativeProgress('Resetting app databases…', () => this.handleWipe('databases')))
+      .registerCommand('airFlutter.factoryResetApp', () => this.withNativeProgress('Resetting app data…', () => this.handleWipe('factory')))
     
     console.log('✅ FlutterPanelController: Essential commands registered successfully')
+  }
+
+  private withNativeProgress<T>(title: string, task: () => Promise<T>): Thenable<T> {
+    return vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title,
+        cancellable: false
+      },
+      task
+    );
   }
 
   private async openFlutterPanel() {
@@ -223,9 +243,22 @@ export class FlutterPanelController extends ADBBaseController {
     this.currentPanel.webview.onDidReceiveMessage(
       async (message) => {
         console.log('📨 FlutterPanelController: Received command:', message?.command)
+        const operationId = `panel-${++this.operationSequence}`;
+        const trackOperation = this.shouldTrackOperation(message?.command);
+        if (trackOperation) {
+          this.postOperationLoading(operationId, message, true);
+        }
         
         try {
           switch (message.command) {
+            case 'panelReady':
+              this.currentPanel?.webview.postMessage({
+                command: 'operationLoading',
+                operationId: 'panel-initial-load',
+                operation: 'initialLoad',
+                loading: this.initialLoadPending
+              });
+              break;
             case 'connectDevice':
               console.log('🔗 FlutterPanelController: Connecting device...')
               await this.handleConnectDevice(message.ip, message.port);
@@ -254,11 +287,16 @@ export class FlutterPanelController extends ADBBaseController {
               await this.handleMirrorDevice(message.deviceId, {
                 displayOff: message.mode === 'screen-off' || message.mode === 'keyboard',
                 hardwareKeyboard: message.mode === 'keyboard',
-                wirelessDisplay: message.mode === 'virtual-display'
+                wirelessDisplay: message.mode === 'virtual-display',
+                audioRoute: message.audioRoute,
+                performanceProfile: message.performanceProfile
               });
               break;
             case 'wakeDevice':
               await this.wakeDeviceScreen(message.deviceId);
+              break;
+            case 'toggleMirrorDisplay':
+              await this.toggleMirroredDisplay(message.deviceId);
               break;
             case 'stopMirroring':
               await this.stopMirroring();
@@ -453,6 +491,10 @@ export class FlutterPanelController extends ADBBaseController {
               type: 'error'
             });
           }
+        } finally {
+          if (trackOperation) {
+            this.postOperationLoading(operationId, message, false);
+          }
         }
       }
     );
@@ -462,14 +504,25 @@ export class FlutterPanelController extends ADBBaseController {
       this.currentPanel = undefined;
     });
 
-    // Initial device refresh
+    // Initial state hydration uses the indicator already rendered in the HTML.
     console.log('🔄 FlutterPanelController: Performing initial device refresh...')
-    await this.refreshConnectedDevices();
-    this.pushLocalhostBridgeState();
-
-    this.notifyMirroringState(this.screenMirrorManager.isMirroring());
-    await this.pushAppStatePackage();
-    this.deepLinkHandler.load();
+    const initialOperationId = 'panel-initial-load';
+    this.initialLoadPending = true;
+    try {
+      await this.refreshConnectedDevices();
+      this.pushLocalhostBridgeState();
+      this.publishMirroringState();
+      await this.pushAppStatePackage();
+      this.deepLinkHandler.load();
+    } finally {
+      this.initialLoadPending = false;
+      this.currentPanel?.webview.postMessage({
+        command: 'operationLoading',
+        operationId: initialOperationId,
+        operation: 'initialLoad',
+        loading: false
+      });
+    }
     
     console.log('✅ FlutterPanelController: Panel opened successfully')
   }
@@ -667,26 +720,19 @@ export class FlutterPanelController extends ADBBaseController {
         });
       }
       
-      // Create a new terminal and execute the command directly
+      // Run as a VS Code task so completion reflects the real process exit,
+      // rather than merely confirming that text was sent to a terminal.
       try {
-        const terminal = vscode.window.createTerminal(`Air Flutter - ${commandName}`);
-        terminal.show();
-        
-        // Execute the command with a small delay to ensure the terminal is ready
-        setTimeout(() => {
-          terminal.sendText(commandToExecute);
-          console.log(`✅ FlutterPanelController: Command sent to terminal: ${commandToExecute}`);
-        }, 500);
-        
-        console.log(`✅ FlutterPanelController: Terminal created for command: ${commandName}`);
-        this.showSuccessMessage(`Executed: ${commandName}`);
+        await runVisibleTask(commandName, commandToExecute, this.getInitialProjectPath() || undefined);
+        console.log(`✅ FlutterPanelController: Command completed: ${commandToExecute}`);
+        this.showSuccessMessage(`Completed: ${commandName}`);
         
         // Update webview with success message
         if (this.currentPanel) {
           console.log(`📤 FlutterPanelController: Sending success message to webview`);
           this.currentPanel.webview.postMessage({
             command: 'addStatusMessage',
-            message: `✅ Successfully executed: ${commandName}`,
+            message: `✅ Successfully completed: ${commandName}`,
             type: 'success'
           });
         }
@@ -711,7 +757,29 @@ export class FlutterPanelController extends ADBBaseController {
       }
     }
   }
-  
+
+  private shouldTrackOperation(command: unknown): command is string {
+    return typeof command === 'string' && ![
+      'panelReady',
+      'loadDeepLinkStudio',
+      'getWorkflowInitialPath'
+    ].includes(command);
+  }
+
+  private postOperationLoading(
+    operationId: string,
+    message: Record<string, unknown>,
+    loading: boolean
+  ): void {
+    this.currentPanel?.webview.postMessage({
+      command: 'operationLoading',
+      operationId,
+      operation: message.command,
+      target: message.commandId,
+      loading
+    });
+  }
+
   // Method removed - using direct terminal execution in handleFlutterCommand
 
   private async handleDisconnectDevice(deviceId: string) {
@@ -885,7 +953,7 @@ export class FlutterPanelController extends ADBBaseController {
 
   private async handleMirrorDevice(
     deviceId: string,
-    options: { displayOff?: boolean; wirelessDisplay?: boolean; hardwareKeyboard?: boolean } = {}
+    options: MirrorOptions = {}
   ) {
     const device = this.connectedDevices.find(item => item.id === deviceId);
     if (!device) {
@@ -900,16 +968,15 @@ export class FlutterPanelController extends ADBBaseController {
     try {
       const adbPath = await this.deviceManager.getADBExecutable();
       if (options.wirelessDisplay) {
-        await this.screenMirrorManager.startWirelessDisplay(device.id, device.name, adbPath);
+        await this.screenMirrorManager.startWirelessDisplay(device.id, device.name, adbPath, options);
         this.postStatus(
           `✅ Mirroring ${device.name} into a virtual display. The phone panel stays off.`,
           'success'
         );
       } else {
-        await this.screenMirrorManager.start(device.id, device.name, adbPath, {
-          displayOff: options.displayOff,
-          hardwareKeyboard: options.hardwareKeyboard
-        });
+        // Pass the whole options object: audioRoute and performanceProfile are
+        // part of the launch contract — dropping them silences the session.
+        await this.screenMirrorManager.start(device.id, device.name, adbPath, options);
 
         if (options.hardwareKeyboard) {
           this.postStatus(
@@ -945,7 +1012,7 @@ export class FlutterPanelController extends ADBBaseController {
     }
   }
 
-  private async selectDeviceToMirror(options: { displayOff?: boolean; wirelessDisplay?: boolean; hardwareKeyboard?: boolean } = {}) {
+  private async selectDeviceToMirror(options: MirrorOptions = {}) {
     await this.refreshConnectedDevices();
     const onlineDevices = this.connectedDevices.filter(device => device.status === 'online');
     if (onlineDevices.length === 0) {
@@ -982,11 +1049,26 @@ export class FlutterPanelController extends ADBBaseController {
     }
   }
 
-  private notifyMirroringState(isMirroring: boolean) {
+  private notifyMirroringState(state: MirroringState) {
     this.currentPanel?.webview.postMessage({
       command: 'mirroringState',
-      isMirroring
+      ...state
     });
+  }
+
+  private publishMirroringState(serial?: string): void {
+    const activeSerial = serial && this.screenMirrorManager.isMirroring(serial)
+      ? serial
+      : this.screenMirrorManager.getActiveDeviceSerial();
+    const state: MirroringState = {
+      isMirroring: this.screenMirrorManager.isMirroring(),
+      displayOff: activeSerial
+        ? this.screenMirrorManager.wasPhysicalDisplayTurnedOff(activeSerial)
+        : false,
+      serial: activeSerial
+    };
+    this.notifyMirroringState(state);
+    this._onMirroringStateChanged.fire(state);
   }
 
   private async stopMirroring() {
@@ -1004,7 +1086,7 @@ export class FlutterPanelController extends ADBBaseController {
         }
       }
 
-      this.notifyMirroringState(false);
+      this.publishMirroringState(mirroredSerial);
       if (stopped) {
         this.postStatus('⏹️ Screen mirroring stopped. Phone screen restored.', 'info');
         vscode.window.showInformationMessage('Screen mirroring stopped. Phone screen restored.');
@@ -1013,7 +1095,7 @@ export class FlutterPanelController extends ADBBaseController {
       }
     } catch (error) {
       this.showErrorMessage(error instanceof Error ? error.message : String(error));
-      this.notifyMirroringState(this.screenMirrorManager.isMirroring());
+      this.publishMirroringState();
     }
   }
 
@@ -1027,17 +1109,87 @@ export class FlutterPanelController extends ADBBaseController {
     }
 
     const adbPath = await this.deviceManager.getADBExecutable();
-    await new Promise<void>((resolve, reject) => {
-      execFile(
-        adbPath,
-        ['-s', targetSerial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'],
-        { windowsHide: true, timeout: 10000 },
-        error => error ? reject(error) : resolve()
-      );
+    const preferredScrcpyRestore = this.screenMirrorManager.wasPhysicalDisplayTurnedOff(targetSerial);
+    if (preferredScrcpyRestore) {
+      this.postStatus(`🔄 Waking ${targetSerial}…`, 'info');
+    }
+    const finalState = await this.screenPower.wakeDisplay(adbPath, targetSerial, {
+      preferScrcpyRestore: preferredScrcpyRestore
     });
 
-    this.postStatus(`✅ Screen woken for ${targetSerial}`, 'success');
-    return targetSerial;
+    if (finalState === 'on' || (finalState === 'unknown' && preferredScrcpyRestore)) {
+      this.screenMirrorManager.markPhysicalDisplayOn(targetSerial);
+      this.publishMirroringState(targetSerial);
+      this.postStatus(
+        finalState === 'on' ? `✅ Screen woken for ${targetSerial}` : `✅ Wake keys sent to ${targetSerial}`,
+        'success'
+      );
+      return targetSerial;
+    }
+
+    this.publishMirroringState(targetSerial);
+    throw new Error(
+      finalState === 'off'
+        ? `The display of ${targetSerial} is still off after the wake attempts. Stop mirroring once and start it again if it stays dark.`
+        : `Could not read the display state of ${targetSerial}; check the phone.`
+    );
+  }
+
+  private async toggleMirroredDisplay(requestedSerial?: string): Promise<MirroringState> {
+    const serial = this.screenMirrorManager.getActiveDeviceSerial();
+    if (!serial || !this.screenMirrorManager.isMirroring(serial)) {
+      const awakenedSerial = await this.wakeDeviceScreen();
+      return { isMirroring: false, displayOff: false, serial: awakenedSerial };
+    }
+    if (requestedSerial && requestedSerial !== serial) {
+      throw new Error('The selected device is not the active mirroring session.');
+    }
+
+    const adbPath = await this.deviceManager.getADBExecutable();
+    const actualState = await this.screenPower.getDisplayPowerState(adbPath, serial)
+      .catch(() => 'unknown' as const);
+
+    // Decide by the real device state; the remembered flag is only a fallback
+    // for builds whose dumpsys cannot be parsed.
+    let displayOff: boolean;
+    if (actualState === 'off' || (actualState === 'unknown' && this.screenMirrorManager.wasPhysicalDisplayTurnedOff(serial))) {
+      await this.wakeDeviceScreen(serial);
+      displayOff = false;
+    } else {
+      displayOff = await this.turnDisplayOffForSession(adbPath, serial);
+    }
+
+    this.publishMirroringState(serial);
+    this.postStatus(
+      displayOff ? `✅ Physical display turned off for ${serial}` : `✅ Screen woken for ${serial}`,
+      'success'
+    );
+    return { isMirroring: true, displayOff, serial };
+  }
+
+  /** Turns the panel off, verifying and falling back to scrcpy blanking. */
+  private async turnDisplayOffForSession(adbPath: string, serial: string): Promise<boolean> {
+    try {
+      const state = await this.screenPower.turnPhysicalDisplayOffVerified(adbPath, serial);
+      if (state === 'off') {
+        this.screenMirrorManager.markPhysicalDisplayOff(serial);
+        return true;
+      }
+      if (state === 'on') {
+        // The display service ignored the request; let scrcpy blank the panel.
+        await this.screenMirrorManager.restartWithPhysicalDisplayOff(serial);
+        this.screenMirrorManager.markPhysicalDisplayOff(serial);
+        return true;
+      }
+      // Unreadable state: trust the successful power-off exit code.
+      this.screenMirrorManager.markPhysicalDisplayOff(serial);
+      return true;
+    } catch {
+      // `cmd display` is missing or failed on this build.
+      await this.screenMirrorManager.restartWithPhysicalDisplayOff(serial);
+      this.screenMirrorManager.markPhysicalDisplayOff(serial);
+      return true;
+    }
   }
 
   private async installApkToDevice(deviceId?: string) {
@@ -1297,6 +1449,10 @@ export class FlutterPanelController extends ADBBaseController {
         command: 'appStatePackageSelected',
         deviceId: serial,
         packageId
+      });
+    } else {
+      this.currentPanel?.webview.postMessage({
+        command: 'appStateCancelled'
       });
     }
   }

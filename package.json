@@ -2,7 +2,7 @@
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
   "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
-  "version": "1.2.0",
+  "version": "1.5.1",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",
@@ -80,8 +80,9 @@
   ],
   "main": "./out/main.js",
   "scripts": {
-    "vscode:prepublish": "npm run setup && npm run compile",
+    "vscode:prepublish": "npm run setup && npm run build:sidebar-css && npm run compile",
     "setup": "npm install",
+    "build:sidebar-css": "node scripts/build-sidebar-css.js",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "build": "npm run clean && npm run compile && npm run package",
@@ -236,6 +237,11 @@
       {
         "command": "airFlutter.wakeScreen",
         "title": "Wake Device Screen",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.toggleScreenPower",
+        "title": "Toggle Mirrored Device Display",
         "category": "Air Flutter"
       },
       {

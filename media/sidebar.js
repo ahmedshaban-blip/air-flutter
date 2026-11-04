@@ -1,4 +1,5 @@
 const vscode = acquireVsCodeApi();
+        const viewState = vscode.getState() || {};
 
         const MAX_ROWS = 1200;
         const lines = [];
@@ -257,6 +258,19 @@ const vscode = acquireVsCodeApi();
         });
 
         // --- tools ---
+        const toolGroupState = viewState.toolGroups || {};
+        document.querySelectorAll('[data-tool-group]').forEach(function (group) {
+            const key = group.getAttribute('data-tool-group');
+            if (Object.prototype.hasOwnProperty.call(toolGroupState, key)) {
+                group.open = Boolean(toolGroupState[key]);
+            }
+            group.addEventListener('toggle', function () {
+                toolGroupState[key] = group.open;
+                viewState.toolGroups = toolGroupState;
+                vscode.setState(viewState);
+            });
+        });
+
         function findToolButtons(tool) {
             if (tool === 'wipe') {
                 return Array.from(document.querySelectorAll('[data-wipe]'));
@@ -286,6 +300,52 @@ const vscode = acquireVsCodeApi();
         }
 
         let toolMessageTimer;
+        const activeSidebarOperations = new Map();
+
+        function sidebarOperationLabel(operation) {
+            const labels = {
+                ready: 'Loading device state…',
+                refreshInfo: 'Refreshing device information…',
+                startLogcat: 'Starting Logcat…',
+                stopLogcat: 'Stopping Logcat…',
+                setPriority: 'Updating Logcat priority…',
+                openLogFile: 'Opening log file…',
+                screenshot: 'Capturing screenshot…',
+                wakeScreen: 'Waking phone display…',
+                toggleScreenPower: 'Updating phone display…',
+                startMirror: 'Starting screen mirroring…',
+                fixWifi: 'Repairing wireless connection…',
+                stopMirror: 'Stopping screen mirroring…',
+                installApk: 'Installing APK…',
+                sendText: 'Sending text to phone…',
+                workflow: 'Opening workflow generator…',
+                signingKey: 'Opening signing key tool…',
+                record: 'Updating screen recording…',
+                flavors: 'Opening flavors manager…',
+                proxy: 'Reading network settings…',
+                agentEngine: 'Opening agent scaffolder…',
+                compatDoctor: 'Scanning compatibility…',
+                wipeApp: 'Resetting app storage…',
+                pickWipePackage: 'Loading app packages…',
+                applyLocalhostBridge: 'Linking localhost port…',
+                refreshLocalhostBridge: 'Refreshing localhost ports…',
+                removeLocalhostBridge: 'Removing localhost port…',
+                removeAllLocalhostBridges: 'Removing localhost ports…'
+            };
+            return labels[operation] || 'Working…';
+        }
+
+        function setSidebarOperation(message) {
+            const operation = String(message.operation || 'operation');
+            if (message.loading) activeSidebarOperations.set(operation, operation);
+            else activeSidebarOperations.delete(operation);
+            const indicator = document.getElementById('sidebarOperationIndicator');
+            const label = document.getElementById('sidebarOperationLabel');
+            if (!indicator || !label) return;
+            const active = Array.from(activeSidebarOperations.values()).at(-1);
+            indicator.hidden = !active;
+            if (active) label.textContent = sidebarOperationLabel(active);
+        }
 
         function showToolMessage(message, ok, sticky) {
             if (toolMessageTimer) {
@@ -345,12 +405,92 @@ const vscode = acquireVsCodeApi();
             }
         }
 
+        let mirroringState = { isMirroring: false, displayOff: false };
+
+        function renderScreenPowerAction(state) {
+            mirroringState = state || mirroringState;
+            const button = document.getElementById('toolWake');
+            const name = button && button.querySelector('.sf-tool-name');
+            const note = button && button.querySelector('.sf-tool-note');
+            if (!button || !name || !note) {
+                return;
+            }
+            const shouldTurnOff = mirroringState.isMirroring && !mirroringState.displayOff;
+            name.textContent = shouldTurnOff ? 'Turn display off' : 'Wake screen';
+            note.textContent = shouldTurnOff ? 'keep mirror running' : 'power on display';
+            button.title = shouldTurnOff
+                ? 'Turn off the physical phone display and keep mirroring'
+                : 'Wake up the physical phone display';
+            button.setAttribute('data-display-action', shouldTurnOff ? 'off' : 'wake');
+        }
+
+        document.getElementById('toolWake').addEventListener('click', function () {
+            showToolMessage('', true);
+            vscode.postMessage({ command: 'toggleScreenPower' });
+        });
+
+        const mirrorSetup = document.getElementById('mirrorSetup');
+        const savedMirrorSetup = viewState.mirrorSetup || {
+            audioRoute: 'computer',
+            performanceProfile: 'balanced'
+        };
+        // Profiles saved before the Ultra rename used the old 'quality' value.
+        if (savedMirrorSetup.performanceProfile === 'quality') {
+            savedMirrorSetup.performanceProfile = 'ultra';
+        }
+        let pendingMirrorMode = 'standard';
+
+        function selectMirrorPreference(name, value) {
+            const input = mirrorSetup.querySelector('input[name="' + name + '"][value="' + value + '"]');
+            if (input) {
+                input.checked = true;
+            }
+        }
+
+        selectMirrorPreference('mirrorAudio', savedMirrorSetup.audioRoute);
+        selectMirrorPreference('mirrorProfile', savedMirrorSetup.performanceProfile);
+
+        function openMirrorSetup(mode) {
+            pendingMirrorMode = mode;
+            document.getElementById('mirrorSetupTitle').textContent = mode === 'keyboard'
+                ? 'Screen off + keyboard'
+                : 'Standard mirroring';
+            mirrorSetup.hidden = false;
+            mirrorSetup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const checked = mirrorSetup.querySelector('input:checked');
+            if (checked) {
+                checked.focus({ preventScroll: true });
+            }
+        }
+
+        document.getElementById('toolMirror').addEventListener('click', function () {
+            openMirrorSetup('standard');
+        });
+        document.getElementById('toolMirrorKeys').addEventListener('click', function () {
+            openMirrorSetup('keyboard');
+        });
+        document.getElementById('mirrorSetupClose').addEventListener('click', function () {
+            mirrorSetup.hidden = true;
+        });
+        mirrorSetup.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const audioRoute = mirrorSetup.querySelector('input[name="mirrorAudio"]:checked').value;
+            const performanceProfile = mirrorSetup.querySelector('input[name="mirrorProfile"]:checked').value;
+            viewState.mirrorSetup = { audioRoute: audioRoute, performanceProfile: performanceProfile };
+            vscode.setState(viewState);
+            mirrorSetup.hidden = true;
+            showToolMessage('Starting mirroring…', true, true);
+            vscode.postMessage({
+                command: 'startMirror',
+                mode: pendingMirrorMode,
+                audioRoute: audioRoute,
+                performanceProfile: performanceProfile
+            });
+        });
+
         [
             ['toolScreenshot', 'screenshot'],
-            ['toolWake', 'wakeScreen'],
             ['toolWifi', 'fixWifi'],
-            ['toolMirror', 'mirror'],
-            ['toolMirrorKeys', 'mirrorKeys'],
             ['toolStopMirror', 'stopMirror'],
             ['toolSendText', 'sendText'],
             ['toolInstallApk', 'installApk'],
@@ -520,11 +660,21 @@ const vscode = acquireVsCodeApi();
                         markDone(message.tool);
                     }
                     break;
+                case 'sidebarOperation':
+                    setSidebarOperation(message);
+                    break;
                 case 'toolProgress':
                     showToolMessage(message.message, true, true);
                     break;
                 case 'recordingState':
                     handleRecordingState(Boolean(message.isRecording), message.duration || 0);
+                    break;
+                case 'mirroringState':
+                    renderScreenPowerAction({
+                        isMirroring: Boolean(message.isMirroring),
+                        displayOff: Boolean(message.displayOff),
+                        serial: message.serial || ''
+                    });
                     break;
                 case 'wipeState':
                     renderWipePackage(message.packageId || '');

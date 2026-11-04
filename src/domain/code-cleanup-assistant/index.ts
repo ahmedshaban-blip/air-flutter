@@ -11,6 +11,21 @@ const REVIEW_DIAGNOSTICS = new Set([
   'unused_field', 'unused_import', 'unused_label', 'unused_local_variable',
   'unused_result', 'unused_shown_name'
 ]);
+const COMMENTED_DART_PATTERNS = [
+  /^(?:import|export)\s+['"][^'"]+['"](?:\s+(?:as|show|hide)\s+[\w$, ]+)?\s*;$/,
+  /^part\s+(?:of\s+[\w.]+|['"][^'"]+['"])\s*;$/,
+  /^(?:class|enum|mixin|extension|typedef)\s+[A-Za-z_$][\w$]*/,
+  /^(?:(?:final|const|var|late(?:\s+final)?)\s+|[A-Za-z_$][\w$<>,? ]*\s+)[A-Za-z_$][\w$]*\s*(?:=|\?\?=)\s*.+;$/,
+  /^(?:final|const|var|late(?:\s+final)?)\s+[A-Za-z_$][\w$]*(?:\s+[A-Za-z_$][\w$]*)?\s*;$/,
+  /^(?:[A-Za-z_$][\w$<>,? ]*|void)\s+[A-Za-z_$][\w$]*\s*\([^)]*\)\s*(?:async\*?|sync\*)?\s*(?:\{.*\}|=>\s*.+;|;)$/,
+  /^[A-Z][\w$]*(?:\.[A-Za-z_$][\w$]*)?\s*\([^)]*\)\s*(?::[^{}]+)?\{.*\}$/,
+  /^(?:else\s+)?(?:if|for|while|switch|catch)\s*\(.+\)\s*\{(?:.*\})?$/,
+  /^(?:else|try|do)\s*\{(?:.*\})?$/,
+  /^(?:return(?:\s+.+)?|throw\s+.+|break|continue);$/,
+  /^(?:await\s+)?[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\s*\([^;]*\)\s*;$/,
+  /^[A-Za-z_$][\w$.[\]]*\s*(?:=|\+=|-=|\*=|\/=|\?\?=)\s*.+;$/,
+  /^(?:const\s+)?[A-Z][\w$.]*(?:<[^>]+>)?\s*\(.*\)\s*[,;]$/
+];
 
 export type CleanupFindingKind = 'dead-code' | 'unused-declaration' | 'commented-code';
 
@@ -63,11 +78,12 @@ export class CodeCleanupAssistant {
     await fs.promises.access(pubspecPath);
 
     const dartSources = await this.readDartSources(root);
+    const productionSources = this.productionBuildSources(dartSources, root);
     const analyzer = await this.runAnalyzer(root);
     const findings = [
       ...this.parseAnalyzerOutput(analyzer.output, root),
       ...this.findUnreferencedPublicFunctions(dartSources),
-      ...this.findCommentedCode(dartSources)
+      ...this.findCommentedCode(productionSources)
     ].sort(this.compareFindings);
 
     return {
@@ -145,11 +161,36 @@ export class CodeCleanupAssistant {
 
   private static findUnreachableFiles(sources: DartSource[], projectPath: string): UnusedDartFile[] {
     const librarySources = sources.filter(source => source.relativePath.startsWith('lib/'));
+    const reachable = this.reachableLibraryPaths(librarySources, projectPath);
+    if (!reachable) return [];
+
+    return librarySources
+      .filter(source => !reachable.has(source.relativePath))
+      .filter(source => !this.isGeneratedDartFile(source.relativePath))
+      .map(source => ({
+        file: source.relativePath,
+        reason: 'Not reachable from any lib/main*.dart entry point.',
+        safeToDelete: true
+      }));
+  }
+
+  private static productionBuildSources(sources: DartSource[], projectPath: string): DartSource[] {
+    const librarySources = sources.filter(source => source.relativePath.startsWith('lib/'));
+    const reachable = this.reachableLibraryPaths(librarySources, projectPath);
+    return librarySources.filter(source =>
+      !this.isGeneratedDartFile(source.relativePath) && (!reachable || reachable.has(source.relativePath))
+    );
+  }
+
+  private static reachableLibraryPaths(
+    librarySources: DartSource[],
+    projectPath: string
+  ): Set<string> | undefined {
     const sourceByPath = new Map(librarySources.map(source => [source.relativePath, source]));
     const roots = librarySources
       .filter(source => /^lib\/main(?:_[^/]+)?\.dart$/.test(source.relativePath))
       .map(source => source.relativePath);
-    if (roots.length === 0) return [];
+    if (roots.length === 0) return undefined;
 
     const reachable = new Set<string>();
     const pending = [...roots];
@@ -163,15 +204,7 @@ export class CodeCleanupAssistant {
         if (!reachable.has(dependency)) pending.push(dependency);
       }
     }
-
-    return librarySources
-      .filter(source => !reachable.has(source.relativePath))
-      .filter(source => !this.isGeneratedDartFile(source.relativePath))
-      .map(source => ({
-        file: source.relativePath,
-        reason: 'Not reachable from any lib/main*.dart entry point.',
-        safeToDelete: true
-      }));
+    return reachable;
   }
 
   private static dartDependencies(
@@ -268,9 +301,14 @@ export class CodeCleanupAssistant {
   }
 
   private static looksLikeCode(comment: string): boolean {
-    const text = comment.trim();
+    const text = comment
+      .split(/\r?\n/)
+      .map(line => line.replace(/^\s*\*\s?/, '').trim())
+      .filter(Boolean)
+      .join(' ')
+      .trim();
     if (!text || text.startsWith('/') || /^(TODO|FIXME|NOTE)\b/i.test(text)) return false;
-    return /^(?:import\s|export\s|part\s|class\s|enum\s|mixin\s|extension\s|typedef\s|void\s|final\s|const\s|var\s|late\s|return\b|throw\b|if\s*\(|for\s*\(|while\s*\(|switch\s*\(|[A-Za-z_$][\w$<>?]*\s+[A-Za-z_$][\w$]*\s*\(|[A-Za-z_$][\w$.[\]]*\s*=)|[;{}]\s*$/.test(text);
+    return COMMENTED_DART_PATTERNS.some(pattern => pattern.test(text));
   }
 
   private static async findUnusedPackages(pubspecPath: string, sources: DartSource[]): Promise<UnusedPackage[]> {

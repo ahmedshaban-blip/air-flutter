@@ -7,7 +7,45 @@ update channel with any other extension.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-04
+
+### Fixes
+
+- **Display Off During Standard Mirroring**: The panel device row now offers **Turn display off** while a standard mirror session is live, and the same button flips to **Wake screen** once the panel is dark — no need to use “Screen Off + Keys”. The action is routed through the verified host toggle, so it works on the active session only and cannot act on a stale device row.
+- **Honest Panel Display State**: The panel previously received only `isMirroring`, so its button could never reflect the real display state. Both surfaces now consume the full `MirroringState` (`isMirroring`, `displayOff`, `serial`) broadcast on start, stop, toggle and panel load, keeping the label honest in the panel and sidebar at all times.
+- **Samsung/MediaTek Display Reading**: `dumpsys display` keeps reporting `mScreenState=ON` while `cmd display power-off` has already blanked the physical panel on these builds, so display-off looked like a failure and the code kept issuing pointless POWER toggles. The reader now prefers the physical DisplayManager `mState=OFF` and treats a successful power-off exit code as authoritative, giving verified ON→OFF→ON reads on real hardware.
+
+## [1.5.0] - 2026-11-04
+
+### Features & Fixes
+
+- **Mirroring Setup in Both Surfaces**: Starting a mirror session from the panel device rows now opens the same setup flow as the sidebar — Audio route (Computer / Phone) and Performance profile (Fast / Balanced / Ultra) — with the choices remembered for the next session.
+- **Audio Route Fixed**: The chosen audio route was silently dropped before reaching scrcpy, so "Computer" fell back to `--no-audio` and the phone kept its sound; preferences now flow end-to-end. `Computer only` forwards the device audio to the computer and mutes the phone speaker (Android 11+, scrcpy REMOTE_SUBMIX).
+- **Ultra Performance Profile**: The misleading `Quality` profile (native size but only 30 FPS) is replaced by **Ultra** — native resolution, 16 Mbps, up to 120 FPS. Honest caveat surfaced in both UIs: FPS is a cap; the device encoder, screen refresh rate and Wi-Fi decide the actual result. Older saved `quality` preferences migrate automatically to Ultra.
+
+## [1.4.0] - 2026-11-04
+
+### Features & Fixes
+
+- **Unified Loading Lifecycle**: Every panel and sidebar operation now shows a spinner from the moment the request reaches the extension host until it settles — success, failure or cancellation — so long ADB, mirroring or filesystem work never feels ignored.
+- **Real Completion Tracking for Flutter Commands**: `flutter doctor`, `pub get`, `pub upgrade`, `clean`, `run` and APK/AAB builds now run as dedicated VS Code tasks, and their loading indicators track the actual process exit code instead of the previous fixed 2–3 second timers.
+- **Flavor Build Tracking**: Running and building flavors (including batch builds) now surface progress until each `flutter` process exits, restoring buttons only after completion.
+- **First-Load Feedback**: Opening the panel or sidebar shows a loading indicator while connected devices, mirroring state and localhost bridge rules are hydrated.
+- **Stuck-Spinner Fixes**: Cancelling app-package pickers or failing workflow / agent-scaffold generation now re-enables their buttons and clears spinners; native VS Code progress notifications wrap the same operations launched from the command palette.
+- **Wake Screen & Display State Fixes**: Wake now reads the real display state (`dumpsys display` / `dumpsys power`), verifies after each attempt, and escalates (display restore → WAKEUP → POWER) until the screen is verifiably on — so waking a panel blanked by "Screen Off + Keys" works directly from the panel or sidebar without toggling display-off first. The sidebar Wake/Turn-off button now renders from verified state instead of stale session flags, and mirror start/stop broadcast the full state (including `displayOff`) to both surfaces.
+
+## [1.3.1] - 2026-11-04
+
+### Features & Fixes
+
+- Added a polished file-layout choice for **Both (APK + AAB)**, allowing one coordinated workflow or two independently runnable workflow files.
+- Workflow filenames now reflect their output: APK uses `build_apk.yml`, while AAB and the combined Android build use `build_android.yml`.
+
+## [1.3.0] - 2026-11-04
+
 ### Features
+
+- Organized the sidebar tools into four accessible, collapsible categories with tool counts, keyboard support, responsive two-column layouts, and remembered open/closed state.
 
 - **Deep Storage & Cache Wiper (Reset App State)**: Reset the app's cache, local databases or entire sandbox over ADB without uninstalling and reinstalling.
   - **Auto package resolution**: Detects `applicationId` from `android/app/build.gradle` or `build.gradle.kts`, with a QuickPick fallback that lists installed third-party packages (`pm list packages -3`) and offers manual entry.

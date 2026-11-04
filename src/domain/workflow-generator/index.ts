@@ -9,6 +9,7 @@ export interface WorkflowOptions {
   triggerOnPr: boolean
   triggerManual: boolean
   buildTarget: 'universal_apk' | 'split_apk' | 'appbundle' | 'both'
+  workflowLayout?: 'single' | 'separate'
   buildMode: 'release' | 'debug'
   enableSigning: boolean
   enableCache: boolean
@@ -152,7 +153,9 @@ export class WorkflowGenerator {
 `
     }
 
-    return `name: Flutter Android CI (${mode.toUpperCase()})
+    const workflowLabel = this.getWorkflowLabel(options.buildTarget)
+
+    return `name: Flutter ${workflowLabel} CI (${mode.toUpperCase()})
 
 on:
 ${triggers.join('\n')}
@@ -291,6 +294,7 @@ android {
 
   public static async writeWorkflowFiles(options: WorkflowOptions): Promise<{
     workflowPath: string
+    workflowPaths: string[]
     secretsGuidePath?: string
   }> {
     const validation = this.validateProject(options.projectPath)
@@ -301,10 +305,23 @@ android {
     const workflowsDir = path.join(options.projectPath, '.github', 'workflows')
     await fs.promises.mkdir(workflowsDir, { recursive: true })
 
-    const fileName = options.workflowFileName || 'build_apk.yml'
-    const workflowPath = path.join(workflowsDir, fileName)
-    const yamlContent = this.generateWorkflowYaml(options)
-    await fs.promises.writeFile(workflowPath, yamlContent, 'utf8')
+    const workflowFiles = options.buildTarget === 'both' && options.workflowLayout === 'separate'
+      ? [
+          { fileName: 'build_apk.yml', buildTarget: 'universal_apk' as const },
+          { fileName: 'build_android.yml', buildTarget: 'appbundle' as const }
+        ]
+      : [{ fileName: options.workflowFileName || this.getDefaultWorkflowFileName(options.buildTarget), buildTarget: options.buildTarget }]
+
+    const workflowPaths: string[] = []
+    for (const workflowFile of workflowFiles) {
+      const workflowPath = path.join(workflowsDir, workflowFile.fileName)
+      const yamlContent = this.generateWorkflowYaml({
+        ...options,
+        buildTarget: workflowFile.buildTarget
+      })
+      await fs.promises.writeFile(workflowPath, yamlContent, 'utf8')
+      workflowPaths.push(workflowPath)
+    }
 
     let secretsGuidePath: string | undefined
     if (options.enableSigning) {
@@ -314,6 +331,18 @@ android {
       await fs.promises.writeFile(secretsGuidePath, guideContent, 'utf8')
     }
 
-    return { workflowPath, secretsGuidePath }
+    return { workflowPath: workflowPaths[0], workflowPaths, secretsGuidePath }
+  }
+
+  private static getDefaultWorkflowFileName(buildTarget: WorkflowOptions['buildTarget']): string {
+    return buildTarget === 'appbundle' || buildTarget === 'both'
+      ? 'build_android.yml'
+      : 'build_apk.yml'
+  }
+
+  private static getWorkflowLabel(buildTarget: WorkflowOptions['buildTarget']): string {
+    if (buildTarget === 'appbundle') return 'AAB'
+    if (buildTarget === 'both') return 'Android'
+    return 'APK'
   }
 }

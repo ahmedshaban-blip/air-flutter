@@ -76,6 +76,11 @@ export async function activate(context: vscode.ExtensionContext) {
                 sidebarController.updateRecordingState(state.isRecording, state.duration)
             })
         )
+        context.subscriptions.push(
+            flutterPanelController.onMirroringStateChanged(state => {
+                sidebarController.updateMirroringState(state)
+            })
+        )
         console.log('✅ Sidebar Controller initialized')
         
         // 3. Initialize Flutter Commands Controller (handles build and run commands)

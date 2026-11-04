@@ -4,6 +4,8 @@ console.log('🔄 Air Flutter JS loading...');
 class AirFlutterWebview {
     constructor() {
         this.isExecuting = false; // Prevent duplicate execution
+        this.activeOperations = new Map();
+        this.mirroringState = { isMirroring: false, displayOff: false, serial: null };
         this.initializeEventListeners();
         this.initializeToasts();
         console.log('✅ Air Flutter Webview initialized');
@@ -55,6 +57,7 @@ class AirFlutterWebview {
             this.initAppStateWiper();
             this.initDeepLinkStudio();
             this.initLocalhostBridge();
+            this.initMirrorSetupModal();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -74,6 +77,7 @@ class AirFlutterWebview {
                     return;
                 }
                 const commandId = match[1];
+                button.dataset.command = commandId;
                 button.removeAttribute('onclick');
                 button.addEventListener('click', () => this.executeFlutterCommand(commandId));
             });
@@ -92,16 +96,11 @@ class AirFlutterWebview {
         if (!refreshBtn) {
             return;
         }
-        const originalText = refreshBtn.innerHTML;
+        if (!refreshBtn.dataset.idleHtml) refreshBtn.dataset.idleHtml = refreshBtn.innerHTML;
         refreshBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i>';
         refreshBtn.disabled = true;
 
         this.sendMessage('refreshDevices', {});
-
-        setTimeout(() => {
-            refreshBtn.innerHTML = originalText;
-            refreshBtn.disabled = false;
-        }, 2400);
     }
 
     executeFlutterCommand(commandId) {
@@ -125,20 +124,10 @@ class AirFlutterWebview {
         }
 
         buttons.forEach(button => {
-            const originalHtml = button.innerHTML;
+            if (!button.dataset.idleHtml) button.dataset.idleHtml = button.innerHTML;
             button.classList.add('is-running');
             button.disabled = true;
-
-            setTimeout(() => {
-                button.innerHTML = originalHtml;
-                button.classList.remove('is-running');
-                button.disabled = false;
-            }, 3000);
         });
-
-        setTimeout(() => {
-            this.isExecuting = false;
-        }, 3000);
     }
 
     updateDevicesList(devices) {
@@ -157,6 +146,11 @@ class AirFlutterWebview {
 
         devicesList.innerHTML = devices.map(device => {
             const offline = device.status !== 'online' ? 'disabled' : '';
+            const controlsActiveMirror = this.mirroringState.isMirroring && this.mirroringState.serial === device.id;
+            const shouldTurnDisplayOff = controlsActiveMirror && !this.mirroringState.displayOff;
+            const displayAction = controlsActiveMirror ? 'toggle-display' : 'wake';
+            const displayTitle = shouldTurnDisplayOff ? 'Turn display off' : 'Wake screen';
+            const displayDescription = shouldTurnDisplayOff ? 'Keep mirror running' : 'Turn this display on';
             return `
             <div class="device">
                 <div class="device-row">
@@ -173,17 +167,17 @@ class AirFlutterWebview {
                     </div>
                 </div>
                 <div class="device-mirror">
-                    <button class="mirror-btn" data-device-action="mirror" data-device-id="${this.escapeHtml(device.id)}" title="Standard mirroring: Display on PC & phone" ${offline}>
+                    <button class="mirror-btn" data-device-action="mirror" data-device-id="${this.escapeHtml(device.id)}" data-device-name="${this.escapeHtml(device.name)}" title="Standard mirroring: Display on PC & phone" ${offline}>
                         <span class="mirror-btn-title">Mirror</span>
                         <span class="mirror-btn-desc">Display on PC & phone</span>
                     </button>
-                    <button class="mirror-btn" data-device-action="mirror-keys" data-device-id="${this.escapeHtml(device.id)}" title="Eco mode: Phone dark, keyboard active" ${offline}>
+                    <button class="mirror-btn" data-device-action="mirror-keys" data-device-id="${this.escapeHtml(device.id)}" data-device-name="${this.escapeHtml(device.name)}" title="Eco mode: Phone dark, keyboard active" ${offline}>
                         <span class="mirror-btn-title">Screen Off + Keys</span>
                         <span class="mirror-btn-desc">Phone dark, keyboard active</span>
                     </button>
-                    <button class="mirror-btn" data-device-action="wake" data-device-id="${this.escapeHtml(device.id)}" title="Wake this phone's physical display" ${offline}>
-                        <span class="mirror-btn-title">Wake screen</span>
-                        <span class="mirror-btn-desc">Turn this display on</span>
+                    <button class="mirror-btn" data-display-power-control data-device-online="${device.status === 'online'}" data-device-action="${displayAction}" data-device-id="${this.escapeHtml(device.id)}" title="${displayTitle}" ${offline}>
+                        <span class="mirror-btn-title">${displayTitle}</span>
+                        <span class="mirror-btn-desc">${displayDescription}</span>
                     </button>
                 </div>
             </div>
@@ -265,14 +259,21 @@ class AirFlutterWebview {
                 button.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Connecting…';
                 this.sendMessage('connectUsbDevice', { deviceId });
             } else if (action === 'mirror') {
-                this.sendMessage('mirrorDevice', { deviceId, mode: 'screen' });
+                this.openMirrorSetup(deviceId, button.dataset.deviceName, 'screen');
             } else if (action === 'mirror-off') {
-                this.sendMessage('mirrorDevice', { deviceId, mode: 'screen-off' });
+                this.openMirrorSetup(deviceId, button.dataset.deviceName, 'screen-off');
             } else if (action === 'mirror-keys') {
-                this.sendMessage('mirrorDevice', { deviceId, mode: 'keyboard' });
+                this.openMirrorSetup(deviceId, button.dataset.deviceName, 'keyboard');
             } else if (action === 'wake') {
                 this.sendMessage('wakeDevice', { deviceId });
                 this.addStatusMessage(`Waking screen: ${deviceId}`, 'info');
+            } else if (action === 'toggle-display') {
+                button.disabled = true;
+                this.sendMessage('toggleMirrorDisplay', { deviceId });
+                this.addStatusMessage(
+                    this.mirroringState.displayOff ? `Waking screen: ${deviceId}` : `Turning display off: ${deviceId}`,
+                    'info'
+                );
             } else if (action === 'mirror-virtual') {
                 this.sendMessage('mirrorDevice', { deviceId, mode: 'virtual-display' });
             } else if (action === 'disconnect') {
@@ -312,8 +313,13 @@ class AirFlutterWebview {
         this.addStatusMessage('Stopping screen mirroring…', 'info');
     }
 
-    updateMirroringState(isMirroring) {
-        this.isMirroring = Boolean(isMirroring);
+    updateMirroringState(state) {
+        this.mirroringState = {
+            isMirroring: Boolean(state && state.isMirroring),
+            displayOff: Boolean(state && state.displayOff),
+            serial: state && state.serial ? state.serial : null
+        };
+        this.isMirroring = this.mirroringState.isMirroring;
         const stopMirrorBtn = document.getElementById('stopMirrorBtn');
         if (stopMirrorBtn) {
             if (this.isMirroring) {
@@ -330,6 +336,22 @@ class AirFlutterWebview {
                 stopMirrorBtn.title = 'No active screen mirroring session';
             }
         }
+
+        document.querySelectorAll('#devicesList button[data-display-power-control]').forEach(button => {
+            const title = button.querySelector('.mirror-btn-title');
+            const description = button.querySelector('.mirror-btn-desc');
+            if (!title || !description) {
+                return;
+            }
+            const controlsActiveMirror = this.mirroringState.isMirroring &&
+                button.dataset.deviceId === this.mirroringState.serial;
+            const shouldTurnOff = controlsActiveMirror && !this.mirroringState.displayOff;
+            button.dataset.deviceAction = controlsActiveMirror ? 'toggle-display' : 'wake';
+            button.title = shouldTurnOff ? 'Turn display off' : 'Wake screen';
+            title.textContent = shouldTurnOff ? 'Turn display off' : 'Wake screen';
+            description.textContent = shouldTurnOff ? 'Keep mirror running' : 'Turn this display on';
+            button.disabled = button.dataset.deviceOnline !== 'true';
+        });
     }
 
     // Status log
@@ -437,6 +459,9 @@ class AirFlutterWebview {
                 case 'showToast':
                     this.showToast(message.message, message.type);
                     break;
+                case 'operationLoading':
+                    this.setOperationLoading(message);
+                    break;
                 case 'openWorkflowModal':
                     this.openWorkflowModal(message.projectPath);
                     break;
@@ -483,7 +508,7 @@ class AirFlutterWebview {
                     this.updateRecordingState(message.isRecording, message.duration);
                     break;
                 case 'mirroringState':
-                    this.updateMirroringState(message.isMirroring);
+                    this.updateMirroringState(message);
                     break;
                 case 'openAgentScaffoldModal':
                     this.openAgentScaffoldModal(message.projectPath);
@@ -531,6 +556,17 @@ class AirFlutterWebview {
                     const assetStatus = document.getElementById('assetAssistantStatus');
                     if (assetStatus) assetStatus.textContent = message.message || 'Asset Assistant failed.';
                     break;
+                case 'assetAssistantUnavailable':
+                    this.setAssetAssistantLoading(false);
+                    const unavailableAssetStatus = document.getElementById('assetAssistantStatus');
+                    const unavailableAssetTree = document.getElementById('assetFileTree');
+                    const unavailableAssetSummary = document.getElementById('assetAssistantSummary');
+                    const generateAssetConstants = document.getElementById('generateAssetConstantsBtn');
+                    if (unavailableAssetStatus) unavailableAssetStatus.textContent = message.message;
+                    if (unavailableAssetTree) unavailableAssetTree.innerHTML = '<p class="empty"><i class="fas fa-folder-open"></i><span>No Flutter project open</span></p>';
+                    if (unavailableAssetSummary) unavailableAssetSummary.innerHTML = '<span><strong>0</strong> files</span>';
+                    if (generateAssetConstants) generateAssetConstants.disabled = true;
+                    break;
                 case 'codeCleanupLoading':
                     this.setCodeCleanupLoading(message.loading);
                     break;
@@ -557,6 +593,15 @@ class AirFlutterWebview {
                     this.showToast(message.message || 'Unable to inspect AndroidManifest.xml.', 'error');
                     const permissionStatus = document.getElementById('permissionStatus');
                     if (permissionStatus) permissionStatus.textContent = message.message || 'Unable to inspect AndroidManifest.xml.';
+                    break;
+                case 'permissionCatalogUnavailable':
+                    this.setPermissionLoading(false);
+                    const unavailablePermissionStatus = document.getElementById('permissionStatus');
+                    const unavailablePermissionCatalog = document.getElementById('permissionCatalog');
+                    const addPermissions = document.getElementById('addPermissionsBtn');
+                    if (unavailablePermissionStatus) unavailablePermissionStatus.textContent = message.message;
+                    if (unavailablePermissionCatalog) unavailablePermissionCatalog.innerHTML = '<p class="empty"><i class="fas fa-shield-halved"></i><span>No Android Flutter project open</span></p>';
+                    if (addPermissions) addPermissions.disabled = true;
                     break;
                 case 'appStateStatus':
                     this.handleAppStateStatus(message);
@@ -592,6 +637,137 @@ class AirFlutterWebview {
         }
     }
 
+    setOperationLoading(message) {
+        const id = String(message.operationId || message.operation || 'operation');
+        if (message.loading) {
+            this.activeOperations.set(id, {
+                operation: message.operation,
+                target: message.target
+            });
+        } else {
+            this.activeOperations.delete(id);
+            this.resetOperationControl(message.operation, message.target);
+        }
+
+        const indicator = document.getElementById('globalOperationIndicator');
+        const label = document.getElementById('globalOperationLabel');
+        if (!indicator || !label) return;
+        const active = Array.from(this.activeOperations.values()).at(-1);
+        indicator.hidden = !active;
+        document.body.setAttribute('aria-busy', active ? 'true' : 'false');
+        if (active) label.textContent = this.operationLabel(active.operation, active.target);
+    }
+
+    operationLabel(operation, target) {
+        const labels = {
+            openWorkflowModal: 'Opening workflow generator…',
+            selectWorkflowProject: 'Selecting Flutter project…',
+            openSigningKeyModal: 'Opening signing key tool…',
+            selectSigningKeyProject: 'Selecting Flutter project…',
+            openFlavorsModal: 'Detecting Flutter flavors…',
+            selectFlavorsProject: 'Selecting Flutter project…',
+            openProxyModal: 'Reading network settings…',
+            openAgentScaffoldModal: 'Opening agent scaffolder…',
+            selectAgentScaffoldProject: 'Selecting project directory…',
+            openCompatDoctorModal: 'Scanning compatibility…',
+            selectCompatProject: 'Selecting Flutter project…',
+            connectDevice: 'Connecting to device…',
+            refreshDevices: 'Refreshing devices…',
+            connectUsbDevice: 'Enabling wireless ADB…',
+            connectNetworkDevice: 'Connecting wirelessly…',
+            disconnectDevice: 'Disconnecting device…',
+            mirrorDevice: 'Starting screen mirroring…',
+            wakeDevice: 'Updating phone display…',
+            stopMirroring: 'Stopping screen mirroring…',
+            installApk: 'Installing APK…',
+            sendText: 'Sending text to phone…',
+            setScrcpyPath: 'Checking scrcpy…',
+            generateWorkflow: 'Generating workflow…',
+            createSigningKey: 'Creating signing key…',
+            detectFlavors: 'Detecting Flutter flavors…',
+            setupFlavors: 'Setting up Flutter flavors…',
+            runFlavor: 'Running Flutter flavor…',
+            buildFlavorApk: 'Building flavor APK…',
+            buildAllFlavors: 'Building all flavor APKs…',
+            getNetworkState: 'Reading network settings…',
+            setProxy: 'Applying HTTP proxy…',
+            clearProxy: 'Clearing HTTP proxy…',
+            setPrivateDns: 'Applying Private DNS…',
+            clearPrivateDns: 'Clearing Private DNS…',
+            toggleScreenRecording: 'Updating screen recording…',
+            generateAgentScaffold: 'Scaffolding AI agents…',
+            runCompatDoctorScan: 'Scanning compatibility…',
+            applyCompatUpgrades: 'Applying compatibility upgrades…',
+            applyCustomStack: 'Applying custom build stack…',
+            scanAssets: 'Scanning assets…',
+            scanAndSyncAssets: 'Scanning and syncing assets…',
+            generateAssetConstants: 'Generating asset constants…',
+            deleteUnusedAsset: 'Deleting asset and rescanning…',
+            runCodeCleanupScan: 'Analyzing code and packages…',
+            deleteUnusedDartFile: 'Deleting file and rescanning…',
+            loadAndroidPermissions: 'Reading Android permissions…',
+            addAndroidPermissions: 'Updating Android permissions…',
+            clearAppCache: 'Clearing app cache…',
+            resetAppDatabases: 'Resetting app databases…',
+            factoryResetApp: 'Resetting app data…',
+            clearAllAppData: 'Clearing all app data…',
+            pickAppPackage: 'Loading app packages…',
+            dispatchDeepLink: 'Dispatching deep link…',
+            applyLocalhostBridge: 'Linking localhost port…',
+            refreshLocalhostBridge: 'Refreshing localhost ports…',
+            removeLocalhostBridge: 'Removing localhost port…',
+            removeAllLocalhostBridges: 'Removing localhost ports…'
+        };
+        if (operation === 'runFlutterCommand') {
+            const commands = {
+                runFlutterDoctor: 'Running Flutter Doctor…',
+                getPackages: 'Getting Flutter packages…',
+                upgradePackages: 'Upgrading Flutter packages…',
+                cleanProject: 'Cleaning Flutter project…',
+                runApp: 'Running Flutter app…',
+                buildAPK: 'Building APK…',
+                buildAAB: 'Building App Bundle…'
+            };
+            return commands[target] || 'Running Flutter command…';
+        }
+        return labels[operation] || 'Working…';
+    }
+
+    resetOperationControl(operation, target) {
+        if (operation === 'refreshDevices') {
+            ['refreshDevicesBtn', 'refreshUsbDevicesBtn'].forEach(id => {
+                const button = document.getElementById(id);
+                if (!button) return;
+                if (button.dataset.idleHtml) button.innerHTML = button.dataset.idleHtml;
+                button.disabled = false;
+            });
+        }
+        if (operation === 'runFlutterCommand') {
+            document.querySelectorAll(`[data-command="${target}"]`).forEach(button => {
+                if (button.dataset.idleHtml) button.innerHTML = button.dataset.idleHtml;
+                button.classList.remove('is-running');
+                button.disabled = false;
+            });
+            this.isExecuting = false;
+        }
+
+        const controls = {
+            generateWorkflow: ['generateWorkflowSubmitBtn', '<i class="fas fa-magic"></i> Generate Workflow'],
+            generateAgentScaffold: ['scaffoldSubmitBtn', '<i class="fas fa-robot"></i> Generate Agent(s)'],
+            setupFlavors: ['setupFlavorsBtn', '<i class="fas fa-wand-magic-sparkles"></i> Setup Flavors (dev, staging, prod)'],
+            buildFlavorApk: ['buildFlavorApkBtn', '<i class="fas fa-box"></i> Build APK'],
+            buildAllFlavors: ['buildAllFlavorsBtn', '<i class="fas fa-boxes-stacked"></i> Build All Flavors']
+        };
+        const control = controls[operation];
+        if (control) {
+            const button = document.getElementById(control[0]);
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = control[1];
+            }
+        }
+    }
+
 }
 
 // Mix in submodule capabilities
@@ -618,6 +794,7 @@ mixinModule(AirFlutterWebview, window.AirFlutterPermissionManagerModule);
 mixinModule(AirFlutterWebview, window.AirFlutterAppStateModule);
 mixinModule(AirFlutterWebview, window.AirFlutterDeepLinkStudioModule);
 mixinModule(AirFlutterWebview, window.AirFlutterLocalhostBridgeModule);
+mixinModule(AirFlutterWebview, window.AirFlutterMirrorSetupModule);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();
@@ -625,6 +802,7 @@ const airFlutter = new AirFlutterWebview();
 window.addEventListener('message', event => {
     airFlutter.handleMessage(event.data);
 });
+airFlutter.sendMessage('panelReady', {});
 
 // Refresh when the panel regains focus.
 window.addEventListener('focus', () => {

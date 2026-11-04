@@ -9,7 +9,8 @@ export class PanelAssetHandler {
 
   public async handleScanAssets(): Promise<void> {
     try {
-      const projectPath = this.requireProjectPath();
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantLoading', loading: true });
       const report = await AssetAssistant.scan(projectPath);
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report });
@@ -20,7 +21,8 @@ export class PanelAssetHandler {
 
   public async handleScanAndSyncAssets(): Promise<void> {
     try {
-      const projectPath = this.requireProjectPath();
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantLoading', loading: true });
       const report = await AssetAssistant.scanAndSync(projectPath);
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report });
@@ -36,7 +38,8 @@ export class PanelAssetHandler {
 
   public async handleGenerateAssetConstants(): Promise<void> {
     try {
-      const projectPath = this.requireProjectPath();
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantLoading', loading: true });
       const report = await AssetAssistant.scan(projectPath);
       let generation = await AssetAssistant.generateConstants(projectPath, report.files);
@@ -71,7 +74,8 @@ export class PanelAssetHandler {
 
   public async deleteUnusedAsset(relativeFile: string): Promise<void> {
     try {
-      const projectPath = this.requireProjectPath();
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
       const freshReport = await AssetAssistant.scan(projectPath);
       const approved = freshReport.files.some(asset => asset.path === relativeFile && asset.safeToDelete);
       if (!approved) throw new Error('This asset is now referenced or no longer qualifies for safe deletion.');
@@ -103,10 +107,16 @@ export class PanelAssetHandler {
     }
   }
 
-  private requireProjectPath(): string {
+  private getFlutterProjectPath(): string | undefined {
     const projectPath = this.ctx.getInitialProjectPath() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!projectPath) throw new Error('Open a Flutter project workspace first.');
-    return projectPath;
+    return projectPath && fs.existsSync(path.join(projectPath, 'pubspec.yaml')) ? projectPath : undefined;
+  }
+
+  private postUnavailable(): void {
+    this.ctx.getPanel()?.webview.postMessage({
+      command: 'assetAssistantUnavailable',
+      message: 'Open a Flutter project containing pubspec.yaml to scan assets.'
+    });
   }
 
   private reportError(prefix: string, error: unknown): void {

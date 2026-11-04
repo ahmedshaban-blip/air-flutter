@@ -332,3 +332,42 @@ section h2 {
         transition-duration: 0.01ms !important;
     }
 }
+.sf-operation-indicator {
+    position: sticky;
+    z-index: 1000;
+    top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+    border-radius: 7px;
+    background: var(--vscode-sideBar-background, #171717);
+    color: var(--vscode-sideBar-foreground, #f4f4f4);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.sf-operation-indicator[hidden] {
+    display: none;
+}
+
+.sf-operation-spinner {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: sf-operation-spin 650ms linear infinite;
+}
+
+@keyframes sf-operation-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-operation-spinner { animation-duration: 1400ms; }
+}

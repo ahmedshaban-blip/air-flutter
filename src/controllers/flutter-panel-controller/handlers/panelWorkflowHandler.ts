@@ -46,13 +46,20 @@ export class PanelWorkflowHandler {
       
       this.ctx.getPanel()?.webview.postMessage({
         command: 'workflowGenerated',
-        message: 'GitHub Workflow generated at .github/workflows/build_apk.yml'
+        message: result.workflowPaths.length === 1
+          ? `GitHub Workflow generated at .github/workflows/${result.workflowPaths[0].split(/[\\/]/).pop()}`
+          : 'GitHub Workflows generated: build_apk.yml and build_android.yml'
       });
       this.ctx.postStatus('✅ GitHub Actions workflow generated successfully!', 'success');
 
       // Open the generated workflow file in editor
-      const document = await vscode.workspace.openTextDocument(result.workflowPath);
-      await vscode.window.showTextDocument(document, { preview: false });
+      for (const [index, workflowPath] of result.workflowPaths.entries()) {
+        const document = await vscode.workspace.openTextDocument(workflowPath);
+        await vscode.window.showTextDocument(document, {
+          preview: false,
+          viewColumn: index === 0 ? vscode.ViewColumn.Active : vscode.ViewColumn.Beside
+        });
+      }
 
       if (result.secretsGuidePath) {
         const choice = await vscode.window.showInformationMessage(
@@ -73,4 +80,3 @@ export class PanelWorkflowHandler {
     }
   }
 }
-

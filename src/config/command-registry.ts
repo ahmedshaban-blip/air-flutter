@@ -161,6 +161,12 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
     description: 'Wake the active mirrored device or a connected phone display'
   },
   {
+    id: 'airFlutter.toggleScreenPower',
+    title: '◐ Toggle Mirrored Device Display',
+    category: 'Air Flutter',
+    description: 'Wake or blank the physical display while mirroring continues'
+  },
+  {
     id: 'airFlutter.installApk',
     title: '📦 Install APK to Device',
     category: 'Air Flutter',

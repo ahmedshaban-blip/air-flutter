@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
   ANDROID_PERMISSION_CATALOG,
@@ -12,7 +14,9 @@ export class PanelPermissionHandler {
 
   public async handleLoadPermissions(): Promise<void> {
     try {
-      const manifestState = await AndroidPermissionManager.read(this.requireProjectPath());
+      const projectPath = this.getAndroidProjectPath();
+      if (!projectPath) return this.postUnavailable();
+      const manifestState = await AndroidPermissionManager.read(projectPath);
       this.ctx.getPanel()?.webview.postMessage({
         command: 'permissionCatalogLoaded',
         catalog: ANDROID_PERMISSION_CATALOG,
@@ -25,9 +29,11 @@ export class PanelPermissionHandler {
 
   public async handleAddPermissions(selectedPermissions?: string[]): Promise<void> {
     try {
+      const projectPath = this.getAndroidProjectPath();
+      if (!projectPath) return this.postUnavailable();
       const allowedPermissions = new Set(ANDROID_PERMISSION_CATALOG.map(permission => permission.name));
       const candidates = (selectedPermissions || []).filter(permission => allowedPermissions.has(permission));
-      const injection = await AndroidPermissionManager.inject(this.requireProjectPath(), candidates);
+      const injection = await AndroidPermissionManager.inject(projectPath, candidates);
 
       if (!injection.changed) {
         this.ctx.postStatus(NO_CHANGES_MESSAGE, 'info');
@@ -54,10 +60,18 @@ export class PanelPermissionHandler {
     }
   }
 
-  private requireProjectPath(): string {
+  private getAndroidProjectPath(): string | undefined {
     const projectPath = this.ctx.getInitialProjectPath() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!projectPath) throw new Error('Open a Flutter project workspace first.');
-    return projectPath;
+    if (!projectPath || !fs.existsSync(path.join(projectPath, 'pubspec.yaml'))) return undefined;
+    const manifestPath = path.join(projectPath, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+    return fs.existsSync(manifestPath) ? projectPath : undefined;
+  }
+
+  private postUnavailable(): void {
+    this.ctx.getPanel()?.webview.postMessage({
+      command: 'permissionCatalogUnavailable',
+      message: 'Open a Flutter project with an Android platform to manage permissions.'
+    });
   }
 
   private reportError(prefix: string, error: unknown): void {

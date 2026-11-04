@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert = __importStar(require("assert"));
-const compatibilityEngine_1 = require("../src/features/compatibility/services/compatibilityEngine");
+const compatibilityEngine_1 = require("../out/features/compatibility/services/compatibilityEngine");
 console.log('🧪 Running Air Flutter Compatibility Tests...');
 // Test 1: VersionComparator
 console.log('--- Testing VersionComparator ---');

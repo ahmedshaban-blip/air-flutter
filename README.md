@@ -22,7 +22,7 @@
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge" alt="Version 1.1.0"/>
+    <img src="https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge" alt="Version 1.3.0"/>
     <img src="https://img.shields.io/badge/VS_Code-1.85.0+-373277?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code"/>
     <img src="https://img.shields.io/badge/Flutter-3.0+-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
     <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT"/>

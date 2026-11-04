@@ -169,6 +169,111 @@
     cursor: pointer;
 }
 
+.workflow-layout-field {
+    padding: 12px;
+    border: 1px solid var(--rule-strong);
+    background: var(--surface-raised, var(--surface));
+}
+
+.workflow-layout-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.workflow-layout-badge,
+.workflow-layout-recommended {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.workflow-layout-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.workflow-layout-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid var(--rule-strong);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 130ms, background 130ms;
+}
+
+.workflow-layout-option:hover,
+.workflow-layout-option:has(input:focus-visible),
+.workflow-layout-option:has(input:checked) {
+    border-color: var(--accent);
+}
+
+.workflow-layout-option:has(input:checked) {
+    background: rgba(214, 76, 42, 0.06);
+}
+
+.workflow-layout-option input {
+    margin: 2px 0 0;
+    accent-color: var(--accent);
+}
+
+.workflow-layout-copy {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.workflow-layout-copy strong {
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.workflow-layout-copy small {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.workflow-layout-copy code {
+    width: fit-content;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+}
+
+.workflow-file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+}
+
+.workflow-layout-recommended {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.workflow-layout-option:first-child .workflow-layout-copy {
+    padding-right: 64px;
+}
+
+@media (max-width: 560px) {
+    .workflow-layout-options {
+        grid-template-columns: 1fr;
+    }
+}
+
 .secrets-notice-box {
     border: 1px solid var(--warn, #D9A94E);
     background: rgba(217, 169, 78, 0.08);
@@ -689,4 +794,64 @@
 .tool-checkbox-item small {
     color: var(--muted);
     font-size: 10px;
+}
+
+/* --- Mirroring setup modal --- */
+.mirror-setup-target {
+    font-size: 12px;
+    margin: 0 0 14px;
+}
+
+.mirror-setup-target strong {
+    font-family: var(--font-mono, monospace);
+}
+
+.mirror-setup-group {
+    border: 0;
+    margin: 0 0 14px;
+    padding: 0;
+}
+
+.mirror-setup-group legend {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.mirror-setup-option {
+    align-items: flex-start;
+    border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 9px 11px;
+}
+
+.mirror-setup-option:hover {
+    border-color: var(--primary, var(--accent, #b23b16));
+}
+
+.mirror-setup-option input {
+    margin-top: 3px;
+}
+
+.mirror-setup-option strong {
+    display: block;
+    font-size: 12.5px;
+}
+
+.mirror-setup-option small {
+    color: var(--muted, inherit);
+    display: block;
+    font-size: 11px;
+}
+
+.mirror-setup-note {
+    color: var(--muted, inherit);
+    font-size: 11px;
+    margin: 0;
 }
