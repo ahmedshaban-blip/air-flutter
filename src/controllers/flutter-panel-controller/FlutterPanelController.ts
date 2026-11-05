@@ -30,6 +30,7 @@ import { PanelFlavorHandler } from './handlers/panelFlavorHandler';
 import { PanelNetworkHandler, PanelDeviceContext } from './handlers/panelNetworkHandler';
 import { PanelWorkflowHandler } from './handlers/panelWorkflowHandler';
 import { PanelAgentHandler } from './handlers/panelAgentHandler';
+import { PanelMcpHandler } from './handlers/panelMcpHandler';
 import { PanelSigningKeyHandler } from './handlers/panelSigningKeyHandler';
 import { PanelAssetHandler } from './handlers/panelAssetHandler';
 import { PanelCodeCleanupHandler } from './handlers/panelCodeCleanupHandler';
@@ -82,6 +83,7 @@ export class FlutterPanelController extends ADBBaseController {
   private readonly networkHandler: PanelNetworkHandler;
   private readonly workflowHandler: PanelWorkflowHandler;
   private readonly agentHandler: PanelAgentHandler;
+  private readonly mcpHandler: PanelMcpHandler;
   private readonly signingKeyHandler: PanelSigningKeyHandler;
   private readonly assetHandler: PanelAssetHandler;
   private readonly codeCleanupHandler: PanelCodeCleanupHandler;
@@ -130,6 +132,7 @@ export class FlutterPanelController extends ADBBaseController {
     this.networkHandler = new PanelNetworkHandler(handlerCtx);
     this.workflowHandler = new PanelWorkflowHandler(handlerCtx);
     this.agentHandler = new PanelAgentHandler(handlerCtx);
+    this.mcpHandler = new PanelMcpHandler(handlerCtx);
     this.signingKeyHandler = new PanelSigningKeyHandler(handlerCtx);
     this.assetHandler = new PanelAssetHandler(handlerCtx);
     this.codeCleanupHandler = new PanelCodeCleanupHandler(handlerCtx);
@@ -175,6 +178,7 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.toggleScreenRecording', () => this.withNativeProgress('Updating screen recording…', () => this.toggleScreenRecording()))
       .registerCommand('airFlutter.openAgentScaffoldingModal', () => this.openAgentScaffoldModal())
       .registerCommand('airFlutter.openCompatDoctorModal', () => this.withNativeProgress('Scanning Flutter compatibility…', () => this.openCompatDoctorModal()))
+      .registerCommand('airFlutter.openMcpHub', () => this.openMcpHubModal())
       .registerCommand('airFlutter.resetAppState', () => this.withNativeProgress('Loading app state tools…', () => this.openAppStateQuickPick()))
       .registerCommand('airFlutter.clearAppCache', () => this.withNativeProgress('Clearing app cache…', () => this.handleWipe('cache')))
       .registerCommand('airFlutter.resetAppDatabases', () => this.withNativeProgress('Resetting app databases…', () => this.handleWipe('databases')))
@@ -384,6 +388,55 @@ export class FlutterPanelController extends ADBBaseController {
               break;
             case 'generateAgentScaffold':
               await this.handleGenerateAgentScaffold(message as unknown as AgentScaffoldOptions);
+              break;
+            case 'openMcpHubModal':
+              await this.openMcpHubModal();
+              break;
+            case 'mcpRequestData':
+              // The modal opens immediately in the webview and asks for the
+              // catalog; reply with data only, so no open/request loop occurs.
+              this.mcpHandler.pushCatalogData(
+                typeof message.workspaceRoot === 'string' && message.workspaceRoot.length > 0
+                  ? message.workspaceRoot
+                  : this.getInitialProjectPath()
+              );
+              break;
+            case 'mcpCheckPrerequisites':
+              await this.mcpHandler.handleMcpCheckPrerequisites(
+                Array.isArray(message.serverIds) ? message.serverIds : []
+              );
+              break;
+            case 'mcpWrite':
+              await this.mcpHandler.handleMcpWrite({
+                agentIds: Array.isArray(message.agentIds) ? message.agentIds : [],
+                scope: message.scope === 'global' ? 'global' : 'workspace',
+                serverIds: Array.isArray(message.serverIds) ? message.serverIds : [],
+                parameters: message.parameters && typeof message.parameters === 'object'
+                  ? message.parameters
+                  : {},
+                instructions: message.instructions && typeof message.instructions === 'object'
+                  ? message.instructions
+                  : {},
+                workspaceRoot: typeof message.workspaceRoot === 'string' ? message.workspaceRoot : undefined
+              });
+              break;
+            case 'mcpCompanionStatus':
+              await this.mcpHandler.handleCompanionStatus(
+                message.serverId,
+                typeof message.workspaceRoot === 'string' ? message.workspaceRoot : undefined
+              );
+              break;
+            case 'mcpCompanionInstall':
+              await this.mcpHandler.handleCompanionInstall(
+                message.serverId,
+                typeof message.workspaceRoot === 'string' ? message.workspaceRoot : undefined
+              );
+              break;
+            case 'mcpCompanionGuideFile':
+              await this.mcpHandler.handleCompanionGuideFile(
+                message.serverId,
+                typeof message.workspaceRoot === 'string' ? message.workspaceRoot : undefined
+              );
               break;
             case 'openCompatDoctorModal':
               await this.openCompatDoctorModal();
@@ -1346,6 +1399,10 @@ export class FlutterPanelController extends ADBBaseController {
 
   private async handleGenerateAgentScaffold(options: AgentScaffoldOptions) {
     return this.agentHandler.handleGenerateAgentScaffold(options);
+  }
+
+  private async openMcpHubModal(workspaceRoot?: string) {
+    return this.mcpHandler.openMcpHubModal(workspaceRoot || this.getInitialProjectPath());
   }
 
   // --- Compat Doctor Handler Delegations ---

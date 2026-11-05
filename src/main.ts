@@ -18,6 +18,7 @@ import { FirebaseManagerChannel } from './domain/firebase-channel'
 import { ConsoleInterface } from './domain/console/console-interface'
 import { ADBResolver } from './domain/adb-resolver'
 import { CompatibilityModule } from './features/compatibility'
+import { McpHubModule } from './mcp'
 import { AndroidDeviceManager } from './domain/android-device-manager'
 import { LocalhostBridge } from './domain/localhost-bridge'
 import * as os from 'os'
@@ -120,6 +121,11 @@ export async function activate(context: vscode.ExtensionContext) {
         console.log('🩺 Air Flutter: Initializing Compatibility Doctor Module...')
         CompatibilityModule.activate(context)
         console.log('✅ Compatibility Doctor Module initialized')
+        
+        // 6. Initialize MCP & AI Agent Hub Module
+        console.log('🤖 Air Flutter: Initializing MCP & AI Agent Hub Module...')
+        McpHubModule.activate(context)
+        console.log('✅ MCP & AI Agent Hub Module initialized')
         
         console.log('✅ All Air Flutter controllers registered successfully')
         

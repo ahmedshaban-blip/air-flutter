@@ -9,11 +9,25 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 
+# Development-only test harness — never shipped to users
+test/**
+test-build/**
+tsconfig.test-mcp.json
+package-lock.json
+
 # Authoring notes, not part of the shipped extension
 PRODUCT.md
+docs/mcp-workspace-paths-research.md
 
 # Docs assets live on GitHub; README points at raw.githubusercontent.com URLs
 screenshots/**
 
 # Build artifacts
 **/*.vsix
+
+# Local verification scratch directories (never shipped)
+/vsix-*/
+/*.tmp.js
+/so.tmp.js
+/sv.tmp.js
+/gen-dart.tmp.js

@@ -6,6 +6,7 @@ import { getProxyModalHtml } from './modals/proxyModalHtml';
 import { getMirrorSetupModalHtml } from './modals/mirrorSetupModalHtml';
 import { getAgentScaffoldModalHtml } from './modals/agentScaffoldModalHtml';
 import { getCompatDoctorModalHtml } from './modals/compatDoctorModalHtml';
+import { getMcpHubModalHtml } from './modals/mcpHubModalHtml';
 import { getSigningKeyModalHtml } from './modals/signingKeyModalHtml';
 import { LOCALHOST_BRIDGE_PRESETS } from '../../../domain/localhost-bridge';
 
@@ -30,6 +31,7 @@ export function getPanelWebviewContent(
   const appStateCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'app-state.css')));
   const deepLinkCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'deep-link-studio.css')));
   const localhostBridgeCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'localhost-bridge.css')));
+  const mcpHubCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'mcp-hub.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
   const proxyModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'proxyModule.js')));
@@ -46,6 +48,7 @@ export function getPanelWebviewContent(
   const deepLinkModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'deepLinkStudioModule.js')));
   const localhostBridgeModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'localhostBridgeModule.js')));
   const mirrorSetupModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mirrorSetupModule.js')));
+  const mcpHubModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mcpHubModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
   const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
     .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
@@ -73,6 +76,7 @@ export function getPanelWebviewContent(
         <link href="${appStateCssUri}" rel="stylesheet">
         <link href="${deepLinkCssUri}" rel="stylesheet">
         <link href="${localhostBridgeCssUri}" rel="stylesheet">
+        <link href="${mcpHubCssUri}" rel="stylesheet">
     </head>
     <body>
         <div class="ff-shell">
@@ -292,6 +296,11 @@ export function getPanelWebviewContent(
                             <button class="cmd" type="button" data-command="compatDoctorModal" onclick="airFlutter.openCompatDoctorModal()">
                                 <i class="cmd-icon fas fa-stethoscope"></i>
                                 <span><span class="cmd-label">Compat Doctor</span><span class="cmd-run">Gradle, AGP, Java &amp; iOS</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="mcpHubModal" onclick="window.airFlutter.openMcpHubModal()">
+                                <i class="cmd-icon fas fa-plug"></i>
+                                <span><span class="cmd-label">MCP Hub</span><span class="cmd-run">AI agent MCP servers</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
                         </div>
@@ -562,10 +571,87 @@ ${getFlavorsModalHtml()}
 ${getProxyModalHtml()}
 ${getAgentScaffoldModalHtml()}
 ${getCompatDoctorModalHtml()}
+${getMcpHubModalHtml()}
 ${getSigningKeyModalHtml()}
 ${getMirrorSetupModalHtml()}
 
         <script>
+            // Define the bridge IMMEDIATELY, not inside DOMContentLoaded.
+            // The inline onclick attributes (e.g. airFlutter.openMcpHubModal())
+            // resolve against window.airFlutter, and a deferred definition is
+            // not guaranteed to have run before the user can click. Keeping it
+            // synchronous removes that race entirely.
+            window.airFlutter = {
+                // The real webview instance is exposed as window.airFlutterApp
+                // by air-flutter.js. Bridge methods delegate to it so the
+                // mixed-in module implementations are actually invoked
+                // instead of the bridge calling itself.
+                executeFlutterCommand: function (commandId) {
+                    if (window.vscode) {
+                        window.vscode.postMessage({
+                            command: 'runFlutterCommand',
+                            commandId: commandId
+                        });
+                    }
+                },
+                stopMirroring: function () {
+                    if (window.vscode) {
+                        window.vscode.postMessage({ command: 'stopMirroring' });
+                    }
+                },
+                openWorkflowModal: function () {
+                    this.delegate('openWorkflowModal', 'openWorkflowModal');
+                },
+                openSigningKeyModal: function () {
+                    this.delegate('openSigningKeyModal', 'openSigningKeyModal');
+                },
+                openFlavorsModal: function () {
+                    this.delegate('openFlavorsModal', 'openFlavorsModal');
+                },
+                openProxyModal: function () {
+                    this.delegate('openProxyModal', 'openProxyModal');
+                },
+                toggleRecording: function () {
+                    if (window.vscode) {
+                        window.vscode.postMessage({ command: 'toggleScreenRecording' });
+                    }
+                },
+                openAgentScaffoldModal: function () {
+                    this.delegate('openAgentScaffoldModal', 'openAgentScaffoldModal');
+                },
+                openCompatDoctorModal: function () {
+                    this.delegate('openCompatDoctorModal', 'openCompatDoctorModal');
+                },
+                openMcpHubModal: function () {
+                    this.delegate('openMcpHub', 'openMcpHubModal');
+                },
+
+                /**
+                 * Call a method on the real webview instance when it exists,
+                 * otherwise fall back to asking the extension host to open the
+                 * corresponding panel.
+                 *
+                 * @param method  method name on window.airFlutterApp
+                 * @param command fallback host message command
+                 */
+                delegate: function (method, command) {
+                    const app = window.airFlutterApp;
+                    if (app && typeof app[method] === 'function') {
+                        app[method]();
+                        return;
+                    }
+                    if (window.vscode) {
+                        window.vscode.postMessage({ command: command });
+                    }
+                }
+            };
+
+            window.showTroubleshootingGuide = function () {
+                if (window.vscode) {
+                    window.vscode.postMessage({ command: 'showTroubleshootingGuide' });
+                }
+            };
+
             window.addEventListener('DOMContentLoaded', () => {
                 document.body.classList.add('js-loaded');
 
@@ -574,75 +660,6 @@ ${getMirrorSetupModalHtml()}
                 } else {
                     document.body.classList.add('no-vscode-api');
                 }
-
-                window.airFlutter = {
-                    executeFlutterCommand: function (commandId) {
-                        if (window.vscode) {
-                            window.vscode.postMessage({
-                                command: 'runFlutterCommand',
-                                commandId: commandId
-                            });
-                        }
-                    },
-                    stopMirroring: function () {
-                        if (window.vscode) {
-                            window.vscode.postMessage({ command: 'stopMirroring' });
-                        }
-                    },
-                    openWorkflowModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openWorkflowModal) {
-                            airFlutter.openWorkflowModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openWorkflowModal' });
-                        }
-                    },
-                    openSigningKeyModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openSigningKeyModal) {
-                            airFlutter.openSigningKeyModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openSigningKeyModal' });
-                        }
-                    },
-                    openFlavorsModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openFlavorsModal) {
-                            airFlutter.openFlavorsModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openFlavorsModal' });
-                        }
-                    },
-                    openProxyModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openProxyModal) {
-                            airFlutter.openProxyModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openProxyModal' });
-                        }
-                    },
-                    toggleRecording: function () {
-                        if (window.vscode) {
-                            window.vscode.postMessage({ command: 'toggleScreenRecording' });
-                        }
-                    },
-                    openAgentScaffoldModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openAgentScaffoldModal) {
-                            airFlutter.openAgentScaffoldModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openAgentScaffoldModal' });
-                        }
-                    },
-                    openCompatDoctorModal: function () {
-                        if (typeof airFlutter !== 'undefined' && airFlutter.openCompatDoctorModal) {
-                            airFlutter.openCompatDoctorModal();
-                        } else if (window.vscode) {
-                            window.vscode.postMessage({ command: 'openCompatDoctorModal' });
-                        }
-                    }
-                };
-
-                window.showTroubleshootingGuide = function () {
-                    if (window.vscode) {
-                        window.vscode.postMessage({ command: 'showTroubleshootingGuide' });
-                    }
-                };
 
                 const darkModeToggle = document.getElementById('darkModeToggle');
                 if (darkModeToggle) {
@@ -679,6 +696,7 @@ ${getMirrorSetupModalHtml()}
         <script src="${appStateModuleUri}"></script>
         <script src="${deepLinkModuleUri}"></script>
         <script src="${localhostBridgeModuleUri}"></script>
+        <script src="${mcpHubModuleUri}"></script>
         <script src="${mirrorSetupModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>

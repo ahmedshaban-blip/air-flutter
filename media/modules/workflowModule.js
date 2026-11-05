@@ -11,6 +11,15 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
         const secretsBox = document.getElementById('workflowSecretsBox');
         const submitBtn = document.getElementById('generateWorkflowSubmitBtn');
         const layoutField = document.getElementById('workflowLayoutField');
+        const preinstalledNdkToggle = document.getElementById('workflowUsePreinstalledNdk');
+        const ndkVersionField = document.getElementById('workflowNdkVersionField');
+        const preinstalledNdkInput = document.getElementById('workflowPreinstalledNdkVersion');
+        const installAndroidToolsToggle = document.getElementById('workflowInstallAndroidTools');
+        const androidToolsInstallFields = document.getElementById('workflowAndroidToolsInstallFields');
+        const limitGradleMemoryToggle = document.getElementById('workflowLimitGradleMemory');
+        const gradleMemoryFields = document.getElementById('workflowGradleMemoryFields');
+        const troubleshootingBadge = document.getElementById('workflowTroubleshootingBadge');
+        const flutterCacheToggle = document.getElementById('workflowFlutterCache');
 
         const syncWorkflowLayoutVisibility = () => {
             const target = document.querySelector('input[name="workflowBuildTarget"]:checked')?.value;
@@ -28,6 +37,48 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
             input.addEventListener('change', syncWorkflowLayoutVisibility);
         });
         syncWorkflowLayoutVisibility();
+
+        const syncAndroidToolsState = () => {
+            const usePreinstalledNdk = preinstalledNdkToggle?.checked ?? true;
+            const installAndroidTools = installAndroidToolsToggle?.checked ?? false;
+            if (ndkVersionField) ndkVersionField.hidden = !usePreinstalledNdk;
+            if (preinstalledNdkInput) preinstalledNdkInput.disabled = !usePreinstalledNdk;
+            if (androidToolsInstallFields) androidToolsInstallFields.hidden = !installAndroidTools;
+            if (gradleMemoryFields) gradleMemoryFields.hidden = !(limitGradleMemoryToggle?.checked ?? false);
+
+            const gradleCacheProvider = document.querySelector('input[name="workflowGradleCacheProvider"]:checked')?.value;
+            const activeCount = Number(usePreinstalledNdk || installAndroidTools)
+                + Number(limitGradleMemoryToggle?.checked ?? false)
+                + Number(flutterCacheToggle?.checked ?? false)
+                + Number(gradleCacheProvider !== 'none');
+            if (troubleshootingBadge) troubleshootingBadge.textContent = `${activeCount} active`;
+        };
+        if (preinstalledNdkToggle) {
+            preinstalledNdkToggle.addEventListener('change', () => {
+                if (preinstalledNdkToggle.checked && installAndroidToolsToggle) {
+                    installAndroidToolsToggle.checked = false;
+                }
+                syncAndroidToolsState();
+            });
+        }
+        if (installAndroidToolsToggle) {
+            installAndroidToolsToggle.addEventListener('change', () => {
+                if (installAndroidToolsToggle.checked && preinstalledNdkToggle) {
+                    preinstalledNdkToggle.checked = false;
+                }
+                syncAndroidToolsState();
+            });
+        }
+        if (limitGradleMemoryToggle) {
+            limitGradleMemoryToggle.addEventListener('change', syncAndroidToolsState);
+        }
+        if (flutterCacheToggle) {
+            flutterCacheToggle.addEventListener('change', syncAndroidToolsState);
+        }
+        document.querySelectorAll('input[name="workflowGradleCacheProvider"]').forEach(input => {
+            input.addEventListener('change', syncAndroidToolsState);
+        });
+        syncAndroidToolsState();
 
         if (browseBtn) {
             browseBtn.addEventListener('click', () => {
@@ -56,9 +107,24 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
 
                 const modeRadio = document.querySelector('input[name="workflowBuildMode"]:checked');
                 const buildMode = modeRadio ? modeRadio.value : 'release';
+                const usePreinstalledNdk = document.getElementById('workflowUsePreinstalledNdk')?.checked ?? true;
+                const installAndroidTools = document.getElementById('workflowInstallAndroidTools')?.checked ?? false;
+                const preinstalledNdkVersion = document.getElementById('workflowPreinstalledNdkVersion')?.value?.trim();
+                const installedNdkVersion = document.getElementById('workflowInstalledNdkVersion')?.value?.trim();
+                const ndkVersion = installAndroidTools
+                    ? installedNdkVersion || '28.2.13676358'
+                    : preinstalledNdkVersion || '27.3.13750724';
+                const cmakeVersion = document.getElementById('workflowCmakeVersion')?.value?.trim() || '3.22.1';
+                const limitGradleMemory = document.getElementById('workflowLimitGradleMemory')?.checked ?? false;
+                const gradleHeapMb = Number(document.getElementById('workflowGradleHeapMb')?.value ?? 2048);
+                const gradleMetaspaceMb = Number(document.getElementById('workflowGradleMetaspaceMb')?.value ?? 512);
+                const gradleWorkers = Number(document.getElementById('workflowGradleWorkers')?.value ?? 2);
+                const disableGradleParallel = document.getElementById('workflowDisableGradleParallel')?.checked ?? true;
+                const disableGradleDaemon = document.getElementById('workflowDisableGradleDaemon')?.checked ?? true;
+                const flutterCache = document.getElementById('workflowFlutterCache')?.checked ?? true;
+                const gradleCacheProvider = document.querySelector('input[name="workflowGradleCacheProvider"]:checked')?.value || 'setup-gradle';
 
                 const enableSigning = document.getElementById('workflowEnableSigning')?.checked ?? false;
-                const enableCache = document.getElementById('workflowEnableCache')?.checked ?? true;
                 const publishToReleases = document.getElementById('workflowPublishToReleases')?.checked ?? false;
                 const retentionDays = Number(document.getElementById('workflowRetentionDays')?.value ?? 14);
                 const timeoutMinutes = Number(document.getElementById('workflowTimeoutMinutes')?.value ?? 60);
@@ -78,6 +144,19 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                     return;
                 }
 
+                if (limitGradleMemory && (!Number.isInteger(gradleHeapMb) || gradleHeapMb < 512 || gradleHeapMb > 6144)) {
+                    this.showToast('Gradle heap must be an integer from 512 to 6144 MB', 'error');
+                    return;
+                }
+                if (limitGradleMemory && (!Number.isInteger(gradleMetaspaceMb) || gradleMetaspaceMb < 256 || gradleMetaspaceMb > 2048)) {
+                    this.showToast('Gradle Metaspace must be an integer from 256 to 2048 MB', 'error');
+                    return;
+                }
+                if (limitGradleMemory && (!Number.isInteger(gradleWorkers) || gradleWorkers < 1 || gradleWorkers > 4)) {
+                    this.showToast('Gradle workers must be an integer from 1 to 4', 'error');
+                    return;
+                }
+
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Generating…';
 
@@ -90,8 +169,20 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                     buildTarget,
                     workflowLayout,
                     buildMode,
+                    usePreinstalledNdk,
+                    installAndroidTools,
+                    ndkVersion,
+                    cmakeVersion,
+                    limitGradleMemory,
+                    gradleHeapMb,
+                    gradleMetaspaceMb,
+                    gradleWorkers,
+                    disableGradleParallel,
+                    disableGradleDaemon,
+                    flutterCache,
+                    gradleCacheProvider,
                     enableSigning,
-                    enableCache,
+                    enableCache: gradleCacheProvider !== 'none',
                     publishToReleases,
                     retentionDays,
                     timeoutMinutes

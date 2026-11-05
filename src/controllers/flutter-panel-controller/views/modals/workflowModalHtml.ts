@@ -123,6 +123,100 @@ export function getWorkflowModalHtml(): string {
                         </div>
                     </div>
 
+                    <details class="workflow-troubleshooting" id="workflowTroubleshootingSection">
+                        <summary>
+                            <span><i class="fas fa-screwdriver-wrench"></i> Build Troubleshooting &amp; Resource Controls</span>
+                            <span class="workflow-active-badge" id="workflowTroubleshootingBadge">3 active</span>
+                        </summary>
+                        <div class="workflow-troubleshooting-body">
+                            <p class="workflow-troubleshooting-intro">Optional fixes for NDK/CMake errors, runner memory kills, and slow dependency downloads.</p>
+
+                            <div class="workflow-troubleshooting-card">
+                                <label class="modal-option-card">
+                                    <input type="checkbox" id="workflowUsePreinstalledNdk" checked />
+                                    <strong>Use preinstalled Android NDK</strong>
+                                </label>
+                                <p class="workflow-option-help"><strong>Use when:</strong> GitHub reports <code>requires Android NDK ...</code> and that version already exists on Ubuntu 24.04.</p>
+                                <div class="modal-field" id="workflowNdkVersionField">
+                                    <label for="workflowPreinstalledNdkVersion">Preinstalled NDK Version</label>
+                                    <input type="text" id="workflowPreinstalledNdkVersion" value="27.3.13750724" list="workflowPreinstalledNdkVersions" />
+                                    <datalist id="workflowPreinstalledNdkVersions">
+                                        <option value="27.3.13750724"></option>
+                                        <option value="29.0.14206865"></option>
+                                        <option value="30.0.16248370"></option>
+                                    </datalist>
+                                    <span class="field-desc">Copy the numeric value shown after “requires Android NDK”. On failure, CI lists every NDK installed on the runner.</span>
+                                </div>
+                            </div>
+
+                            <div class="workflow-troubleshooting-card">
+                                <label class="modal-option-card">
+                                    <input type="checkbox" id="workflowInstallAndroidTools" />
+                                    <strong>Install NDK and CMake before building</strong>
+                                </label>
+                                <p class="workflow-option-help"><strong>Use when:</strong> the required NDK or <code>CMake 'x.y.z'</code> is not found on the runner.</p>
+                                <div class="modal-options-grid" id="workflowAndroidToolsInstallFields" hidden>
+                                    <div class="modal-field">
+                                        <label for="workflowInstalledNdkVersion">NDK Version</label>
+                                        <input type="text" id="workflowInstalledNdkVersion" value="28.2.13676358" placeholder="e.g. 28.2.13676358" />
+                                        <span class="field-desc">Copy the required version from the NDK mismatch error.</span>
+                                    </div>
+                                    <div class="modal-field">
+                                        <label for="workflowCmakeVersion">CMake Version</label>
+                                        <input type="text" id="workflowCmakeVersion" value="3.22.1" placeholder="e.g. 3.22.1" />
+                                        <span class="field-desc">Copy the version quoted by the CMake not-found error.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="workflow-troubleshooting-card">
+                                <label class="modal-option-card">
+                                    <input type="checkbox" id="workflowLimitGradleMemory" />
+                                    <strong>Limit Gradle memory usage</strong>
+                                </label>
+                                <p class="workflow-option-help"><strong>Use when:</strong> logs show <code>Killed</code>, <code>exit code 137</code>, <code>OutOfMemoryError</code>, Java heap, or Metaspace errors.</p>
+                                <div id="workflowGradleMemoryFields" hidden>
+                                    <div class="modal-options-grid">
+                                        <div class="modal-field">
+                                            <label for="workflowGradleHeapMb">Maximum Heap (MB)</label>
+                                            <input type="number" id="workflowGradleHeapMb" value="2048" min="512" max="6144" step="128" />
+                                            <span class="field-desc">From 512 to 6144 MB</span>
+                                        </div>
+                                        <div class="modal-field">
+                                            <label for="workflowGradleMetaspaceMb">Maximum Metaspace (MB)</label>
+                                            <input type="number" id="workflowGradleMetaspaceMb" value="512" min="256" max="2048" step="128" />
+                                            <span class="field-desc">From 256 to 2048 MB</span>
+                                        </div>
+                                        <div class="modal-field">
+                                            <label for="workflowGradleWorkers">Maximum Workers</label>
+                                            <input type="number" id="workflowGradleWorkers" value="2" min="1" max="4" step="1" />
+                                            <span class="field-desc">From 1 to 4 workers</span>
+                                        </div>
+                                    </div>
+                                    <div class="modal-options-grid">
+                                        <label class="modal-option-card"><input type="checkbox" id="workflowDisableGradleParallel" checked /><span>Disable parallel execution</span></label>
+                                        <label class="modal-option-card"><input type="checkbox" id="workflowDisableGradleDaemon" checked /><span>Disable Gradle daemon</span></label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="workflow-troubleshooting-card">
+                                <strong class="workflow-card-title">Dependency Caching</strong>
+                                <label class="modal-option-card">
+                                    <input type="checkbox" id="workflowFlutterCache" checked />
+                                    <span>Flutter SDK &amp; Pub Cache</span>
+                                </label>
+                                <div class="modal-field">
+                                    <label>Gradle Cache Provider</label>
+                                    <label class="modal-option-card"><input type="radio" name="workflowGradleCacheProvider" value="setup-gradle" checked /><span>Gradle Setup Cache — Recommended</span></label>
+                                    <label class="modal-option-card"><input type="radio" name="workflowGradleCacheProvider" value="setup-java" /><span>Java Setup Cache</span></label>
+                                    <label class="modal-option-card"><input type="radio" name="workflowGradleCacheProvider" value="none" /><span>No Gradle Cache</span></label>
+                                </div>
+                                <span class="field-desc">Only one Gradle cache provider is generated, preventing cache conflicts.</span>
+                            </div>
+                        </div>
+                    </details>
+
                     <!-- App Signing (Keystore) -->
                     <div class="modal-field">
                         <label class="modal-option-card" style="margin-top: 4px;">
@@ -144,14 +238,6 @@ export function getWorkflowModalHtml(): string {
                         <div style="font-weight: 600; margin-top: 4px;">Convert Keystore to Base64 (Windows PowerShell):</div>
                         <div class="secrets-code-snippet">[Convert]::ToBase64String([IO.File]::ReadAllBytes("path\\\\to\\\\your-key.jks")) | Set-Clipboard</div>
                         <span style="font-size: 11px; color: var(--muted);">A complete guide (<code>SECRETS_SETUP.md</code>) will be generated inside your <code>.github</code> folder automatically.</span>
-                    </div>
-
-                    <!-- Performance / Cache -->
-                    <div class="modal-field">
-                        <label class="modal-option-card">
-                            <input type="checkbox" id="workflowEnableCache" checked />
-                            <span>Enable Dependency Caching (Gradle &amp; Flutter Pub)</span>
-                        </label>
                     </div>
 
                     <div class="modal-field">

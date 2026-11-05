@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "lib": ["es2020", "dom"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "strict": false,
+    "outDir": "test-build",
+    "rootDir": ".",
+    "sourceMap": false
+  },
+  "include": ["src/mcp/**/*.ts", "test/test-mcp-hub.ts"],
+  "exclude": ["node_modules", "out", "test-build"]
+}

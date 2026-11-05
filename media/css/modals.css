@@ -112,7 +112,8 @@
 }
 
 .modal-field input[type="text"],
-.modal-field input[type="number"] {
+.modal-field input[type="number"],
+.modal-field select {
     padding: 8px 10px;
     border: 1px solid var(--rule-strong);
     border-radius: 3px;
@@ -125,7 +126,8 @@
 }
 
 .modal-field input[type="text"]:focus,
-.modal-field input[type="number"]:focus {
+.modal-field input[type="number"]:focus,
+.modal-field select:focus {
     border-color: var(--accent);
 }
 
@@ -167,6 +169,66 @@
     margin: 0;
     accent-color: var(--accent);
     cursor: pointer;
+}
+
+.workflow-troubleshooting {
+    border: 1px solid var(--rule-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    background: var(--surface-raised, var(--surface));
+}
+
+.workflow-troubleshooting > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    cursor: pointer;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    list-style-position: inside;
+}
+
+.workflow-active-badge {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 10px;
+    font-family: var(--font-mono);
+}
+
+.workflow-troubleshooting-body {
+    display: grid;
+    gap: 10px;
+    padding: 0 12px 12px;
+}
+
+.workflow-troubleshooting-intro,
+.workflow-option-help {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.workflow-troubleshooting-card {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+}
+
+.workflow-card-title {
+    color: var(--ink);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .workflow-layout-field {

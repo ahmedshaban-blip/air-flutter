@@ -58,6 +58,7 @@ class AirFlutterWebview {
             this.initDeepLinkStudio();
             this.initLocalhostBridge();
             this.initMirrorSetupModal();
+            this.initMcpModal();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -530,6 +531,27 @@ class AirFlutterWebview {
                 case 'openCompatDoctorModal':
                     this.openCompatDoctorModal(message.projectPath);
                     break;
+                case 'openMcpHubModal':
+                    this.openMcpHub(message.workspaceRoot);
+                    break;
+                case 'mcpHubData':
+                    this.setData(message.agents, message.servers);
+                    break;
+                case 'mcpCompanionStatus':
+                    this.onCompanionStatus(message);
+                    break;
+                case 'mcpCompanionDone':
+                    this.onCompanionDone(message);
+                    break;
+                case 'mcpShowCompanionGuide':
+                    this.openCompanionGuide(message.serverId);
+                    break;
+                case 'mcpPrereqResult':
+                    this.showPrerequisiteResult(message);
+                    break;
+                case 'mcpWriteDone':
+                    this.onWriteDone(message);
+                    break;
                 case 'compatProjectSelected':
                     const compatPathInput = document.getElementById('compatProjectPathInput');
                     if (compatPathInput) compatPathInput.value = message.path || '';
@@ -795,9 +817,16 @@ mixinModule(AirFlutterWebview, window.AirFlutterAppStateModule);
 mixinModule(AirFlutterWebview, window.AirFlutterDeepLinkStudioModule);
 mixinModule(AirFlutterWebview, window.AirFlutterLocalhostBridgeModule);
 mixinModule(AirFlutterWebview, window.AirFlutterMirrorSetupModule);
+mixinModule(AirFlutterWebview, window.AirFlutterMcpModule);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();
+
+// The panel's inline script later replaces `window.airFlutter` with a small
+// bridge object, which would hide every method mixed into this instance.
+// Expose the real instance under a reserved name so the bridge (and any future
+// inline code) can delegate to the actual implementation.
+window.airFlutterApp = airFlutter;
 
 window.addEventListener('message', event => {
     airFlutter.handleMessage(event.data);

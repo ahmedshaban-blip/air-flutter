@@ -227,7 +227,7 @@ export function getSidebarWebviewHtml(
         <details class="sf-tool-group" data-tool-group="advanced">
             <summary>
                 <span class="sf-tool-group-title">Network &amp; automation</span>
-                <span class="sf-tool-group-meta"><span>2 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span>3 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolProxy" data-tool="proxy" title="Configure HTTP Proxy and Private DNS for network traffic inspection">
@@ -237,6 +237,10 @@ export function getSidebarWebviewHtml(
             <button class="sf-tool" type="button" id="toolAgentEngine" data-tool="agentEngine" title="Scaffold AI Sub-Agents and Multi-Agent Workflows">
                 <span class="sf-tool-name">AI Agent Engine</span>
                 <span class="sf-tool-note">sub-agents &amp; teams</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolMcpHub" data-tool="mcpHub" title="Configure MCP servers for your AI coding agent">
+                <span class="sf-tool-name">MCP Hub</span>
+                <span class="sf-tool-note">AI agent servers</span>
             </button>
             </div>
         </details>

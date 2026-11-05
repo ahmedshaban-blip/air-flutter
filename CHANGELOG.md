@@ -7,6 +7,87 @@ update channel with any other extension.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-04
+
+### GitHub Actions
+
+- **CI-only NDK pinning**: Generated Android workflows use a preinstalled Ubuntu 24.04 NDK through `CI_NDK_VERSION`, while local builds continue using Flutter's default NDK.
+- **Optional Android tool installation**: Workflows can install manually entered NDK and CMake versions with `sdkmanager`, or verify a manually entered preinstalled NDK version without downloading it.
+- **All Android build variants covered**: Universal APK, split APK, App Bundle, combined APK/AAB, debug, and release workflows share the same verified NDK configuration.
+- **Build troubleshooting controls**: A collapsible workflow section explains common NDK, CMake, memory, and caching failures, with CI-only Gradle heap, Metaspace, worker, parallelism, and daemon limits.
+- **Conflict-free cache providers**: Flutter SDK/Pub caching is independent from the mutually exclusive Gradle Setup, Java Setup, and no-cache options.
+- **Actionable failure diagnostics**: Generated workflows classify common memory, Android toolchain, disk, signing, dependency, and network failures, then upload target-specific logs and safe runner diagnostics for seven days.
+
+## [1.8.0] - 2026-11-04
+
+### MCP Hub
+
+- **Official workspace paths**: Copilot now uses `.mcp.json`, Antigravity uses `.agents/mcp_config.json`, and Continue writes a valid MCP block under `.continue/mcpServers/`.
+- **Capability-aware scopes**: Every integration declares its supported scopes and mode. The panel disables incompatible scope choices, rejects selections with no common scope, and the extension host validates the scope again before writing.
+- **Global-only agents**: Cline, Windsurf/Cascade, and Claude Desktop are available only at their documented user-level locations; Air Flutter no longer creates unsupported project files for them.
+- **Framework-native outputs**: CrewAI and AutoGen generate reviewable Python integration templates under `.air-flutter/mcp/`; AutoGPT generates a setup guide for its Settings → Integrations flow.
+- **Unsupported targets removed**: Aider and AutoClaw are no longer presented as native MCP clients, and the inert `.mcp/multi-agent.templates.json` convention has been removed.
+
+## [1.7.3] - 2026-11-04
+
+### Fixes
+
+- **MCP Hub click handler resolves the correct bridge**: The panel button now calls `window.airFlutter.openMcpHubModal()` explicitly, preventing VS Code's webview from resolving the bare `airFlutter` identifier to the underlying instance, where that method does not exist.
+
+## [1.7.2] - 2026-11-04
+
+### Fixes
+
+- **Panel buttons failed with "airFlutter.openMcpHubModal is not a function"**: The webview bridge (`window.airFlutter`) was defined inside a `DOMContentLoaded` handler. When that handler had not run yet, the object did not exist with its methods, so every button routed through the bridge threw and the click was silently lost. This affected **MCP Hub**, Flavors, Proxy / DNS, GitHub Workflow, Signing Key, Agent Engine and Compat Doctor. The bridge is now defined synchronously, so it is always available before the first click.
+- **Graceful degradation**: If the webview scripts fail to load, the bridge now falls back to asking the extension host to open the panel instead of throwing `is not a function`.
+- **Toast routed to the wrong object**: The MCP module called `window.airFlutter.showToast`, which resolves to the bridge rather than the real instance. It now targets `window.airFlutterApp`, so toasts display correctly.
+
+## [1.7.1] - 2026-11-04
+
+### Fixes
+
+- **MCP Hub button did nothing**: Clicking **MCP Hub** in the panel had no effect. The panel's inline script replaces `window.airFlutter` with a small bridge object, which discarded every method the webview module mixins had added — so the button's handler had nothing to delegate to. The real webview instance is now exposed as `window.airFlutterApp` before the bridge is created, and the bridge delegates to it. The same flaw silently affected the Flavors, Proxy, Workflow, Signing Key, Agent Engine and Compat Doctor buttons, which called themselves in a loop instead of the real implementation; they are fixed too.
+
+## [1.7.0] - 2026-11-04
+
+### Features
+
+- **Mobile MCP Server**: The catalog gains **Mobile MCP** (`@mobilenext/mobile-mcp`) — platform-agnostic automation for Android emulators, iOS simulators and real devices, driving apps through the native accessibility tree.
+- **Marionette is now complete**: The Marionette entry correctly uses the Dart bridge (`marionette_mcp`) instead of an npm package, and knows that your app needs the `marionette_flutter` package installed and wired up.
+- **App-side setup wizard**: Servers that need a package inside your own Flutter app now show a call-out in the Configure step. Air Flutter detects whether the dependency is already in `pubspec.yaml`, offers to run `flutter pub add` for you, and can wire `lib/main.dart` automatically.
+- **Smart `main.dart` editing**: The automatic rewrite inserts the required imports, wraps `MarionetteBinding.ensureInitialized()` in a `kDebugMode` guard, and preserves your own `runApp(...)` call — including nested arguments such as `runApp(const MyApp(home: Home()))`. A backup is created first, and an unrecognised `main()` is reported for manual editing rather than rewritten.
+- **Setup guide window**: A dedicated guide modal shows the exact `flutter pub add` command, the `main()` snippet and a numbered checklist, each with copy buttons, plus a one-click **Save as Markdown** export.
+
+### Fixes
+
+- **`kDebugMode` import**: The generated snippet needs `package:flutter/foundation.dart`. `material.dart` does not re-export `kDebugMode` (verified against the Flutter SDK), so the import is now added whenever it is missing.
+
+## [1.6.0] - 2026-11-04
+
+### Features
+
+- **MCP & AI Agent Hub**: A new **MCP Hub** button inside the Air Flutter panel (commands grid) and the sidebar (Network & automation group) opens a guided 5-step modal that configures Model Context Protocol servers for your AI coding agent. A QuickPick version is also available from the Command Palette as **MCP & AI Agent Hub (Quick Wizard)**.
+- **20 Flutter-Focused MCP Servers**: A curated catalog covering the Dart & Flutter SDK server, pub.dev, Firebase, Supabase, Appwrite, Figma, Android ADB, Marionette, SQLite, PostgreSQL, OpenAPI/Swagger, Fetch, Postman, Sentry, GitHub, GitLab, Fastlane, DevDocs, Brave Search, and the Memory & Sequential Thinking server.
+- **14 AI Agent Adapters**: Writes the exact schema each agent expects — GitHub Copilot, Cursor, Cline, Roo Code, Windsurf/Cascade, Anti-Gravity, Claude Desktop, Continue, Aider, Devin, OpenCode, Auto-Claw, OpenAI Codex CLI, and portable multi-agent templates (CrewAI, AutoGPT, AutoGen). JSON, YAML (Continue/Aider) and TOML (Codex) are all supported.
+- **Per-Server Instructions**: Optionally attach an `instructions` field to any server so the agent knows how to use it in your project — for example restricting Supabase to a single schema. 17 of the 20 servers ship ready-made templates you can accept, edit, or replace with your own text.
+- **Dual-Scope Targeting**: Install each configuration at project level (workspace) or global level (user/machine), with OS-correct paths on Windows, macOS and Linux.
+- **Batch Installation**: Select and configure any number of MCP servers in a single run.
+- **Prerequisites Health-Check**: Before writing anything, the hub verifies Node/npx, Flutter, Dart, Python/uvx, adb and Git, and shows a checklist with official download links and copy-paste install commands for your OS when something is missing.
+- **Catalog Browser & Prerequisite Check**: Two extra commands — `Browse MCP Server Catalog` and `Check MCP Prerequisites` — for inspecting the catalog and verifying your toolchain without installing anything.
+
+### Safety
+
+- **Non-Destructive Writes**: New server entries are deep-merged into existing config files. Pre-existing servers, custom settings and unrelated keys are never overwritten or removed, and arrays of named servers are unioned rather than replaced.
+- **Automatic Backups**: A timestamped backup is created next to any config file before it is modified (can be disabled with `airFlutter.mcp.backupBeforeWrite`).
+- **Corruption Guard**: If an existing config file cannot be parsed, it is left byte-for-byte untouched and reported, instead of being silently rewritten.
+- **Secrets Notice**: A one-time warning explains that API keys are stored in plaintext, and workspace-scope runs offer to add the written config paths to `.gitignore`.
+
+### Fixes
+
+- **Prerequisites False Negatives on Windows**: The health check reported installed tools such as the Flutter SDK, `npx` and `adb` as missing, because on Windows they ship as `.bat`/`.cmd` shims that a plain executable probe cannot launch. The check now resolves Windows shims and probes them correctly, so a working Flutter install is recognised.
+- **MCP Hub button did not open the modal**: The **MCP Hub** button in the panel did nothing when clicked. The message router called a method that only existed on the host class rather than on a mixed-in module, so the call threw and the handler aborted silently. The entry point now lives on the module and is copied by the mixin correctly.
+- **Final "Next" button did nothing**: On the Review step the button stayed labelled **Next** and clicking it had no effect. The module kept its step state in a `constructor()`, which the webview's mixin pattern never invokes, so the step counter was undefined and the "write configuration" branch was never reached. State is now initialised in the module's `initMcpModal()` like every other module, and the button correctly becomes **Write configuration**.
+
 ## [1.5.1] - 2026-11-04
 
 ### Fixes

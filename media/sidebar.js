@@ -324,6 +324,7 @@ const vscode = acquireVsCodeApi();
                 flavors: 'Opening flavors manager…',
                 proxy: 'Reading network settings…',
                 agentEngine: 'Opening agent scaffolder…',
+                mcpHub: 'Opening MCP Hub…',
                 compatDoctor: 'Scanning compatibility…',
                 wipeApp: 'Resetting app storage…',
                 pickWipePackage: 'Loading app packages…',
@@ -500,6 +501,7 @@ const vscode = acquireVsCodeApi();
             ['toolFlavors', 'flavors'],
             ['toolProxy', 'proxy'],
             ['toolAgentEngine', 'agentEngine'],
+            ['toolMcpHub', 'mcpHub'],
             ['toolCompatDoctor', 'compatDoctor']
         ].forEach(function (pair) {
             const button = document.getElementById(pair[0]);

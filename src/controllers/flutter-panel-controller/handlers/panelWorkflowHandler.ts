@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { WorkflowGenerator, WorkflowOptions } from '../../../domain/workflow-generator';
 import { PanelHandlerContext } from './panelCompatHandler';
 
@@ -51,6 +52,12 @@ export class PanelWorkflowHandler {
           : 'GitHub Workflows generated: build_apk.yml and build_android.yml'
       });
       this.ctx.postStatus('✅ GitHub Actions workflow generated successfully!', 'success');
+
+      if (result.androidBuildFilePath) {
+        vscode.window.showInformationMessage(
+          `CI-only Android NDK configured in ${path.basename(result.androidBuildFilePath)}; local builds keep Flutter's default.`
+        );
+      }
 
       // Open the generated workflow file in editor
       for (const [index, workflowPath] of result.workflowPaths.entries()) {

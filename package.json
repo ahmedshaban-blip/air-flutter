@@ -1,8 +1,8 @@
 {
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
-  "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
-  "version": "1.5.1",
+  "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, MCP & AI Agent Hub, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
+  "version": "1.8.1",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",
@@ -76,7 +76,18 @@
     "ci cd",
     "ai agents",
     "subagents",
-    "antigravity"
+    "antigravity",
+    "mcp",
+    "model context protocol",
+    "mcp servers",
+    "ai agent hub",
+    "cursor",
+    "cline",
+    "roo code",
+    "windsurf",
+    "copilot",
+    "claude desktop",
+    "codex"
   ],
   "main": "./out/main.js",
   "scripts": {
@@ -87,17 +98,24 @@
     "watch": "tsc -watch -p ./",
     "build": "npm run clean && npm run compile && npm run package",
     "clean": "rimraf out dist",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test:mcp": "tsc -p ./ && tsc -p tsconfig.test-mcp.json && node test-build/test/test-mcp-hub.js && node test/test-mcp-companion.js && node test/test-mcp-dom.js && node test/test-mcp-panel-button.js && node test/test-mcp-loadorder.js",
+    "test:workflow": "tsc -p ./ && node test/test-workflow-generator.js && node test/test-workflow-dom.js",
+    "test:vsix": "node test/test-mcp-vsix.js && node test/test-mcp-loadorder-vsix.js"
   },
   "dependencies": {
     "adm-zip": "^0.4.14",
     "diff": ">=3.5.0",
-    "local-devices": "^3.0.0"
+    "js-yaml": "^4.3.2",
+    "local-devices": "^3.0.0",
+    "smol-toml": "^1.9.1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.32.0",
+    "jsdom": "^30.1.3",
     "rimraf": "^5.0.0",
     "typescript": "^5.0.0"
   },
@@ -320,6 +338,27 @@
         "title": "Package Bug Report (Screenshot + Logs)",
         "category": "Air Flutter",
         "icon": "$(bug)"
+      },
+      {
+        "command": "airFlutter.openMcpHub",
+        "title": "MCP & AI Agent Hub",
+        "category": "Air Flutter",
+        "icon": "$(server-process)"
+      },
+      {
+        "command": "airFlutter.openMcpHubWizard",
+        "title": "MCP & AI Agent Hub (Quick Wizard)",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.showMcpCatalog",
+        "title": "Browse MCP Server Catalog",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.checkMcpPrerequisites",
+        "title": "Check MCP Prerequisites",
+        "category": "Air Flutter"
       }
     ],
     "menus": {
@@ -371,6 +410,10 @@
         {
           "command": "airFlutter.killserver",
           "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openMcpHub",
+          "when": "workspaceHasAirFlutter"
         }
       ],
       "view/title": [
@@ -383,6 +426,11 @@
           "command": "airFlutter.packageBugReport",
           "when": "view == air-flutter-panel && workspaceHasAirFlutter",
           "group": "navigation@2"
+        },
+        {
+          "command": "airFlutter.openMcpHub",
+          "when": "view == air-flutter-panel && workspaceHasAirFlutter",
+          "group": "navigation@3"
         }
       ]
     },
@@ -438,6 +486,11 @@
           "type": "boolean",
           "default": false,
           "description": "Forward device audio while mirroring; disabled by default for lower latency"
+        },
+        "airFlutter.mcp.backupBeforeWrite": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create a timestamped backup next to an AI agent MCP config file before the MCP & AI Agent Hub modifies it"
         }
       }
     }

@@ -69,3 +69,9 @@ adb-interface-vscode-0.2.1.vsix
 
 # Packaged extension builds (produced by `npm run package`, attached to releases)
 *.vsix
+
+# MCP Hub test harness output (produced by `npm run test:mcp`)
+/test-build/
+
+# Verification scratch directories
+/vsix-*/

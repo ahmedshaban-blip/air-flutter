@@ -285,6 +285,9 @@ export class SidebarController {
       case 'agentEngine':
         await vscode.commands.executeCommand('airFlutter.openAgentScaffoldingModal')
         break
+      case 'mcpHub':
+        await vscode.commands.executeCommand('airFlutter.openMcpHub')
+        break
       case 'compatDoctor':
         await this.openCompatDoctorInPanel()
         break
