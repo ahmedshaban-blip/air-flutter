@@ -368,6 +368,24 @@
     overflow-wrap: anywhere;
 }
 
+.workflow-latest-release-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 9px 10px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--rule));
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+    color: var(--ink-soft);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.workflow-latest-release-hint i {
+    margin-top: 2px;
+    color: var(--accent);
+}
+
 @media (max-width: 560px) {
     .workflow-layout-options {
         grid-template-columns: 1fr;

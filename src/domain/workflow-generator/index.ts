@@ -29,6 +29,7 @@ export interface WorkflowOptions {
   releaseNameTemplate?: string
   releaseTagTemplate?: string
   artifactNameTemplate?: string
+  latestReleaseTarget?: 'apk' | 'aab'
   retentionDays?: number
   timeoutMinutes?: number
   javaVersion?: string
@@ -174,7 +175,7 @@ export class WorkflowGenerator {
           tag_name: \${{ env.RELEASE_TAG }}
           name: \${{ env.RELEASE_NAME }}
           prerelease: ${mode === 'debug'}
-          make_latest: ${mode === 'debug' ? 'false' : 'true'}
+          make_latest: ${this.shouldMakeLatestRelease(options)}
           generate_release_notes: true
           files: |
             release-assets/*`
@@ -324,6 +325,9 @@ ${failureDiagnosticsSteps}
     if (!validVersionSources.includes(config.versionSource)) {
       throw new Error('Release version source must be pubspec, run_number, custom, or manual.')
     }
+    if (options.latestReleaseTarget && !['apk', 'aab'].includes(options.latestReleaseTarget)) {
+      throw new Error('Latest release target must be apk or aab.')
+    }
     if (config.nameSource === 'custom' && !config.customName) {
       throw new Error('A custom release name is required when Custom Name is selected.')
     }
@@ -384,6 +388,14 @@ ${inputs.join('\n')}`
 
   private static yamlSingleQuoted(value: string): string {
     return `'${value.replace(/'/g, "''")}'`
+  }
+
+  private static shouldMakeLatestRelease(options: WorkflowOptions): boolean {
+    if (options.buildMode === 'debug') return false
+    if (options.workflowLayout !== 'separate') return true
+
+    const currentTarget = options.buildTarget === 'appbundle' ? 'aab' : 'apk'
+    return currentTarget === (options.latestReleaseTarget || 'apk')
   }
 
   private static generateReleaseMetadataStep(options: WorkflowOptions, config: ReleaseConfig): string {
@@ -483,6 +495,9 @@ ${inputs.join('\n')}`
           fi
 
           RELEASE_NAME="$(render_template "$RELEASE_NAME_TEMPLATE" "$RELEASE_TARGET")"
+          if [ "$REQUIRE_TARGET_IN_TAG" = 'true' ] && [[ "$RELEASE_NAME_TEMPLATE" != *'{target}'* ]]; then
+            RELEASE_NAME="$RELEASE_NAME — \${RELEASE_TARGET^^}"
+          fi
           RELEASE_TAG="$(render_template "$RELEASE_TAG_TEMPLATE" "$RELEASE_TARGET")"
           if [[ "$RELEASE_TAG_TEMPLATE" != *'{run}'* ]]; then
             RELEASE_TAG="$RELEASE_TAG-build-$GITHUB_RUN_NUMBER"

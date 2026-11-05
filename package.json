@@ -2,7 +2,7 @@
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
   "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, MCP & AI Agent Hub, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",

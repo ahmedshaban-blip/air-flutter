@@ -320,6 +320,25 @@ export function getWorkflowModalHtml(): string {
                             <input type="text" id="workflowArtifactNameCustomTemplate" value="{slug}-{target}-v{version}-build-{run}" hidden />
                         </div>
 
+                        <div class="modal-field workflow-latest-release-field" id="workflowLatestReleaseField" hidden>
+                            <label>Latest Release Target</label>
+                            <span class="field-desc">Controls which separate GitHub Release receives the <strong>Latest</strong> badge. The other release is still published normally.</span>
+                            <div class="modal-options-grid" role="radiogroup" aria-label="Latest release target">
+                                <label class="modal-option-card">
+                                    <input type="radio" name="workflowLatestReleaseTarget" value="apk" checked />
+                                    <span><strong>APK</strong> — Default</span>
+                                </label>
+                                <label class="modal-option-card">
+                                    <input type="radio" name="workflowLatestReleaseTarget" value="aab" />
+                                    <span><strong>AAB</strong></span>
+                                </label>
+                            </div>
+                            <div class="workflow-latest-release-hint">
+                                <i class="fas fa-circle-info"></i>
+                                <span>Use APK when users download and install the app directly. Choose AAB when the bundle should represent the primary store release.</span>
+                            </div>
+                        </div>
+
                         <div class="workflow-release-preview" aria-live="polite">
                             <strong>Preview</strong>
                             <span>Release: <code id="workflowReleaseNamePreview"></code></span>

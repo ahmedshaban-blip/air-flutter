@@ -163,9 +163,28 @@ const createFlutterProject = (prefix, kotlin = false) => {
   });
   assert.ok(separateReleaseYaml.includes("RELEASE_CUSTOM_NAME: 'Owner''s App'"));
   assert.ok(separateReleaseYaml.includes("REQUIRE_TARGET_IN_TAG: 'true'"));
+  assert.ok(separateReleaseYaml.includes('RELEASE_NAME="$RELEASE_NAME — ${RELEASE_TARGET^^}"'));
   assert.ok(separateReleaseYaml.includes('RELEASE_TAG="$RELEASE_TAG-$RELEASE_TARGET"'));
   assert.ok(separateReleaseYaml.includes('release-assets/${ARTIFACT_AAB_NAME}.aab'));
+  assert.ok(separateReleaseYaml.includes('make_latest: false'));
   yaml.load(separateReleaseYaml);
+
+  const selectedAabReleaseYaml = WorkflowGenerator.generateWorkflowYaml({
+    ...baseOptions(singleProject),
+    buildTarget: 'appbundle',
+    workflowLayout: 'separate',
+    publishToReleases: true,
+    latestReleaseTarget: 'aab'
+  });
+  const nonLatestApkReleaseYaml = WorkflowGenerator.generateWorkflowYaml({
+    ...baseOptions(singleProject),
+    buildTarget: 'universal_apk',
+    workflowLayout: 'separate',
+    publishToReleases: true,
+    latestReleaseTarget: 'aab'
+  });
+  assert.ok(selectedAabReleaseYaml.includes('make_latest: true'));
+  assert.ok(nonLatestApkReleaseYaml.includes('make_latest: false'));
 
   assert.throws(
     () => WorkflowGenerator.generateWorkflowYaml({

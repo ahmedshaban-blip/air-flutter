@@ -30,6 +30,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
         const releaseTagTemplateSelect = document.getElementById('workflowReleaseTagTemplate');
         const artifactNameTemplateSelect = document.getElementById('workflowArtifactNameTemplate');
         const manualTriggerToggle = document.getElementById('workflowTriggerManual');
+        const latestReleaseField = document.getElementById('workflowLatestReleaseField');
 
         const templateValue = (selectId, customInputId) => {
             const select = document.getElementById(selectId);
@@ -48,7 +49,13 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
 
         const syncReleaseSettings = () => {
             const enabled = publishToReleasesToggle?.checked ?? false;
+            const targetValue = document.querySelector('input[name="workflowBuildTarget"]:checked')?.value;
+            const layoutValue = document.querySelector('input[name="workflowLayout"]:checked')?.value;
+            const modeValue = document.querySelector('input[name="workflowBuildMode"]:checked')?.value || 'release';
             if (releaseSettings) releaseSettings.hidden = !enabled;
+            if (latestReleaseField) {
+                latestReleaseField.hidden = !(enabled && targetValue === 'both' && layoutValue === 'separate' && modeValue === 'release');
+            }
             if (releaseCustomNameField) releaseCustomNameField.hidden = releaseNameSource?.value !== 'custom';
             if (releaseCustomVersionField) releaseCustomVersionField.hidden = releaseVersionSource?.value !== 'custom';
 
@@ -81,9 +88,10 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
             const version = releaseVersionSource?.value === 'run_number'
                 ? '25'
                 : releaseVersionSource?.value === 'custom' ? customVersion || '1.2.0' : '1.2.0';
-            const targetValue = document.querySelector('input[name="workflowBuildTarget"]:checked')?.value;
             const target = targetValue === 'appbundle' ? 'aab' : targetValue === 'both' ? 'android' : 'apk';
-            const mode = document.querySelector('input[name="workflowBuildMode"]:checked')?.value || 'release';
+            const latestTarget = document.querySelector('input[name="workflowLatestReleaseTarget"]:checked')?.value || 'apk';
+            const previewTarget = targetValue === 'both' && layoutValue === 'separate' ? latestTarget : target;
+            const mode = modeValue;
             const values = {
                 app: appName,
                 slug: slugify(appName),
@@ -92,7 +100,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                 fullVersion: `${version}+15`,
                 run: '25',
                 attempt: '1',
-                target,
+                target: previewTarget,
                 mode,
                 branch: document.getElementById('workflowBranchInput')?.value?.trim() || 'main'
             };
@@ -102,13 +110,19 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
             let tagPreview = renderReleaseTemplate(tagTemplate, values);
             if (!tagTemplate.includes('{run}')) tagPreview += '-build-25';
             if (!tagTemplate.includes('{attempt}')) tagPreview += '-attempt-1';
+            if (targetValue === 'both' && layoutValue === 'separate' && !tagTemplate.includes('{target}')) tagPreview += `-${previewTarget}`;
+
+            let releaseNamePreview = renderReleaseTemplate(nameTemplate, values);
+            if (targetValue === 'both' && layoutValue === 'separate' && !nameTemplate.includes('{target}')) {
+                releaseNamePreview += ` — ${previewTarget.toUpperCase()}`;
+            }
 
             const namePreview = document.getElementById('workflowReleaseNamePreview');
             const tagPreviewElement = document.getElementById('workflowReleaseTagPreview');
             const artifactPreview = document.getElementById('workflowArtifactNamePreview');
-            if (namePreview) namePreview.textContent = renderReleaseTemplate(nameTemplate, values);
+            if (namePreview) namePreview.textContent = releaseNamePreview;
             if (tagPreviewElement) tagPreviewElement.textContent = slugify(tagPreview);
-            if (artifactPreview) artifactPreview.textContent = slugify(renderReleaseTemplate(artifactTemplate, { ...values, target: target === 'android' ? 'apk' : target }));
+            if (artifactPreview) artifactPreview.textContent = slugify(renderReleaseTemplate(artifactTemplate, values));
         };
 
         const syncWorkflowLayoutVisibility = () => {
@@ -128,6 +142,9 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                 syncWorkflowLayoutVisibility();
                 syncReleaseSettings();
             });
+        });
+        document.querySelectorAll('input[name="workflowLayout"]').forEach(input => {
+            input.addEventListener('change', syncReleaseSettings);
         });
         syncWorkflowLayoutVisibility();
 
@@ -178,6 +195,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
             .filter(Boolean)
             .forEach(input => input.addEventListener('change', syncReleaseSettings));
         document.querySelectorAll('input[name="workflowBuildMode"]').forEach(input => input.addEventListener('change', syncReleaseSettings));
+        document.querySelectorAll('input[name="workflowLatestReleaseTarget"]').forEach(input => input.addEventListener('change', syncReleaseSettings));
         [
             'workflowProjectPathInput', 'workflowBranchInput', 'workflowReleaseCustomName', 'workflowReleaseCustomVersion',
             'workflowReleaseNameCustomTemplate', 'workflowReleaseTagCustomTemplate', 'workflowArtifactNameCustomTemplate'
@@ -237,6 +255,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                 const releaseNameTemplate = templateValue('workflowReleaseNameTemplate', 'workflowReleaseNameCustomTemplate');
                 const releaseTagTemplate = templateValue('workflowReleaseTagTemplate', 'workflowReleaseTagCustomTemplate');
                 const artifactNameTemplate = templateValue('workflowArtifactNameTemplate', 'workflowArtifactNameCustomTemplate');
+                const latestReleaseTarget = document.querySelector('input[name="workflowLatestReleaseTarget"]:checked')?.value || 'apk';
                 const retentionDays = Number(document.getElementById('workflowRetentionDays')?.value ?? 14);
                 const timeoutMinutes = Number(document.getElementById('workflowTimeoutMinutes')?.value ?? 60);
 
@@ -319,6 +338,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                     releaseNameTemplate,
                     releaseTagTemplate,
                     artifactNameTemplate,
+                    latestReleaseTarget,
                     retentionDays,
                     timeoutMinutes
                 });

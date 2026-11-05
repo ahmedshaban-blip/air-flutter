@@ -7,6 +7,15 @@ update channel with any other extension.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-05
+
+### GitHub Releases
+
+- **Configurable release naming**: Generated workflows can derive app names from the repository, a fixed value, or manual-run input, with matching version sources and customizable release, tag, and artifact templates.
+- **Collision-free tags and named assets**: Run and attempt identifiers keep tags unique, while uploaded APK/AAB files receive readable versioned names with split-ABI suffixes preserved.
+- **Latest release control**: Separate APK/AAB workflows let users choose which target receives GitHub's `Latest` badge, defaulting to APK, with an in-product hint explaining when each option is appropriate.
+- **Accurate release semantics**: Coordinated APK/AAB builds remain one combined latest release, separate releases identify their target, and debug builds publish as prereleases.
+
 ## [1.8.1] - 2026-11-04
 
 ### GitHub Actions
