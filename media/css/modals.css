@@ -330,6 +330,44 @@
     padding-right: 64px;
 }
 
+.workflow-release-settings {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--rule-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    background: var(--surface-raised, var(--surface));
+}
+
+.workflow-release-settings[hidden] {
+    display: none;
+}
+
+.workflow-release-preview {
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+    color: var(--ink-soft);
+    font-size: 11px;
+}
+
+.workflow-release-preview strong {
+    color: var(--ink);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.workflow-release-preview code {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 560px) {
     .workflow-layout-options {
         grid-template-columns: 1fr;

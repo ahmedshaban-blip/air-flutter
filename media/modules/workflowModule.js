@@ -20,6 +20,96 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
         const gradleMemoryFields = document.getElementById('workflowGradleMemoryFields');
         const troubleshootingBadge = document.getElementById('workflowTroubleshootingBadge');
         const flutterCacheToggle = document.getElementById('workflowFlutterCache');
+        const publishToReleasesToggle = document.getElementById('workflowPublishToReleases');
+        const releaseSettings = document.getElementById('workflowReleaseSettings');
+        const releaseNameSource = document.getElementById('workflowReleaseNameSource');
+        const releaseVersionSource = document.getElementById('workflowReleaseVersionSource');
+        const releaseCustomNameField = document.getElementById('workflowReleaseCustomNameField');
+        const releaseCustomVersionField = document.getElementById('workflowReleaseCustomVersionField');
+        const releaseNameTemplateSelect = document.getElementById('workflowReleaseNameTemplate');
+        const releaseTagTemplateSelect = document.getElementById('workflowReleaseTagTemplate');
+        const artifactNameTemplateSelect = document.getElementById('workflowArtifactNameTemplate');
+        const manualTriggerToggle = document.getElementById('workflowTriggerManual');
+
+        const templateValue = (selectId, customInputId) => {
+            const select = document.getElementById(selectId);
+            const customInput = document.getElementById(customInputId);
+            return select?.value === 'custom' ? customInput?.value?.trim() || '' : select?.value || '';
+        };
+
+        const slugify = value => value.toLowerCase()
+            .replace(/[^a-z0-9._-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^[.-]+|[.-]+$/g, '');
+
+        const renderReleaseTemplate = (template, values) => template.replace(/\{(\w+)\}/g, (match, key) => (
+            Object.prototype.hasOwnProperty.call(values, key) ? values[key] : match
+        ));
+
+        const syncReleaseSettings = () => {
+            const enabled = publishToReleasesToggle?.checked ?? false;
+            if (releaseSettings) releaseSettings.hidden = !enabled;
+            if (releaseCustomNameField) releaseCustomNameField.hidden = releaseNameSource?.value !== 'custom';
+            if (releaseCustomVersionField) releaseCustomVersionField.hidden = releaseVersionSource?.value !== 'custom';
+
+            const manualEnabled = manualTriggerToggle?.checked ?? false;
+            [releaseNameSource, releaseVersionSource].forEach(select => {
+                const option = select?.querySelector('option[value="manual"]');
+                if (option) option.disabled = !manualEnabled;
+                if (!manualEnabled && select?.value === 'manual') {
+                    select.value = select === releaseNameSource ? 'repository' : 'pubspec';
+                }
+            });
+
+            [
+                [releaseNameTemplateSelect, 'workflowReleaseNameCustomTemplate'],
+                [releaseTagTemplateSelect, 'workflowReleaseTagCustomTemplate'],
+                [artifactNameTemplateSelect, 'workflowArtifactNameCustomTemplate']
+            ].forEach(([select, inputId]) => {
+                const input = document.getElementById(inputId);
+                if (input) input.hidden = select?.value !== 'custom';
+            });
+
+            const projectPath = document.getElementById('workflowProjectPathInput')?.value?.trim() || 'my-app';
+            const repositoryName = projectPath.split(/[\\/]/).filter(Boolean).at(-1) || 'my-app';
+            const repositoryDisplay = repositoryName.replace(/[-_]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+            const customName = document.getElementById('workflowReleaseCustomName')?.value?.trim();
+            const appName = releaseNameSource?.value === 'custom'
+                ? customName || 'My App'
+                : releaseNameSource?.value === 'manual' ? 'Manual App' : repositoryDisplay;
+            const customVersion = document.getElementById('workflowReleaseCustomVersion')?.value?.trim();
+            const version = releaseVersionSource?.value === 'run_number'
+                ? '25'
+                : releaseVersionSource?.value === 'custom' ? customVersion || '1.2.0' : '1.2.0';
+            const targetValue = document.querySelector('input[name="workflowBuildTarget"]:checked')?.value;
+            const target = targetValue === 'appbundle' ? 'aab' : targetValue === 'both' ? 'android' : 'apk';
+            const mode = document.querySelector('input[name="workflowBuildMode"]:checked')?.value || 'release';
+            const values = {
+                app: appName,
+                slug: slugify(appName),
+                version,
+                build: '15',
+                fullVersion: `${version}+15`,
+                run: '25',
+                attempt: '1',
+                target,
+                mode,
+                branch: document.getElementById('workflowBranchInput')?.value?.trim() || 'main'
+            };
+            const nameTemplate = templateValue('workflowReleaseNameTemplate', 'workflowReleaseNameCustomTemplate');
+            const tagTemplate = templateValue('workflowReleaseTagTemplate', 'workflowReleaseTagCustomTemplate');
+            const artifactTemplate = templateValue('workflowArtifactNameTemplate', 'workflowArtifactNameCustomTemplate');
+            let tagPreview = renderReleaseTemplate(tagTemplate, values);
+            if (!tagTemplate.includes('{run}')) tagPreview += '-build-25';
+            if (!tagTemplate.includes('{attempt}')) tagPreview += '-attempt-1';
+
+            const namePreview = document.getElementById('workflowReleaseNamePreview');
+            const tagPreviewElement = document.getElementById('workflowReleaseTagPreview');
+            const artifactPreview = document.getElementById('workflowArtifactNamePreview');
+            if (namePreview) namePreview.textContent = renderReleaseTemplate(nameTemplate, values);
+            if (tagPreviewElement) tagPreviewElement.textContent = slugify(tagPreview);
+            if (artifactPreview) artifactPreview.textContent = slugify(renderReleaseTemplate(artifactTemplate, { ...values, target: target === 'android' ? 'apk' : target }));
+        };
 
         const syncWorkflowLayoutVisibility = () => {
             const target = document.querySelector('input[name="workflowBuildTarget"]:checked')?.value;
@@ -34,7 +124,10 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
         if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
         document.querySelectorAll('input[name="workflowBuildTarget"]').forEach(input => {
-            input.addEventListener('change', syncWorkflowLayoutVisibility);
+            input.addEventListener('change', () => {
+                syncWorkflowLayoutVisibility();
+                syncReleaseSettings();
+            });
         });
         syncWorkflowLayoutVisibility();
 
@@ -79,6 +172,17 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
             input.addEventListener('change', syncAndroidToolsState);
         });
         syncAndroidToolsState();
+
+        [publishToReleasesToggle, releaseNameSource, releaseVersionSource, manualTriggerToggle,
+            releaseNameTemplateSelect, releaseTagTemplateSelect, artifactNameTemplateSelect]
+            .filter(Boolean)
+            .forEach(input => input.addEventListener('change', syncReleaseSettings));
+        document.querySelectorAll('input[name="workflowBuildMode"]').forEach(input => input.addEventListener('change', syncReleaseSettings));
+        [
+            'workflowProjectPathInput', 'workflowBranchInput', 'workflowReleaseCustomName', 'workflowReleaseCustomVersion',
+            'workflowReleaseNameCustomTemplate', 'workflowReleaseTagCustomTemplate', 'workflowArtifactNameCustomTemplate'
+        ].forEach(id => document.getElementById(id)?.addEventListener('input', syncReleaseSettings));
+        syncReleaseSettings();
 
         if (browseBtn) {
             browseBtn.addEventListener('click', () => {
@@ -126,12 +230,36 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
 
                 const enableSigning = document.getElementById('workflowEnableSigning')?.checked ?? false;
                 const publishToReleases = document.getElementById('workflowPublishToReleases')?.checked ?? false;
+                const releaseNameSourceValue = releaseNameSource?.value || 'repository';
+                const releaseCustomName = document.getElementById('workflowReleaseCustomName')?.value?.trim() || '';
+                const releaseVersionSourceValue = releaseVersionSource?.value || 'pubspec';
+                const releaseCustomVersion = document.getElementById('workflowReleaseCustomVersion')?.value?.trim() || '';
+                const releaseNameTemplate = templateValue('workflowReleaseNameTemplate', 'workflowReleaseNameCustomTemplate');
+                const releaseTagTemplate = templateValue('workflowReleaseTagTemplate', 'workflowReleaseTagCustomTemplate');
+                const artifactNameTemplate = templateValue('workflowArtifactNameTemplate', 'workflowArtifactNameCustomTemplate');
                 const retentionDays = Number(document.getElementById('workflowRetentionDays')?.value ?? 14);
                 const timeoutMinutes = Number(document.getElementById('workflowTimeoutMinutes')?.value ?? 60);
 
                 if (!projectPath) {
                     this.showToast('Please select a valid project path', 'error');
                     return;
+                }
+
+                if (publishToReleases && releaseNameSourceValue === 'custom' && !releaseCustomName) {
+                    this.showToast('Enter a custom app name for the release', 'error');
+                    return;
+                }
+                if (publishToReleases && releaseVersionSourceValue === 'custom' && !releaseCustomVersion) {
+                    this.showToast('Enter a fixed release version', 'error');
+                    return;
+                }
+                const allowedVariables = new Set(['app', 'slug', 'version', 'build', 'fullVersion', 'run', 'attempt', 'target', 'mode', 'branch']);
+                for (const [label, template] of [['Release name', releaseNameTemplate], ['Tag', releaseTagTemplate], ['Artifact name', artifactNameTemplate]]) {
+                    const variables = [...template.matchAll(/\{([^{}]+)\}/g)].map(match => match[1]);
+                    if (publishToReleases && (!template || variables.some(variable => !allowedVariables.has(variable)))) {
+                        this.showToast(`${label} template is empty or contains an unknown variable`, 'error');
+                        return;
+                    }
                 }
 
                 if (!Number.isInteger(retentionDays) || retentionDays < 1) {
@@ -184,6 +312,13 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
                     enableSigning,
                     enableCache: gradleCacheProvider !== 'none',
                     publishToReleases,
+                    releaseNameSource: releaseNameSourceValue,
+                    releaseCustomName,
+                    releaseVersionSource: releaseVersionSourceValue,
+                    releaseCustomVersion,
+                    releaseNameTemplate,
+                    releaseTagTemplate,
+                    artifactNameTemplate,
                     retentionDays,
                     timeoutMinutes
                 });
@@ -198,6 +333,7 @@ window.AirFlutterWorkflowModule = class AirFlutterWorkflowModule {
             const input = document.getElementById('workflowProjectPathInput');
             if (input && defaultPath) {
                 input.value = defaultPath;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             } else if (!input?.value) {
                 this.sendMessage('getWorkflowInitialPath', {});
             }

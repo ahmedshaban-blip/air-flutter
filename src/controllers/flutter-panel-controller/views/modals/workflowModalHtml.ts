@@ -247,6 +247,87 @@ export function getWorkflowModalHtml(): string {
                         </label>
                         <span class="field-desc">Attaches the APK/AAB files to a tagged release after a successful build.</span>
                     </div>
+
+                    <div class="workflow-release-settings" id="workflowReleaseSettings" hidden>
+                        <div class="workflow-layout-heading">
+                            <label>Release Naming</label>
+                            <span class="workflow-layout-badge">Unique tags enforced</span>
+                        </div>
+                        <span class="field-desc">Choose where the release name and version come from, then select or customize each template.</span>
+
+                        <div class="modal-options-grid">
+                            <div class="modal-field">
+                                <label for="workflowReleaseNameSource">App Name Source</label>
+                                <select id="workflowReleaseNameSource">
+                                    <option value="repository" selected>Repository Name (automatic)</option>
+                                    <option value="custom">Custom Name</option>
+                                    <option value="manual">Manual Run Input</option>
+                                </select>
+                            </div>
+                            <div class="modal-field" id="workflowReleaseCustomNameField" hidden>
+                                <label for="workflowReleaseCustomName">Custom App Name</label>
+                                <input type="text" id="workflowReleaseCustomName" placeholder="e.g. My App" />
+                            </div>
+                            <div class="modal-field">
+                                <label for="workflowReleaseVersionSource">Version Source</label>
+                                <select id="workflowReleaseVersionSource">
+                                    <option value="pubspec" selected>pubspec.yaml</option>
+                                    <option value="run_number">GitHub Run Number</option>
+                                    <option value="custom">Fixed Version</option>
+                                    <option value="manual">Manual Run Input</option>
+                                </select>
+                            </div>
+                            <div class="modal-field" id="workflowReleaseCustomVersionField" hidden>
+                                <label for="workflowReleaseCustomVersion">Fixed Version</label>
+                                <input type="text" id="workflowReleaseCustomVersion" placeholder="e.g. 1.2.0+15" />
+                            </div>
+                        </div>
+
+                        <div class="modal-field">
+                            <label for="workflowReleaseNameTemplate">Release Name Template</label>
+                            <select id="workflowReleaseNameTemplate">
+                                <option value="{app} v{version} (Build {run})" selected>{app} v{version} (Build {run})</option>
+                                <option value="{app} - {version}">{app} - {version}</option>
+                                <option value="{app} v{version}">{app} v{version}</option>
+                                <option value="{app} - Build {run}">{app} - Build {run}</option>
+                                <option value="{app} - {target} - {version}">{app} - {target} - {version}</option>
+                                <option value="custom">Custom Template</option>
+                            </select>
+                            <input type="text" id="workflowReleaseNameCustomTemplate" value="{app} v{version} (Build {run})" hidden />
+                        </div>
+
+                        <div class="modal-field">
+                            <label for="workflowReleaseTagTemplate">Tag Template</label>
+                            <select id="workflowReleaseTagTemplate">
+                                <option value="{slug}-v{version}-build-{run}-attempt-{attempt}" selected>{slug}-v{version}-build-{run}-attempt-{attempt}</option>
+                                <option value="{slug}-v{version}">{slug}-v{version}</option>
+                                <option value="{slug}-build-{run}">{slug}-build-{run}</option>
+                                <option value="v{version}">v{version}</option>
+                                <option value="custom">Custom Template</option>
+                            </select>
+                            <input type="text" id="workflowReleaseTagCustomTemplate" value="{slug}-v{version}-build-{run}-attempt-{attempt}" hidden />
+                            <span class="field-desc">Missing {run} and {attempt} values are appended automatically to prevent duplicate tags.</span>
+                        </div>
+
+                        <div class="modal-field">
+                            <label for="workflowArtifactNameTemplate">Artifact Name Template</label>
+                            <select id="workflowArtifactNameTemplate">
+                                <option value="{slug}-{target}-v{version}-build-{run}" selected>{slug}-{target}-v{version}-build-{run}</option>
+                                <option value="{slug}-{target}-{version}">{slug}-{target}-{version}</option>
+                                <option value="{slug}-{mode}-{target}-build-{run}">{slug}-{mode}-{target}-build-{run}</option>
+                                <option value="custom">Custom Template</option>
+                            </select>
+                            <input type="text" id="workflowArtifactNameCustomTemplate" value="{slug}-{target}-v{version}-build-{run}" hidden />
+                        </div>
+
+                        <div class="workflow-release-preview" aria-live="polite">
+                            <strong>Preview</strong>
+                            <span>Release: <code id="workflowReleaseNamePreview"></code></span>
+                            <span>Tag: <code id="workflowReleaseTagPreview"></code></span>
+                            <span>Artifact: <code id="workflowArtifactNamePreview"></code></span>
+                        </div>
+                        <span class="field-desc">Variables: {app}, {slug}, {version}, {build}, {fullVersion}, {run}, {attempt}, {target}, {mode}, {branch}</span>
+                    </div>
                 </div>
                 <div class="modal-foot">
                     <button class="btn btn-quiet" id="cancelWorkflowModalBtn" type="button">Cancel</button>

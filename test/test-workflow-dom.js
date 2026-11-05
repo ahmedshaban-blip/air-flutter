@@ -39,6 +39,14 @@ assert.match(toasts.at(-1).message, /512 to 6144/);
 assert.strictEqual(messages.some(message => message.command === 'generateWorkflow'), false);
 
 byId('workflowGradleHeapMb').value = '2048';
+byId('workflowPublishToReleases').checked = true;
+change(byId('workflowPublishToReleases'));
+assert.strictEqual(byId('workflowReleaseSettings').hidden, false);
+assert.match(byId('workflowReleaseNamePreview').textContent, /v1\.2\.0/);
+byId('workflowReleaseNameSource').value = 'custom';
+change(byId('workflowReleaseNameSource'));
+assert.strictEqual(byId('workflowReleaseCustomNameField').hidden, false);
+byId('workflowReleaseCustomName').value = 'Fixture App';
 byId('generateWorkflowSubmitBtn').click();
 const request = messages.find(message => message.command === 'generateWorkflow');
 assert.ok(request);
@@ -47,5 +55,11 @@ assert.strictEqual(request.payload.usePreinstalledNdk, false);
 assert.strictEqual(request.payload.gradleCacheProvider, 'setup-gradle');
 assert.strictEqual(request.payload.limitGradleMemory, true);
 assert.strictEqual(request.payload.gradleHeapMb, 2048);
+assert.strictEqual(request.payload.publishToReleases, true);
+assert.strictEqual(request.payload.releaseNameSource, 'custom');
+assert.strictEqual(request.payload.releaseCustomName, 'Fixture App');
+assert.strictEqual(request.payload.releaseVersionSource, 'pubspec');
+assert.strictEqual(request.payload.releaseNameTemplate, '{app} v{version} (Build {run})');
+assert.strictEqual(request.payload.releaseTagTemplate, '{slug}-v{version}-build-{run}-attempt-{attempt}');
 
 console.log('Workflow troubleshooting DOM tests passed.');

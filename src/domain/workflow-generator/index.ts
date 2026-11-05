@@ -22,6 +22,13 @@ export interface WorkflowOptions {
   disableGradleParallel?: boolean
   disableGradleDaemon?: boolean
   publishToReleases?: boolean
+  releaseNameSource?: 'repository' | 'custom' | 'manual'
+  releaseCustomName?: string
+  releaseVersionSource?: 'pubspec' | 'run_number' | 'custom' | 'manual'
+  releaseCustomVersion?: string
+  releaseNameTemplate?: string
+  releaseTagTemplate?: string
+  artifactNameTemplate?: string
   retentionDays?: number
   timeoutMinutes?: number
   javaVersion?: string
@@ -30,6 +37,16 @@ export interface WorkflowOptions {
   installAndroidTools?: boolean
   ndkVersion?: string
   cmakeVersion?: string
+}
+
+interface ReleaseConfig {
+  nameSource: 'repository' | 'custom' | 'manual'
+  customName: string
+  versionSource: 'pubspec' | 'run_number' | 'custom' | 'manual'
+  customVersion: string
+  nameTemplate: string
+  tagTemplate: string
+  artifactTemplate: string
 }
 
 export class WorkflowGenerator {
@@ -49,6 +66,7 @@ export class WorkflowGenerator {
   }
 
   public static generateWorkflowYaml(options: WorkflowOptions): string {
+    const releaseConfig = this.getReleaseConfig(options)
     const triggers: string[] = []
 
     if (options.triggerOnPush) {
@@ -62,7 +80,7 @@ export class WorkflowGenerator {
       - ${options.branch}`)
     }
     if (options.triggerManual || triggers.length === 0) {
-      triggers.push(`  workflow_dispatch:`)
+      triggers.push(this.generateWorkflowDispatchTrigger(releaseConfig))
     }
 
     const javaVer = options.javaVersion || '17'
@@ -133,14 +151,19 @@ export class WorkflowGenerator {
           retention-days: ${retentionDays}`
     }
 
+    if (options.publishToReleases) {
+      artifactSteps = artifactSteps
+        .replace(`name: flutter-${mode}-apk`, 'name: \${{ env.ARTIFACT_APK_NAME }}')
+        .replace('name: App Bundle', 'name: \${{ env.ARTIFACT_AAB_NAME }}')
+        .replace(`name: flutter-${mode}-split-apks`, 'name: \${{ env.ARTIFACT_APK_NAME }}')
+    }
+
+    let releaseMetadataStep = ''
+    let releaseAssetsStep = ''
     let releaseStep = ''
     if (options.publishToReleases) {
-      const releaseFiles = options.buildTarget === 'appbundle'
-        ? `build/app/outputs/bundle/${mode}/*.aab`
-        : options.buildTarget === 'both'
-          ? `build/app/outputs/flutter-apk/*.apk
-            build/app/outputs/bundle/${mode}/*.aab`
-          : 'build/app/outputs/flutter-apk/*.apk'
+      releaseMetadataStep = this.generateReleaseMetadataStep(options, releaseConfig)
+      releaseAssetsStep = this.generateReleaseAssetsStep(options.buildTarget, mode)
 
       releaseStep = `
 
@@ -148,11 +171,13 @@ export class WorkflowGenerator {
         if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-\${{ github.run_number }}-\${{ github.run_attempt }}
-          name: Flutter Build #\${{ github.run_number }}
+          tag_name: \${{ env.RELEASE_TAG }}
+          name: \${{ env.RELEASE_NAME }}
+          prerelease: ${mode === 'debug'}
+          make_latest: ${mode === 'debug' ? 'false' : 'true'}
           generate_release_notes: true
           files: |
-            ${releaseFiles}`
+            release-assets/*`
     }
 
     let signingSteps = ''
@@ -270,11 +295,262 @@ ${gradleMemoryStep}${cacheStep}${signingSteps}      - name: Install dependencies
           source "$RUNNER_TEMP/air-flutter-diagnose.sh"
           run_with_diagnostics "flutter-pub-get" flutter pub get
 
-${buildSteps}
+${releaseMetadataStep}${buildSteps}
 
-${artifactSteps}${releaseStep}
+${artifactSteps}${releaseAssetsStep}${releaseStep}
 
 ${failureDiagnosticsSteps}
+`
+  }
+
+  private static getReleaseConfig(options: WorkflowOptions): ReleaseConfig {
+    const config: ReleaseConfig = {
+      nameSource: options.releaseNameSource || 'repository',
+      customName: options.releaseCustomName?.trim() || '',
+      versionSource: options.releaseVersionSource || 'pubspec',
+      customVersion: options.releaseCustomVersion?.trim() || '',
+      nameTemplate: options.releaseNameTemplate?.trim() || '{app} v{version} (Build {run})',
+      tagTemplate: options.releaseTagTemplate?.trim() || '{slug}-v{version}-build-{run}-attempt-{attempt}',
+      artifactTemplate: options.artifactNameTemplate?.trim() || '{slug}-{target}-v{version}-build-{run}'
+    }
+
+    if (!options.publishToReleases) return config
+
+    const validNameSources = ['repository', 'custom', 'manual']
+    const validVersionSources = ['pubspec', 'run_number', 'custom', 'manual']
+    if (!validNameSources.includes(config.nameSource)) {
+      throw new Error('Release name source must be repository, custom, or manual.')
+    }
+    if (!validVersionSources.includes(config.versionSource)) {
+      throw new Error('Release version source must be pubspec, run_number, custom, or manual.')
+    }
+    if (config.nameSource === 'custom' && !config.customName) {
+      throw new Error('A custom release name is required when Custom Name is selected.')
+    }
+    if (config.versionSource === 'custom' && !config.customVersion) {
+      throw new Error('A custom release version is required when Fixed Version is selected.')
+    }
+
+    const hasManualTrigger = options.triggerManual || (!options.triggerOnPush && !options.triggerOnPr)
+    if ((config.nameSource === 'manual' || config.versionSource === 'manual') && !hasManualTrigger) {
+      throw new Error('Manual release name or version input requires the Manual Run trigger.')
+    }
+
+    this.validateReleaseTemplate(config.nameTemplate, 'Release name template')
+    this.validateReleaseTemplate(config.tagTemplate, 'Tag template')
+    this.validateReleaseTemplate(config.artifactTemplate, 'Artifact name template')
+    return config
+  }
+
+  private static validateReleaseTemplate(template: string, label: string): void {
+    if (!template || template.length > 180) {
+      throw new Error(`${label} must contain between 1 and 180 characters.`)
+    }
+    const allowed = new Set([
+      'app', 'slug', 'version', 'build', 'fullVersion', 'run', 'attempt', 'target', 'mode', 'branch'
+    ])
+    const placeholders = template.match(/\{[^{}]+\}/g) || []
+    for (const placeholder of placeholders) {
+      const name = placeholder.slice(1, -1)
+      if (!allowed.has(name)) {
+        throw new Error(`${label} contains unknown variable {${name}}.`)
+      }
+    }
+    if (/[{}]/.test(template.replace(/\{[^{}]+\}/g, ''))) {
+      throw new Error(`${label} contains an invalid variable expression.`)
+    }
+  }
+
+  private static generateWorkflowDispatchTrigger(config: ReleaseConfig): string {
+    const inputs: string[] = []
+    if (config.nameSource === 'manual') {
+      inputs.push(`      release_name:
+        description: 'Release name (leave blank to use the repository name)'
+        required: false
+        type: string`)
+    }
+    if (config.versionSource === 'manual') {
+      inputs.push(`      release_version:
+        description: 'Release version (leave blank to use pubspec.yaml)'
+        required: false
+        type: string`)
+    }
+    return inputs.length > 0
+      ? `  workflow_dispatch:
+    inputs:
+${inputs.join('\n')}`
+      : '  workflow_dispatch:'
+  }
+
+  private static yamlSingleQuoted(value: string): string {
+    return `'${value.replace(/'/g, "''")}'`
+  }
+
+  private static generateReleaseMetadataStep(options: WorkflowOptions, config: ReleaseConfig): string {
+    const target = options.buildTarget === 'appbundle'
+      ? 'aab'
+      : options.buildTarget === 'both'
+        ? 'android'
+        : 'apk'
+    const requireTargetInTag = options.workflowLayout === 'separate'
+
+    return `      - name: Prepare release metadata
+        env:
+          RELEASE_NAME_SOURCE: ${this.yamlSingleQuoted(config.nameSource)}
+          RELEASE_CUSTOM_NAME: ${this.yamlSingleQuoted(config.customName)}
+          RELEASE_VERSION_SOURCE: ${this.yamlSingleQuoted(config.versionSource)}
+          RELEASE_CUSTOM_VERSION: ${this.yamlSingleQuoted(config.customVersion)}
+          RELEASE_NAME_TEMPLATE: ${this.yamlSingleQuoted(config.nameTemplate)}
+          RELEASE_TAG_TEMPLATE: ${this.yamlSingleQuoted(config.tagTemplate)}
+          ARTIFACT_NAME_TEMPLATE: ${this.yamlSingleQuoted(config.artifactTemplate)}
+          RELEASE_TARGET: ${this.yamlSingleQuoted(target)}
+          RELEASE_MODE: ${this.yamlSingleQuoted(options.buildMode)}
+          REQUIRE_TARGET_IN_TAG: ${this.yamlSingleQuoted(String(requireTargetInTag))}
+          MANUAL_APP_NAME: \${{ github.event.inputs.release_name || '' }}
+          MANUAL_VERSION: \${{ github.event.inputs.release_version || '' }}
+          REPOSITORY_NAME: \${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+
+          title_case() {
+            printf '%s' "$1" | sed -E 's/[-_]+/ /g' | awk '{ for (i = 1; i <= NF; i++) { $i = toupper(substr($i, 1, 1)) substr($i, 2) } print }'
+          }
+
+          slugify() {
+            printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^[.-]+//; s/[.-]+$//'
+          }
+
+          read_pubspec_version() {
+            awk '/^version:[[:space:]]*/ { value=$0; sub(/^version:[[:space:]]*/, "", value); print value; exit }' pubspec.yaml | tr -d '"\\047\\r'
+          }
+
+          apply_version() {
+            FULL_VERSION="$1"
+            VERSION="\${FULL_VERSION%%+*}"
+            if [[ "$FULL_VERSION" == *+* ]]; then
+              BUILD_NUMBER="\${FULL_VERSION#*+}"
+            else
+              BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+            fi
+          }
+
+          render_template() {
+            local value="$1"
+            local render_target="$2"
+            value="\${value//\\{app\\}/$APP_NAME}"
+            value="\${value//\\{slug\\}/$APP_SLUG}"
+            value="\${value//\\{version\\}/$VERSION}"
+            value="\${value//\\{build\\}/$BUILD_NUMBER}"
+            value="\${value//\\{fullVersion\\}/$FULL_VERSION}"
+            value="\${value//\\{run\\}/$GITHUB_RUN_NUMBER}"
+            value="\${value//\\{attempt\\}/$GITHUB_RUN_ATTEMPT}"
+            value="\${value//\\{target\\}/$render_target}"
+            value="\${value//\\{mode\\}/$RELEASE_MODE}"
+            value="\${value//\\{branch\\}/$GITHUB_REF_NAME}"
+            printf '%s' "$value"
+          }
+
+          REPOSITORY_DISPLAY_NAME="$(title_case "$REPOSITORY_NAME")"
+          case "$RELEASE_NAME_SOURCE" in
+            repository) APP_NAME="$REPOSITORY_DISPLAY_NAME" ;;
+            custom) APP_NAME="$RELEASE_CUSTOM_NAME" ;;
+            manual) APP_NAME="\${MANUAL_APP_NAME:-$REPOSITORY_DISPLAY_NAME}" ;;
+          esac
+          if [[ "$APP_NAME" == *$'\\n'* || "$APP_NAME" == *$'\\r'* ]]; then
+            echo "::error title=Invalid release name::Release names must use a single line."
+            exit 1
+          fi
+          APP_SLUG="$(slugify "$APP_NAME")"
+          if [ -z "$APP_SLUG" ]; then
+            echo "::error title=Invalid release name::The selected app name cannot produce a safe tag."
+            exit 1
+          fi
+
+          PUBSPEC_VERSION="$(read_pubspec_version)"
+          if [ -z "$PUBSPEC_VERSION" ]; then
+            echo "::error title=Missing Flutter version::No version field was found in pubspec.yaml."
+            exit 1
+          fi
+          case "$RELEASE_VERSION_SOURCE" in
+            pubspec) apply_version "$PUBSPEC_VERSION" ;;
+            run_number) apply_version "$GITHUB_RUN_NUMBER" ;;
+            custom) apply_version "$RELEASE_CUSTOM_VERSION" ;;
+            manual) apply_version "\${MANUAL_VERSION:-$PUBSPEC_VERSION}" ;;
+          esac
+          if [[ "$FULL_VERSION" == *$'\\n'* || "$FULL_VERSION" == *$'\\r'* ]]; then
+            echo "::error title=Invalid release version::Release versions must use a single line."
+            exit 1
+          fi
+
+          RELEASE_NAME="$(render_template "$RELEASE_NAME_TEMPLATE" "$RELEASE_TARGET")"
+          RELEASE_TAG="$(render_template "$RELEASE_TAG_TEMPLATE" "$RELEASE_TARGET")"
+          if [[ "$RELEASE_TAG_TEMPLATE" != *'{run}'* ]]; then
+            RELEASE_TAG="$RELEASE_TAG-build-$GITHUB_RUN_NUMBER"
+          fi
+          if [[ "$RELEASE_TAG_TEMPLATE" != *'{attempt}'* ]]; then
+            RELEASE_TAG="$RELEASE_TAG-attempt-$GITHUB_RUN_ATTEMPT"
+          fi
+          if [ "$REQUIRE_TARGET_IN_TAG" = 'true' ] && [[ "$RELEASE_TAG_TEMPLATE" != *'{target}'* ]]; then
+            RELEASE_TAG="$RELEASE_TAG-$RELEASE_TARGET"
+          fi
+          RELEASE_TAG="$(slugify "$RELEASE_TAG")"
+
+          ARTIFACT_APK_NAME="$(slugify "$(render_template "$ARTIFACT_NAME_TEMPLATE" 'apk')")"
+          ARTIFACT_AAB_NAME="$(slugify "$(render_template "$ARTIFACT_NAME_TEMPLATE" 'aab')")"
+          if [ -z "$RELEASE_NAME" ] || [ -z "$RELEASE_TAG" ] || [ -z "$ARTIFACT_APK_NAME" ] || [ -z "$ARTIFACT_AAB_NAME" ]; then
+            echo "::error title=Invalid release template::A release template produced an empty value."
+            exit 1
+          fi
+          if [ "\${#RELEASE_TAG}" -gt 240 ]; then
+            echo "::error title=Tag too long::The generated tag exceeds 240 characters. Shorten the tag template or app name."
+            exit 1
+          fi
+          if [ "\${#RELEASE_NAME}" -gt 240 ] || [ "\${#ARTIFACT_APK_NAME}" -gt 200 ] || [ "\${#ARTIFACT_AAB_NAME}" -gt 200 ]; then
+            echo "::error title=Release name too long::Shorten the release or artifact template."
+            exit 1
+          fi
+
+          {
+            echo "RELEASE_NAME=$RELEASE_NAME"
+            echo "RELEASE_TAG=$RELEASE_TAG"
+            echo "ARTIFACT_APK_NAME=$ARTIFACT_APK_NAME"
+            echo "ARTIFACT_AAB_NAME=$ARTIFACT_AAB_NAME"
+          } >> "$GITHUB_ENV"
+          echo "Release: $RELEASE_NAME"
+          echo "Tag: $RELEASE_TAG"
+
+`
+  }
+
+  private static generateReleaseAssetsStep(
+    buildTarget: WorkflowOptions['buildTarget'],
+    mode: WorkflowOptions['buildMode']
+  ): string {
+    const apkCommands = buildTarget === 'split_apk'
+      ? `          for source in build/app/outputs/flutter-apk/*.apk; do
+            file_name="$(basename "$source" .apk)"
+            abi="\${file_name#app-}"
+            abi="\${abi%-${mode}}"
+            cp "$source" "release-assets/\${ARTIFACT_APK_NAME}-\${abi}.apk"
+          done`
+      : `          source="$(find build/app/outputs/flutter-apk -maxdepth 1 -name '*.apk' -print -quit)"
+          cp "$source" "release-assets/\${ARTIFACT_APK_NAME}.apk"`
+    const aabCommands = `          source="$(find build/app/outputs/bundle/${mode} -maxdepth 1 -name '*.aab' -print -quit)"
+          cp "$source" "release-assets/\${ARTIFACT_AAB_NAME}.aab"`
+    const commands = buildTarget === 'appbundle'
+      ? aabCommands
+      : buildTarget === 'both'
+        ? `${apkCommands}\n${aabCommands}`
+        : apkCommands
+
+    return `
+
+      - name: Prepare named release files
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+${commands}
 `
   }
 

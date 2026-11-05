@@ -122,6 +122,77 @@ const createFlutterProject = (prefix, kotlin = false) => {
   assert.ok(!noCacheYaml.includes("cache: 'gradle'"));
   assert.ok(!noCacheYaml.includes('gradle/actions/setup-gradle'));
 
+  const namedReleaseYaml = WorkflowGenerator.generateWorkflowYaml({
+    ...baseOptions(singleProject),
+    publishToReleases: true,
+    releaseNameSource: 'manual',
+    releaseVersionSource: 'manual',
+    releaseNameTemplate: '{app} - {version}',
+    releaseTagTemplate: '{slug}-v{version}',
+    artifactNameTemplate: '{slug}-{target}-{fullVersion}'
+  });
+  assert.ok(namedReleaseYaml.includes('release_name:'));
+  assert.ok(namedReleaseYaml.includes('release_version:'));
+  assert.ok(namedReleaseYaml.includes("RELEASE_NAME_TEMPLATE: '{app} - {version}'"));
+  assert.ok(namedReleaseYaml.includes('RELEASE_TAG="$RELEASE_TAG-build-$GITHUB_RUN_NUMBER"'));
+  assert.ok(namedReleaseYaml.includes('RELEASE_TAG="$RELEASE_TAG-attempt-$GITHUB_RUN_ATTEMPT"'));
+  assert.ok(namedReleaseYaml.includes('tag_name: ${{ env.RELEASE_TAG }}'));
+  assert.ok(namedReleaseYaml.includes('name: ${{ env.RELEASE_NAME }}'));
+  assert.ok(namedReleaseYaml.includes('name: ${{ env.ARTIFACT_APK_NAME }}'));
+  assert.ok(namedReleaseYaml.includes('name: ${{ env.ARTIFACT_AAB_NAME }}'));
+  assert.ok(namedReleaseYaml.includes('release-assets/*'));
+  assert.ok(namedReleaseYaml.includes('prerelease: false'));
+  assert.ok(namedReleaseYaml.includes('make_latest: true'));
+  yaml.load(namedReleaseYaml);
+
+  const debugReleaseYaml = WorkflowGenerator.generateWorkflowYaml({
+    ...baseOptions(singleProject),
+    buildMode: 'debug',
+    publishToReleases: true
+  });
+  assert.ok(debugReleaseYaml.includes('prerelease: true'));
+  assert.ok(debugReleaseYaml.includes('make_latest: false'));
+
+  const separateReleaseYaml = WorkflowGenerator.generateWorkflowYaml({
+    ...baseOptions(singleProject),
+    buildTarget: 'appbundle',
+    workflowLayout: 'separate',
+    publishToReleases: true,
+    releaseCustomName: "Owner's App",
+    releaseNameSource: 'custom'
+  });
+  assert.ok(separateReleaseYaml.includes("RELEASE_CUSTOM_NAME: 'Owner''s App'"));
+  assert.ok(separateReleaseYaml.includes("REQUIRE_TARGET_IN_TAG: 'true'"));
+  assert.ok(separateReleaseYaml.includes('RELEASE_TAG="$RELEASE_TAG-$RELEASE_TARGET"'));
+  assert.ok(separateReleaseYaml.includes('release-assets/${ARTIFACT_AAB_NAME}.aab'));
+  yaml.load(separateReleaseYaml);
+
+  assert.throws(
+    () => WorkflowGenerator.generateWorkflowYaml({
+      ...baseOptions(singleProject),
+      publishToReleases: true,
+      releaseNameTemplate: '{app} {verion}'
+    }),
+    /unknown variable \{verion\}/
+  );
+  assert.throws(
+    () => WorkflowGenerator.generateWorkflowYaml({
+      ...baseOptions(singleProject),
+      publishToReleases: true,
+      releaseNameSource: 'custom'
+    }),
+    /custom release name is required/i
+  );
+  assert.throws(
+    () => WorkflowGenerator.generateWorkflowYaml({
+      ...baseOptions(singleProject),
+      triggerManual: false,
+      publishToReleases: true,
+      releaseVersionSource: 'manual'
+    }),
+    /requires the Manual Run trigger/
+  );
+
   assert.throws(
     () => WorkflowGenerator.generateWorkflowYaml({
       ...baseOptions(singleProject),

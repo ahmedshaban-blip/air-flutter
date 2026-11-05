@@ -468,7 +468,10 @@ class AirFlutterWebview {
                     break;
                 case 'workflowProjectPath':
                     const pathInput = document.getElementById('workflowProjectPathInput');
-                    if (pathInput) pathInput.value = message.path || '';
+                    if (pathInput) {
+                        pathInput.value = message.path || '';
+                        pathInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
                     break;
                 case 'workflowGenerated':
                     const modalToClose = document.getElementById('workflowModal');
