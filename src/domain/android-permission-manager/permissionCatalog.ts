@@ -14,6 +14,7 @@ export interface PermissionItem {
   adbPermissionName?: string;               // Exact identifier used for `pm grant/revoke`
   iosKey?: string;                          // Exact Info.plist key (e.g., NSCameraUsageDescription)
   iosMinVersion?: string;                   // Minimum iOS version required (e.g., '17.0')
+  defaultIosUsageDescription?: string;      // Recommended default explanation for Info.plist usage description
   hint: string;                             // Clear explanation of what this permission does and when it is needed
   storeReviewWarning?: string;              // Optional warning about Play Store / App Store rejection risks or privacy policies
   flutterPackageRecommendation?: string[];   // Common Flutter plugins utilizing this (e.g., ['camera', 'image_picker'])
@@ -101,6 +102,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidProtectionLevel: 'dangerous',
         adbPermissionName: 'android.permission.CAMERA',
         iosKey: 'NSCameraUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to the camera to take photos and scan QR codes.',
         hint: 'Required by plugins like camera, mobile_scanner, or qr_code_scanner to capture live camera feed and photos. On iOS, missing NSCameraUsageDescription causes an immediate app crash upon opening the camera.',
         flutterPackageRecommendation: ['camera', 'image_picker', 'mobile_scanner']
       },
@@ -131,6 +133,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidProtectionLevel: 'dangerous',
         adbPermissionName: 'android.permission.RECORD_AUDIO',
         iosKey: 'NSMicrophoneUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to the microphone to record audio.',
         hint: 'Required for audio recording, voice notes, and VoIP call audio streams. On iOS, accessing audio hardware without NSMicrophoneUsageDescription crashes the app instantly.',
         flutterPackageRecommendation: ['record', 'audioplayers', 'flutter_sound']
       },
@@ -150,6 +153,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'microphone_audio',
         iosKey: 'NSSpeechRecognitionUsageDescription',
+        defaultIosUsageDescription: 'This app uses speech recognition to transcribe your spoken voice into text.',
         hint: 'Required when sending live or recorded user audio to Apple speech servers for automatic speech-to-text transcription.',
         storeReviewWarning: 'App Store review requires clear explanation in NSSpeechRecognitionUsageDescription of how user speech data is processed and transcribed.',
         flutterPackageRecommendation: ['speech_to_text']
@@ -196,6 +200,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidMinSdk: 33,
         adbPermissionName: 'android.permission.READ_MEDIA_IMAGES',
         iosKey: 'NSPhotoLibraryUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to your photo library to select and upload photos and videos.',
         hint: 'Allows selecting and reading images from the device gallery. Required on Android 13+ (API 33) for photo picking without opening legacy storage. On iOS, NSPhotoLibraryUsageDescription is required for read access.',
         flutterPackageRecommendation: ['image_picker', 'photo_manager', 'wechat_assets_picker']
       },
@@ -221,6 +226,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidMinSdk: 33,
         adbPermissionName: 'android.permission.READ_MEDIA_AUDIO',
         iosKey: 'NSAppleMusicUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to your music and media library to play audio tracks.',
         hint: 'Grants access to audio files in shared storage on Android 13+ (API 33+) and the user Apple Music / Media Library on iOS.',
         flutterPackageRecommendation: ['on_audio_query', 'audioplayers', 'music_player']
       },
@@ -266,6 +272,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'storage_media',
         iosKey: 'NSPhotoLibraryAddUsageDescription',
+        defaultIosUsageDescription: 'This app requires permission to save photos and media directly to your photo library.',
         hint: 'Allows saving photos or videos into the user gallery without requesting broad read access to existing photos.',
         flutterPackageRecommendation: ['image_gallery_saver', 'gal', 'saver_gallery']
       }
@@ -297,6 +304,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidProtectionLevel: 'dangerous',
         adbPermissionName: 'android.permission.ACCESS_FINE_LOCATION',
         iosKey: 'NSLocationWhenInUseUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to your location while in use to provide accurate location services.',
         hint: 'Grants precise GPS location coordinates while the app is active in foreground. On iOS, NSLocationWhenInUseUsageDescription must explain why precise location is required.',
         flutterPackageRecommendation: ['geolocator', 'location', 'google_maps_flutter']
       },
@@ -310,6 +318,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidMinSdk: 29,
         adbPermissionName: 'android.permission.ACCESS_BACKGROUND_LOCATION',
         iosKey: 'NSLocationAlwaysAndWhenInUseUsageDescription',
+        defaultIosUsageDescription: 'This app requires background location access to provide continuous tracking even when minimized.',
         hint: 'Enables continuous location tracking even when the app is minimized or the screen is off. Must be requested separately from foreground location.',
         storeReviewWarning: 'Google Play and Apple App Store subject background location to prominent disclosure and strict review. Apps must demonstrate clear user-facing utility (e.g. turn-by-turn navigation or fitness tracking).',
         flutterPackageRecommendation: ['background_locator_2', 'geolocator']
@@ -320,6 +329,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'location_geolocation',
         iosKey: 'NSLocationAlwaysUsageDescription',
+        defaultIosUsageDescription: 'This app requires continuous access to your location.',
         hint: 'Legacy iOS 10 and earlier key for background location. On iOS 11+, NSLocationAlwaysAndWhenInUseUsageDescription is required alongside this key.',
         flutterPackageRecommendation: ['geolocator', 'location']
       }
@@ -353,6 +363,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidMinSdk: 31,
         adbPermissionName: 'android.permission.BLUETOOTH_CONNECT',
         iosKey: 'NSBluetoothAlwaysUsageDescription',
+        defaultIosUsageDescription: 'This app requires Bluetooth access to connect to and communicate with nearby devices.',
         hint: 'Allows connecting and exchanging data with paired Bluetooth devices on Android 12+ (API 31+). On iOS 13+, NSBluetoothAlwaysUsageDescription is required for CoreBluetooth access.',
         flutterPackageRecommendation: ['flutter_blue_plus', 'flutter_reactive_ble']
       },
@@ -396,6 +407,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'bluetooth_nearby',
         iosKey: 'NSBluetoothPeripheralUsageDescription',
+        defaultIosUsageDescription: 'This app requires Bluetooth access to act as a peripheral and share data with nearby devices.',
         hint: 'Legacy iOS 12 and earlier key for sharing data via CoreBluetooth. Deprecated in iOS 13 in favor of NSBluetoothAlwaysUsageDescription.',
         flutterPackageRecommendation: ['flutter_blue_plus']
       },
@@ -406,6 +418,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         category: 'bluetooth_nearby',
         iosKey: 'NSLocalNetworkUsageDescription',
         iosMinVersion: '14.0',
+        defaultIosUsageDescription: 'This app requires access to the local network to discover and communicate with local devices.',
         hint: 'Required on iOS 14+ when discovering or connecting to devices on the local Wi-Fi network via Bonjour, mDNS, or direct IP sockets.',
         flutterPackageRecommendation: ['network_info_plus', 'bonsoir']
       }
@@ -426,6 +439,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidProtectionLevel: 'dangerous',
         adbPermissionName: 'android.permission.READ_CONTACTS',
         iosKey: 'NSContactsUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to your contacts to let you connect with and invite friends.',
         hint: 'Allows accessing device contacts list and reading names, phone numbers, and emails. On iOS, NSContactsUsageDescription is required.',
         flutterPackageRecommendation: ['flutter_contacts', 'contacts_service']
       },
@@ -449,6 +463,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidProtectionLevel: 'dangerous',
         adbPermissionName: 'android.permission.READ_CALENDAR',
         iosKey: 'NSCalendarsUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to your calendar to display and manage your scheduled events.',
         hint: 'Allows reading calendar events and attendees from device calendars. On iOS <= 16, NSCalendarsUsageDescription covers read/write.',
         flutterPackageRecommendation: ['device_calendar', 'manage_calendar_events']
       },
@@ -470,6 +485,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         category: 'contacts_calendar_reminders',
         iosKey: 'NSCalendarsFullAccessUsageDescription',
         iosMinVersion: '17.0',
+        defaultIosUsageDescription: 'This app requires full access to your calendar to view, create, and manage events.',
         hint: 'Introduced in iOS 17.0 for reading and writing full calendar events. Replaces NSCalendarsUsageDescription for comprehensive calendar operations.',
         flutterPackageRecommendation: ['device_calendar']
       },
@@ -480,6 +496,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         category: 'contacts_calendar_reminders',
         iosKey: 'NSCalendarsWriteOnlyAccessUsageDescription',
         iosMinVersion: '17.0',
+        defaultIosUsageDescription: 'This app requires permission to add new events and appointments to your calendar.',
         hint: 'Introduced in iOS 17.0 to allow adding events to the user calendar without granting permission to read existing personal appointments.',
         flutterPackageRecommendation: ['device_calendar', 'add_2_calendar']
       },
@@ -489,6 +506,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'contacts_calendar_reminders',
         iosKey: 'NSRemindersUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to your reminders to organize and track your tasks.',
         hint: 'Allows accessing and modifying reminders and task lists in the iOS Reminders app for iOS 16 and below.',
         flutterPackageRecommendation: ['device_calendar']
       },
@@ -499,6 +517,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         category: 'contacts_calendar_reminders',
         iosKey: 'NSRemindersFullAccessUsageDescription',
         iosMinVersion: '17.0',
+        defaultIosUsageDescription: 'This app requires full access to your reminders to view and manage tasks.',
         hint: 'Required on iOS 17.0+ to read, create, and manage reminders in the Reminders app.',
         flutterPackageRecommendation: ['device_calendar']
       }
@@ -583,6 +602,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidProtectionLevel: 'normal',
         androidMinSdk: 28,
         iosKey: 'NSFaceIDUsageDescription',
+        defaultIosUsageDescription: 'This app uses Face ID / Touch ID for quick and secure authentication.',
         hint: 'Required to authenticate users using biometric hardware (Fingerprint, Face Unlock, or iOS Face ID). On iOS, NSFaceIDUsageDescription must describe why biometric authentication is used.',
         flutterPackageRecommendation: ['local_auth']
       },
@@ -757,6 +777,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         androidMinSdk: 29,
         adbPermissionName: 'android.permission.ACTIVITY_RECOGNITION',
         iosKey: 'NSMotionUsageDescription',
+        defaultIosUsageDescription: 'This app requires access to motion data to track physical activity and step count.',
         hint: 'Enables step counting, pedometer monitoring, and activity recognition (walking, biking, driving). On iOS, NSMotionUsageDescription is required for CoreMotion.',
         flutterPackageRecommendation: ['pedometer', 'activity_recognition_flutter']
       },
@@ -766,6 +787,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'sensors_health_system',
         iosKey: 'NSHealthShareUsageDescription',
+        defaultIosUsageDescription: 'This app requires read access to health data to display your wellness metrics.',
         hint: 'Required on iOS to read workouts, steps, heart rate, and health metrics from Apple HealthKit.',
         storeReviewWarning: 'Apple HealthKit integration requires a dedicated privacy policy explaining that health data will never be sold to third-party data brokers or advertising platforms.',
         flutterPackageRecommendation: ['health']
@@ -776,6 +798,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'sensors_health_system',
         iosKey: 'NSHealthUpdateUsageDescription',
+        defaultIosUsageDescription: 'This app requires write access to health data to log workouts and activities.',
         hint: 'Required on iOS to write or update workouts, dietary intake, and body metrics into Apple HealthKit.',
         flutterPackageRecommendation: ['health']
       },
@@ -786,6 +809,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         category: 'sensors_health_system',
         iosKey: 'NSUserTrackingUsageDescription',
         iosMinVersion: '14.0',
+        defaultIosUsageDescription: 'This identifier will be used to deliver personalized ads and content.',
         hint: 'Required on iOS 14+ when tracking users across third-party apps and websites for advertising purposes (IDFA).',
         storeReviewWarning: 'App Store review rejects apps that request tracking if the explanation in NSUserTrackingUsageDescription is vague, deceptive, or does not clearly state what data is tracked.',
         flutterPackageRecommendation: ['app_tracking_transparency']
@@ -796,6 +820,7 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         platform: 'ios',
         category: 'sensors_health_system',
         iosKey: 'NSSiriUsageDescription',
+        defaultIosUsageDescription: 'This app integrates with Siri to allow quick voice shortcuts and hands-free control.',
         hint: 'Required to expose in-app voice intents and shortcut actions to Apple Siri.',
         flutterPackageRecommendation: ['flutter_siri_suggestions']
       },
@@ -835,5 +860,31 @@ export function findPermissionByAndroidName(androidManifestName: string): Permis
 
 export function findPermissionByIosKey(iosKey: string): PermissionItem | undefined {
   return getAllPermissionItems().find(item => item.iosKey === iosKey);
+}
+
+export interface PermissionCategorySummary {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  count: number;
+}
+
+export function getPermissionCategories(platform?: 'android' | 'ios' | 'all'): PermissionCategorySummary[] {
+  return PERMISSION_CATALOG.map(category => {
+    const matchingPermissions = category.permissions.filter(p => {
+      if (!platform || platform === 'all') return true;
+      if (platform === 'android') return p.platform === 'android' || p.platform === 'both';
+      if (platform === 'ios') return (p.platform === 'ios' || p.platform === 'both') && typeof p.iosKey === 'string';
+      return true;
+    });
+    return {
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      icon: category.icon,
+      count: matchingPermissions.length
+    };
+  }).filter(c => c.count > 0);
 }
 

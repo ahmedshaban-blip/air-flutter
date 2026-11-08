@@ -5,10 +5,12 @@ import {
   AndroidProtectionLevel,
   PermissionItem,
   PermissionCategory,
+  PermissionCategorySummary,
   PERMISSION_CATALOG,
   getAllPermissionItems,
   findPermissionByAndroidName,
-  findPermissionByIosKey
+  findPermissionByIosKey,
+  getPermissionCategories
 } from './permissionCatalog';
 
 export {
@@ -16,10 +18,12 @@ export {
   AndroidProtectionLevel,
   PermissionItem,
   PermissionCategory,
+  PermissionCategorySummary,
   PERMISSION_CATALOG,
   getAllPermissionItems,
   findPermissionByAndroidName,
-  findPermissionByIosKey
+  findPermissionByIosKey,
+  getPermissionCategories
 };
 
 export interface AndroidPermissionDefinition {
@@ -64,6 +68,150 @@ export const ANDROID_PERMISSION_CATALOG: readonly AndroidPermissionDefinition[] 
     storeReviewWarning: item.storeReviewWarning,
     flutterPackageRecommendation: item.flutterPackageRecommendation
   }));
+
+export interface IosPermissionDefinition {
+  name: string;
+  label: string;
+  description: string;
+  id?: string;
+  category?: string;
+  minVersion?: string;
+  defaultUsageDescription: string;
+  storeReviewWarning?: string;
+  flutterPackageRecommendation?: string[];
+}
+
+export interface IosPermissionState {
+  plistPath: string;
+  declaredPermissions: string[];
+  declaredDescriptions?: Record<string, string>;
+}
+
+export interface IosPermissionInjectionResult extends IosPermissionState {
+  addedPermissions: string[];
+  changed: boolean;
+}
+
+export const IOS_PERMISSION_CATALOG: readonly IosPermissionDefinition[] = PERMISSION_CATALOG
+  .flatMap(category => category.permissions)
+  .filter((item): item is PermissionItem & { iosKey: string } => typeof item.iosKey === 'string')
+  .map(item => ({
+    name: item.iosKey,
+    label: item.displayName,
+    description: item.hint,
+    id: item.id,
+    category: item.category,
+    minVersion: item.iosMinVersion,
+    defaultUsageDescription: item.defaultIosUsageDescription || item.hint,
+    storeReviewWarning: item.storeReviewWarning,
+    flutterPackageRecommendation: item.flutterPackageRecommendation
+  }));
+
+export class IosPermissionManager {
+  public static getPlistPath(projectPath: string): string {
+    return path.join(projectPath, 'ios', 'Runner', 'Info.plist');
+  }
+
+  public static parseDeclaredPermissions(xml: string): Set<string> {
+    const permissions = new Set<string>();
+    const keyPattern = /<key>([^<]+)<\/key>/g;
+    let match: RegExpExecArray | null;
+    while ((match = keyPattern.exec(xml)) !== null) {
+      permissions.add(match[1].trim());
+    }
+    return permissions;
+  }
+
+  public static parseDeclaredDescriptions(xml: string): Record<string, string> {
+    const descriptions: Record<string, string> = {};
+    const entryPattern = /<key>([^<]+)<\/key>\s*<string>([^<]*)<\/string>/g;
+    let match: RegExpExecArray | null;
+    while ((match = entryPattern.exec(xml)) !== null) {
+      descriptions[match[1].trim()] = match[2];
+    }
+    return descriptions;
+  }
+
+  public static async read(projectPath: string): Promise<IosPermissionState> {
+    const plistPath = this.getPlistPath(projectPath);
+    const xml = await fs.promises.readFile(plistPath, 'utf8');
+    return {
+      plistPath,
+      declaredPermissions: Array.from(this.parseDeclaredPermissions(xml)),
+      declaredDescriptions: this.parseDeclaredDescriptions(xml)
+    };
+  }
+
+  public static async inject(
+    projectPath: string,
+    permissionsToAdd: Record<string, string>
+  ): Promise<IosPermissionInjectionResult> {
+    const plistPath = this.getPlistPath(projectPath);
+    const xml = await fs.promises.readFile(plistPath, 'utf8');
+    const declaredPermissions = this.parseDeclaredPermissions(xml);
+    const declaredDescriptions = this.parseDeclaredDescriptions(xml);
+
+    const keysToAdd = Object.keys(permissionsToAdd).filter(key => !declaredPermissions.has(key));
+    if (keysToAdd.length === 0) {
+      return {
+        plistPath,
+        declaredPermissions: Array.from(declaredPermissions),
+        declaredDescriptions,
+        addedPermissions: [],
+        changed: false
+      };
+    }
+
+    const filteredMap: Record<string, string> = {};
+    for (const key of keysToAdd) {
+      filteredMap[key] = permissionsToAdd[key];
+    }
+
+    const updatedXml = this.appendPermissions(xml, filteredMap);
+    await fs.promises.writeFile(plistPath, updatedXml, 'utf8');
+    keysToAdd.forEach(key => {
+      declaredPermissions.add(key);
+      declaredDescriptions[key] = filteredMap[key];
+    });
+
+    return {
+      plistPath,
+      declaredPermissions: Array.from(declaredPermissions),
+      declaredDescriptions,
+      addedPermissions: keysToAdd,
+      changed: true
+    };
+  }
+
+  private static appendPermissions(xml: string, permissions: Record<string, string>): string {
+    const insertionIndex = xml.lastIndexOf('</dict>');
+    if (insertionIndex === -1) {
+      throw new Error('Info.plist does not contain a closing </dict> tag.');
+    }
+
+    const eol = xml.includes('\r\n') ? '\r\n' : '\n';
+    const lineBeforeIndex = xml.lastIndexOf('\n', insertionIndex);
+    const dictIndent = lineBeforeIndex !== -1 ? xml.slice(lineBeforeIndex + 1, insertionIndex) : '\t';
+    const itemIndent = dictIndent.includes('\t') ? `${dictIndent}\t` : `${dictIndent}    `;
+
+    const escapeXml = (str: string) =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+    const entries = Object.entries(permissions)
+      .map(([key, desc]) => {
+        return `${itemIndent}<key>${escapeXml(key)}</key>${eol}${itemIndent}<string>${escapeXml(desc)}</string>`;
+      })
+      .join(eol);
+
+    return `${xml.slice(0, insertionIndex)}${entries}${eol}${dictIndent}${xml.slice(insertionIndex)}`;
+  }
+}
+
 
 export class AndroidPermissionManager {
   public static readonly permissionPattern = /<uses-permission\s+[^>]*android:name=["']([^"']+)["'][^>]*>/g;

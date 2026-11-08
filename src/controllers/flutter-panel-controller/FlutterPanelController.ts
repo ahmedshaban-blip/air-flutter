@@ -514,10 +514,20 @@ export class FlutterPanelController extends ADBBaseController {
               await this.codeCleanupHandler.deleteUnusedDartFile(message.file);
               break;
             case 'loadAndroidPermissions':
-              await this.permissionHandler.handleLoadPermissions();
+              await this.permissionHandler.handleLoadPermissions('android');
+              break;
+            case 'loadPermissions':
+              await this.permissionHandler.handleLoadPermissions(message.platform || 'android');
               break;
             case 'addAndroidPermissions':
-              await this.permissionHandler.handleAddPermissions(message.selectedPermissions);
+              await this.permissionHandler.handleAddPermissions(message.selectedPermissions, 'android');
+              break;
+            case 'addPermissions':
+              await this.permissionHandler.handleAddPermissions(
+                message.selectedPermissions,
+                message.platform || 'android',
+                message.permissionsMap
+              );
               break;
             case 'clearAppCache':
               await this.handleWipe('cache', message.deviceId, message.packageId);

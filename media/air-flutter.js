@@ -605,7 +605,7 @@ class AirFlutterWebview {
                     if (cleanupStatus) cleanupStatus.textContent = message.message || 'Code cleanup scan failed.';
                     break;
                 case 'permissionCatalogLoaded':
-                    this.renderPermissionCatalog(message.catalog, message.declaredPermissions);
+                    this.renderPermissionCatalog(message.catalog, message.declaredPermissions, message.categories, message.platform);
                     break;
                 case 'permissionsAdded':
                     this.handlePermissionsAdded(message);
@@ -732,6 +732,8 @@ class AirFlutterWebview {
             deleteUnusedDartFile: 'Deleting file and rescanning…',
             loadAndroidPermissions: 'Reading Android permissions…',
             addAndroidPermissions: 'Updating Android permissions…',
+            loadPermissions: 'Reading permissions…',
+            addPermissions: 'Updating permissions…',
             clearAppCache: 'Clearing app cache…',
             resetAppDatabases: 'Resetting app databases…',
             factoryResetApp: 'Resetting app data…',

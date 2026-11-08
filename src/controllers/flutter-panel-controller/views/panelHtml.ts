@@ -113,7 +113,7 @@ export function getPanelWebviewContent(
                 <button class="ff-tab is-active" type="button" role="tab" aria-selected="true" data-panel-tab="workspace">Workspace</button>
                 <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="assets">Assets &amp; Media</button>
                 <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="cleanup">Code Cleanup</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="permissions">Android Permissions</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="permissions">Permissions</button>
                 <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="deep-links">Deep Links</button>
             </nav>
 
@@ -605,24 +605,39 @@ export function getPanelWebviewContent(
                 </div>
             </section>
 
-            <section data-panel-view="permissions" hidden aria-label="Android permissions">
+            <section data-panel-view="permissions" hidden aria-label="Permissions">
                 <div class="permission-manager-layout">
                     <div class="ff-section">
                         <div class="ff-section-head">
-                            <h2>Android Permissions</h2>
-                            <span class="ff-section-note">AndroidManifest.xml</span>
+                            <h2 id="permissionHeading">Android Permissions</h2>
+                            <span class="ff-section-note" id="permissionTargetBadge">AndroidManifest.xml</span>
+                        </div>
+                        <div class="permission-platform-tabs" role="tablist" aria-label="Platform selection">
+                            <button class="permission-platform-tab is-active" id="permPlatformAndroidBtn" type="button" role="tab" aria-selected="true" data-perm-platform="android">
+                                <i class="fab fa-android"></i> Android
+                            </button>
+                            <button class="permission-platform-tab" id="permPlatformIosBtn" type="button" role="tab" aria-selected="false" data-perm-platform="ios">
+                                <i class="fab fa-apple"></i> iOS
+                            </button>
                         </div>
                         <button class="btn btn-primary btn-block" id="addPermissionsBtn" type="button" disabled>
-                            <i class="fas fa-plus"></i> Add to Manifest
+                            <i class="fas fa-plus"></i> <span id="addPermissionsBtnText">Add to Manifest</span>
                         </button>
-                        <p class="permission-help">Select one or more permissions. Permissions already declared in the main Android manifest cannot be selected again.</p>
-                        <p class="permission-status" id="permissionStatus" role="status">Open this tab to inspect AndroidManifest.xml.</p>
+                        <p class="permission-help" id="permissionHelpText">Select one or more permissions. Permissions already declared in AndroidManifest.xml cannot be selected again.</p>
+                        <p class="permission-status" id="permissionStatus" role="status">Open this tab to inspect permissions.</p>
                     </div>
 
                     <div class="ff-section">
                         <div class="ff-section-head">
                             <h2>Permission catalog</h2>
-                            <span class="ff-section-note">multi-select</span>
+                            <span class="ff-section-note" id="permissionSelectedBadge">multi-select</span>
+                        </div>
+                        <div class="permission-search-wrapper">
+                            <i class="fas fa-search permission-search-icon"></i>
+                            <input type="search" class="permission-search-input" id="permissionSearchInput" placeholder="Search permissions (e.g. camera, location, storage)..." autocomplete="off" spellcheck="false" />
+                        </div>
+                        <div class="permission-chips-bar" id="permissionCategoryChips" role="toolbar" aria-label="Category filters">
+                            <!-- Populated dynamically: All, Network, Camera, etc. -->
                         </div>
                         <div class="permission-catalog" id="permissionCatalog">
                             <p class="empty"><i class="fas fa-shield-halved"></i><span>Waiting for manifest pre-check</span></p>
