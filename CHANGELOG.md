@@ -7,6 +7,14 @@ update channel with any other extension.
 
 ## [Unreleased]
 
+### Permissions & Security
+
+- **Comprehensive Permission Catalog Data Module**: Added production-grade `PERMISSION_CATALOG` (`PermissionCategory[]`) with 12 structured functional categories covering Android permissions and iOS `Info.plist` usage description keys.
+- **Granular Platform & Version Metadata**: Full support for Android Protection Levels (`normal`, `dangerous`, `signature`, `special`), minimum/maximum Android SDK requirements (e.g., `READ_MEDIA_*` on API 33+, `READ_MEDIA_VISUAL_USER_SELECTED` on API 34+), and minimum iOS versions (e.g., iOS 17 calendar and reminders split).
+- **Automated maxSdkVersion Tag Injection**: `AndroidPermissionManager.inject()` now automatically inspects `PERMISSION_CATALOG` to emit `android:maxSdkVersion="..."` attributes (such as `android:maxSdkVersion="29"` for `WRITE_EXTERNAL_STORAGE` and `android:maxSdkVersion="32"` for `READ_EXTERNAL_STORAGE`).
+- **ADB Command Support & Protection Guardrails**: Added exact `adbPermissionName` mappings for runtime dangerous permissions (`adb shell pm grant/revoke`), along with Play Store & App Store review warnings and recommended Flutter packages.
+
+
 ## [1.9.0] - 2026-11-05
 
 ### GitHub Releases

@@ -199,6 +199,16 @@ Reset auth tokens, local databases and cache **without uninstalling and reinstal
 
 ---
 
+### 13. 🛡️ Permission Catalog & Android Manifest Manager
+Streamline mobile permissions across Android and iOS with an intelligent, version-aware registry:
+- **12 Functional Domain Categories**: Optical cameras, audio recording, media & scoped storage, geolocation, Bluetooth & BLE, contacts/calendars, alarms & notifications, biometrics, telephony/SMS, background execution, and hardware health/sensors.
+- **Granular Android & iOS Versioning**: Accurate SDK scoping including Android 13+ granular media (`READ_MEDIA_IMAGES/VIDEO/AUDIO`), Android 14+ partial visual picker (`READ_MEDIA_VISUAL_USER_SELECTED`), and iOS 17 full/write-only calendar & reminder splits.
+- **Auto-injected `maxSdkVersion` Attributes**: Injects required deprecation caps automatically (e.g., `android:maxSdkVersion="29"` for legacy storage writes) into `AndroidManifest.xml`.
+- **ADB Command Ready**: Full mapping of `adbPermissionName` for seamless runtime `adb shell pm grant` and `pm revoke` control over dangerous permissions.
+- **Store Review & Privacy Warnings**: Actionable warnings covering Play Store & App Store rejection policies for restricted permissions (`MANAGE_EXTERNAL_STORAGE`, `ACCESS_BACKGROUND_LOCATION`, `SEND_SMS`, `READ_CALL_LOG`).
+
+---
+
 ## Getting Started
 
 1. Install **Air Flutter** in VS Code / Antigravity IDE.

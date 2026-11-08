@@ -1,10 +1,40 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  PlatformType,
+  AndroidProtectionLevel,
+  PermissionItem,
+  PermissionCategory,
+  PERMISSION_CATALOG,
+  getAllPermissionItems,
+  findPermissionByAndroidName,
+  findPermissionByIosKey
+} from './permissionCatalog';
+
+export {
+  PlatformType,
+  AndroidProtectionLevel,
+  PermissionItem,
+  PermissionCategory,
+  PERMISSION_CATALOG,
+  getAllPermissionItems,
+  findPermissionByAndroidName,
+  findPermissionByIosKey
+};
 
 export interface AndroidPermissionDefinition {
   name: string;
   label: string;
   description: string;
+  id?: string;
+  category?: string;
+  protectionLevel?: AndroidProtectionLevel;
+  minSdk?: number;
+  maxSdk?: number;
+  adbPermissionName?: string;
+  iosKey?: string;
+  storeReviewWarning?: string;
+  flutterPackageRecommendation?: string[];
 }
 
 export interface AndroidPermissionState {
@@ -17,28 +47,23 @@ export interface AndroidPermissionInjectionResult extends AndroidPermissionState
   changed: boolean;
 }
 
-export const ANDROID_PERMISSION_CATALOG: readonly AndroidPermissionDefinition[] = [
-  { name: 'android.permission.INTERNET', label: 'Internet', description: 'Access network connections.' },
-  { name: 'android.permission.ACCESS_NETWORK_STATE', label: 'Network state', description: 'Inspect network connectivity.' },
-  { name: 'android.permission.CAMERA', label: 'Camera', description: 'Capture photos and video.' },
-  { name: 'android.permission.RECORD_AUDIO', label: 'Microphone', description: 'Record audio from the microphone.' },
-  { name: 'android.permission.ACCESS_FINE_LOCATION', label: 'Precise location', description: 'Access precise device location.' },
-  { name: 'android.permission.ACCESS_COARSE_LOCATION', label: 'Approximate location', description: 'Access approximate device location.' },
-  { name: 'android.permission.POST_NOTIFICATIONS', label: 'Notifications', description: 'Post notifications on Android 13+.' },
-  { name: 'android.permission.READ_CONTACTS', label: 'Read contacts', description: 'Read contacts stored on the device.' },
-  { name: 'android.permission.WRITE_CONTACTS', label: 'Write contacts', description: 'Add or update device contacts.' },
-  { name: 'android.permission.READ_CALENDAR', label: 'Read calendar', description: 'Read calendar events.' },
-  { name: 'android.permission.WRITE_CALENDAR', label: 'Write calendar', description: 'Add or update calendar events.' },
-  { name: 'android.permission.BLUETOOTH_CONNECT', label: 'Bluetooth connect', description: 'Connect to paired Bluetooth devices.' },
-  { name: 'android.permission.BLUETOOTH_SCAN', label: 'Bluetooth scan', description: 'Discover nearby Bluetooth devices.' },
-  { name: 'android.permission.NFC', label: 'NFC', description: 'Communicate with NFC tags and devices.' },
-  { name: 'android.permission.VIBRATE', label: 'Vibration', description: 'Control the device vibrator.' },
-  { name: 'android.permission.READ_MEDIA_IMAGES', label: 'Read images', description: 'Read images on Android 13+.' },
-  { name: 'android.permission.READ_MEDIA_VIDEO', label: 'Read videos', description: 'Read videos on Android 13+.' },
-  { name: 'android.permission.READ_MEDIA_AUDIO', label: 'Read audio', description: 'Read audio on Android 13+.' },
-  { name: 'android.permission.READ_EXTERNAL_STORAGE', label: 'Read storage (legacy)', description: 'Read shared storage on Android 12 and earlier.' },
-  { name: 'android.permission.WRITE_EXTERNAL_STORAGE', label: 'Write storage (legacy)', description: 'Write shared storage on Android 9 and earlier.' }
-];
+export const ANDROID_PERMISSION_CATALOG: readonly AndroidPermissionDefinition[] = PERMISSION_CATALOG
+  .flatMap(category => category.permissions)
+  .filter((item): item is PermissionItem & { androidManifestName: string } => typeof item.androidManifestName === 'string')
+  .map(item => ({
+    name: item.androidManifestName,
+    label: item.displayName,
+    description: item.hint,
+    id: item.id,
+    category: item.category,
+    protectionLevel: item.androidProtectionLevel,
+    minSdk: item.androidMinSdk,
+    maxSdk: item.androidMaxSdk,
+    adbPermissionName: item.adbPermissionName,
+    iosKey: item.iosKey,
+    storeReviewWarning: item.storeReviewWarning,
+    flutterPackageRecommendation: item.flutterPackageRecommendation
+  }));
 
 export class AndroidPermissionManager {
   public static readonly permissionPattern = /<uses-permission\s+[^>]*android:name=["']([^"']+)["'][^>]*>/g;
@@ -103,7 +128,13 @@ export class AndroidPermissionManager {
     const eol = xml.includes('\r\n') ? '\r\n' : '\n';
     const indent = insertionMatch[1] || '    ';
     const tags = permissions
-      .map(permission => `${indent}<uses-permission android:name="${permission}" />`)
+      .map(permission => {
+        const item = findPermissionByAndroidName(permission);
+        if (item && typeof item.androidMaxSdk === 'number') {
+          return `${indent}<uses-permission android:name="${permission}" android:maxSdkVersion="${item.androidMaxSdk}" />`;
+        }
+        return `${indent}<uses-permission android:name="${permission}" />`;
+      })
       .join(eol);
     const insertionIndex = insertionMatch.index + 1;
     return `${xml.slice(0, insertionIndex)}${tags}${eol}${xml.slice(insertionIndex)}`;
