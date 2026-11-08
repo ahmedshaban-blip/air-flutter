@@ -58,6 +58,7 @@ interface RawCommentLine {
   indentBeforeMarker: string;
   markerColumn: number;
   innerText: string;
+  isBlankGap?: boolean;
 }
 
 interface CandidateBlock {
@@ -223,24 +224,58 @@ export class CommentedCodeBlockDetector {
         while (index < lines.length) {
           const currentLine = lines[index];
           const m = currentLine.match(/^(\s*)\/\/(?!\/)\s?(.*)$/);
-          if (!m) break;
+          if (m) {
+            const indent = m[1];
+            const inner = m[2];
 
-          const indent = m[1];
-          const inner = m[2];
+            // Do not merge across drastically unrelated indentation contexts unless inner text is indented or closing
+            if (rawRun.length > 0 && !this.sharesIndentationContext(rawRun[0], indent, inner)) {
+              break;
+            }
 
-          // Do not merge across drastically unrelated indentation contexts unless inner text is indented or closing
-          if (rawRun.length > 0 && !this.sharesIndentationContext(rawRun[0], indent, inner)) {
-            break;
+            rawRun.push({
+              zeroBasedLine: index,
+              rawLine: currentLine,
+              indentBeforeMarker: indent,
+              markerColumn: indent.length,
+              innerText: inner,
+              isBlankGap: false
+            });
+            index++;
+            continue;
           }
 
-          rawRun.push({
-            zeroBasedLine: index,
-            rawLine: currentLine,
-            indentBeforeMarker: indent,
-            markerColumn: indent.length,
-            innerText: inner
-          });
-          index++;
+          // Tolerate one or more empty/whitespace-only lines inside a commented code run
+          // if followed by another `//` line in the same indentation context.
+          if (currentLine.trim().length === 0) {
+            let lookahead = index + 1;
+            while (lookahead < lines.length && lines[lookahead].trim().length === 0) {
+              lookahead++;
+            }
+            if (lookahead < lines.length) {
+              const nextMatch = lines[lookahead].match(/^(\s*)\/\/(?!\/)\s?(.*)$/);
+              if (
+                nextMatch &&
+                rawRun.length > 0 &&
+                this.sharesIndentationContext(rawRun[0], nextMatch[1], nextMatch[2])
+              ) {
+                while (index < lookahead) {
+                  rawRun.push({
+                    zeroBasedLine: index,
+                    rawLine: lines[index],
+                    indentBeforeMarker: rawRun[0].indentBeforeMarker,
+                    markerColumn: rawRun[0].markerColumn,
+                    innerText: '',
+                    isBlankGap: true
+                  });
+                  index++;
+                }
+                continue;
+              }
+            }
+          }
+
+          break;
         }
 
         const partitioned = this.partitionSingleLineRun(rawRun, relativeFile);
@@ -353,6 +388,18 @@ export class CommentedCodeBlockDetector {
         const evaluated = this.evaluateSingleLineSubBlock(relativeFile, sub);
         if (evaluated) {
           results.push(evaluated);
+        } else {
+          // If the full subBlock is unbalanced (e.g. a commented class is missing its final closing `}`),
+          // split on blank gaps and evaluate balanced sub-chunks so valid sections are still detected.
+          const chunks = this.splitOnBlankGaps(sub);
+          if (chunks.length > 1) {
+            for (const chunk of this.mergeBalancedAdjacentChunks(chunks)) {
+              const chunkEvaluated = this.evaluateSingleLineSubBlock(relativeFile, chunk);
+              if (chunkEvaluated) {
+                results.push(chunkEvaluated);
+              }
+            }
+          }
         }
       }
     }
@@ -404,6 +451,75 @@ export class CommentedCodeBlockDetector {
     }
   }
 
+  private static splitOnBlankGaps(lines: RawCommentLine[]): RawCommentLine[][] {
+    const chunks: RawCommentLine[][] = [];
+    let current: RawCommentLine[] = [];
+    for (const line of lines) {
+      if (line.isBlankGap) {
+        this.trimEmptyEdges(current);
+        if (current.length > 0) {
+          chunks.push(current);
+          current = [];
+        }
+      } else {
+        current.push(line);
+      }
+    }
+    this.trimEmptyEdges(current);
+    if (current.length > 0) {
+      chunks.push(current);
+    }
+    return chunks;
+  }
+
+  /**
+   * Attempts to greedily combine consecutive chunks (including the blank gap lines between them)
+   * into the largest balanced code blocks possible, falling back to individual chunks when a chunk
+   * has an unclosed outer brace (e.g. a commented-out class missing its final `}`).
+   */
+  private static mergeBalancedAdjacentChunks(chunks: RawCommentLine[][]): RawCommentLine[][] {
+    const merged: RawCommentLine[][] = [];
+    let i = 0;
+    while (i < chunks.length) {
+      let bestEnd = -1;
+      for (let j = chunks.length - 1; j >= i; j--) {
+        const candidateLines = chunks.slice(i, j + 1).flatMap(c => c);
+        const text = candidateLines.map(l => l.innerText).join('\n');
+        if (this.areDelimitersBalanced(text)) {
+          bestEnd = j;
+          break;
+        }
+      }
+      if (bestEnd > i) {
+        // Reconstruct with blank gap lines included between chunks[i]..chunks[bestEnd]
+        const combined: RawCommentLine[] = [];
+        for (let k = i; k <= bestEnd; k++) {
+          if (k > i) {
+            const prevLast = chunks[k - 1][chunks[k - 1].length - 1];
+            const nextFirst = chunks[k][0];
+            for (let z = prevLast.zeroBasedLine + 1; z < nextFirst.zeroBasedLine; z++) {
+              combined.push({
+                zeroBasedLine: z,
+                rawLine: '',
+                indentBeforeMarker: prevLast.indentBeforeMarker,
+                markerColumn: prevLast.markerColumn,
+                innerText: '',
+                isBlankGap: true
+              });
+            }
+          }
+          combined.push(...chunks[k]);
+        }
+        merged.push(combined);
+        i = bestEnd + 1;
+      } else {
+        merged.push(chunks[i]);
+        i++;
+      }
+    }
+    return merged;
+  }
+
   // ============================================================================
   // STAGE 2: Fast Heuristic Pre-Filtering & Code Probability Scoring
   // ============================================================================
@@ -447,7 +563,11 @@ export class CommentedCodeBlockDetector {
 
     // Check for 3+ consecutive plain words separated by whitespace outside of string literals
     if (this.hasNaturalLanguageWordRun(withoutStrings)) {
-      return true;
+      // Don't reject if the line is clearly a Dart declaration or statement
+      const isDeclaration = /^(?:abstract\s+|base\s+|final\s+|interface\s+|sealed\s+|mixin\s+)*(?:class|enum|mixin|extension|typedef)\s+[A-Za-z_$][\w$]*/.test(trimmedText);
+      if (!isDeclaration) {
+        return true;
+      }
     }
 
     // Pure words and spaces with no code punctuation at all (allow standalone block keywords `else`, `try`, `do`, `finally`)
@@ -466,7 +586,8 @@ export class CommentedCodeBlockDetector {
     const declarationModifiers = new Set([
       'abstract', 'base', 'final', 'interface', 'sealed', 'mixin', 'class', 'enum',
       'extension', 'typedef', 'static', 'late', 'const', 'var', 'external', 'covariant',
-      'required', 'void', 'async', 'sync', 'part', 'of', 'import', 'export', 'as', 'show', 'hide'
+      'required', 'void', 'async', 'sync', 'part', 'of', 'import', 'export', 'as', 'show', 'hide',
+      'extends', 'implements', 'with'
     ]);
 
     // Find runs of space-separated alphabetic words
@@ -475,7 +596,10 @@ export class CommentedCodeBlockDetector {
     while ((match = wordRunRegex.exec(textWithoutStrings)) !== null) {
       const words = match[0].split(/\s+/);
       if (words.length >= 4) {
-        // Only valid 4-word run in Dart is e.g. `abstract base mixin class Foo`
+        // Allow Dart type declarations (`class Foo extends Bar`, `class Foo with Mixin implements Baz`)
+        if (words.some(w => ['class', 'enum', 'mixin', 'extension', 'typedef'].includes(w))) {
+          continue;
+        }
         const modifierCount = words.filter(w => declarationModifiers.has(w)).length;
         if (modifierCount < words.length - 1) {
           return true;
@@ -529,7 +653,7 @@ export class CommentedCodeBlockDetector {
     const last = lines[lines.length - 1];
     const rawText = lines.map(l => l.rawLine).join('\n');
     const restoredCodeText = lines
-      .map((l, idx) => `${l.indentBeforeMarker}${normalizedLines[idx]}`)
+      .map((l, idx) => (l.isBlankGap || !normalizedLines[idx].trim() ? '' : `${l.indentBeforeMarker}${normalizedLines[idx]}`))
       .join('\n');
 
     const finalScore = Math.min(1, Number((score + structural.bonus).toFixed(2)));
@@ -688,7 +812,10 @@ export class CommentedCodeBlockDetector {
 
     // 2. Reject any block where natural-language word runs exist outside strings
     if (this.hasNaturalLanguageWordRun(withoutStrings)) {
-      return { valid: false, bonus: 0 };
+      const isDeclaration = /^(?:abstract\s+|base\s+|final\s+|interface\s+|sealed\s+|mixin\s+)*(?:class|enum|mixin|extension|typedef)\s+[A-Za-z_$][\w$]*/.test(withoutStrings);
+      if (!isDeclaration) {
+        return { valid: false, bonus: 0 };
+      }
     }
 
     // 3. Reject parenthesized conditions that contain plain prose (`if (the device disconnects)`)

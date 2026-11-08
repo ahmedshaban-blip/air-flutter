@@ -100,7 +100,62 @@ const { CommentedCodeBlockDetector } = require('../out/domain/code-cleanup-assis
   const unbalancedBlocks = CommentedCodeBlockDetector.detectInSource(unbalancedSource, 'lib/unbalanced.dart');
   assert.strictEqual(unbalancedBlocks.length, 0, 'Unbalanced partial commented snippets must be rejected');
 
-  // 6. Async batch detection with Dart Analyzer fallback
+  // 6. Commented class declarations with inheritance (`extends`, `implements`, `with`) and blank lines -> MUST be detected
+  const commentedClassSource = [
+    '// enum SystemStateType { offline, loading, error, empty }',
+    '',
+    '',
+    '// class _SystemStatesCard extends StatelessWidget {',
+    '//   final ValueChanged<SystemStateType>? onSelected;',
+    '//   const _SystemStatesCard({this.onSelected});',
+    '',
+    '',
+    '//   static const _items = [',
+    '//     (',
+    '//       SystemStateType.offline,',
+    '//       \'تجربة عدم الاتصال\',',
+    '//       \'معاينة رسالة انقطاع الشبكة.\',',
+    '//     ),',
+    '//   ];',
+    '',
+    '',
+    '',
+    '//   @override',
+    '//   Widget build(BuildContext context) {',
+    '//     return Container();',
+    '//   }',
+    '// }'
+  ].join('\n');
+
+  const commentedClassBlocks = CommentedCodeBlockDetector.detectInSource(commentedClassSource, 'lib/states_card.dart');
+  assert.strictEqual(commentedClassBlocks.length, 1, 'Multi-section commented code separated by blank lines must be grouped into a unified block');
+  assert.strictEqual(commentedClassBlocks[0].startLine, 1);
+  assert.strictEqual(commentedClassBlocks[0].endLine, 23);
+  assert.ok(commentedClassBlocks[0].uncommentedText.includes('class _SystemStatesCard extends StatelessWidget'));
+  assert.ok(commentedClassBlocks[0].uncommentedText.includes('Widget build(BuildContext context)'));
+
+  // 6b. Even if a trailing commented class is missing its final closing `}`, preceding balanced blocks + inner methods are still detected
+  const partialUnclosedEndSource = [
+    '// enum SystemStateType { offline, loading, error, empty }',
+    '',
+    '// class _SystemStatesCard extends StatelessWidget {',
+    '//   final ValueChanged<SystemStateType>? onSelected;',
+    '//   const _SystemStatesCard({this.onSelected});',
+    '// }',
+    '',
+    '// class _StateTile extends StatelessWidget {',
+    '//   final String title;',
+    '//   @override',
+    '//   Widget build(BuildContext context) {',
+    '//     return Container();',
+    '//   }'
+  ].join('\n');
+
+  const partialBlocks = CommentedCodeBlockDetector.detectInSource(partialUnclosedEndSource, 'lib/partial_end.dart');
+  assert.ok(partialBlocks.length >= 1, 'Must still detect balanced commented classes even when a trailing class is missing its closing brace');
+  assert.ok(partialBlocks[0].uncommentedText.includes('class _SystemStatesCard extends StatelessWidget'));
+
+  // 7. Async batch detection with Dart Analyzer fallback
   const batchBlocks = await CommentedCodeBlockDetector.detectInFiles([
     { relativePath: 'lib/demo_widget.dart', content: widgetSource },
     { relativePath: 'lib/prose.dart', content: proseSource },
