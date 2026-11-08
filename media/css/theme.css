@@ -33,6 +33,7 @@
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+html.dark-mode,
 body.dark-mode {
     color-scheme: dark;
     --paper: #0F110E;
@@ -66,6 +67,8 @@ body.dark-mode {
 
 html {
     -webkit-text-size-adjust: 100%;
+    background: var(--paper);
+    color: var(--ink);
 }
 
 body {

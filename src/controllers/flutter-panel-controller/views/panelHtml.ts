@@ -60,6 +60,15 @@ export function getPanelWebviewContent(
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Air Flutter - Wireless Debug &amp; Run</title>
+        <script>
+            (function () {
+                try {
+                    if (localStorage.getItem('airFlutterDarkMode') === 'true') {
+                        document.documentElement.classList.add('dark-mode');
+                    }
+                } catch (e) {}
+            })();
+        </script>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -758,16 +767,20 @@ ${getMirrorSetupModalHtml()}
                 }
 
                 const darkModeToggle = document.getElementById('darkModeToggle');
-                if (darkModeToggle) {
-                    const isDarkMode = localStorage.getItem('airFlutterDarkMode') === 'true';
-                    if (isDarkMode) {
-                        document.body.classList.add('dark-mode');
+                const isDarkMode = localStorage.getItem('airFlutterDarkMode') === 'true';
+                if (isDarkMode) {
+                    document.documentElement.classList.add('dark-mode');
+                    document.body.classList.add('dark-mode');
+                    if (darkModeToggle) {
                         darkModeToggle.innerHTML = '<i class="fas fa-sun"></i> Light';
                     }
+                }
 
+                if (darkModeToggle) {
                     darkModeToggle.addEventListener('click', function () {
+                        document.documentElement.classList.toggle('dark-mode');
                         document.body.classList.toggle('dark-mode');
-                        const isDark = document.body.classList.contains('dark-mode');
+                        const isDark = document.documentElement.classList.contains('dark-mode');
                         localStorage.setItem('airFlutterDarkMode', isDark);
                         this.innerHTML = isDark
                             ? '<i class="fas fa-sun"></i> Light'

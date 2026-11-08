@@ -15,6 +15,15 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Air Flutter - Device Setup Guide</title>
+        <script>
+            (function () {
+                try {
+                    if (localStorage.getItem('airFlutterDarkMode') === 'true') {
+                        document.documentElement.classList.add('dark-mode');
+                    }
+                } catch (e) {}
+            })();
+        </script>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         <link href="${themeUri}" rel="stylesheet">
@@ -276,6 +285,7 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
             window.addEventListener('DOMContentLoaded', () => {
                 const isDarkMode = localStorage.getItem('airFlutterDarkMode') === 'true';
                 if (isDarkMode) {
+                    document.documentElement.classList.add('dark-mode');
                     document.body.classList.add('dark-mode');
                 }
                 
@@ -287,8 +297,9 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
                     }
                     
                     darkModeToggle.addEventListener('click', function() {
+                        document.documentElement.classList.toggle('dark-mode');
                         document.body.classList.toggle('dark-mode');
-                        const isDark = document.body.classList.contains('dark-mode');
+                        const isDark = document.documentElement.classList.contains('dark-mode');
                         localStorage.setItem('airFlutterDarkMode', isDark);
                         this.innerHTML = isDark ? '<i class="fas fa-sun"></i> Light' : '<i class="fas fa-moon"></i> Dark';
                     });
