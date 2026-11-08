@@ -57,15 +57,132 @@
     margin-bottom: 12px;
 }
 
+.pub-health-error-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 10px 0;
+    text-align: left;
+}
+
 .pub-health-error-card {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     text-align: left;
     background: rgba(226, 85, 43, 0.08);
     border: 1px solid var(--accent);
     padding: 16px;
     border-radius: 4px;
+}
+
+.pub-health-error-card i {
+    font-size: 24px;
+    color: var(--accent);
+    margin-top: 2px;
+}
+
+.pub-health-error-text strong {
+    font-size: 14px;
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+
+.pub-health-error-text p {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0;
+    word-break: break-word;
+}
+
+.pub-diagnostic-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid #D69E2E;
+    border-radius: 4px;
+    padding: 14px 16px;
+    text-align: left;
+}
+
+.pub-diagnostic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pub-diagnostic-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pub-diagnostic-badge {
+    background: rgba(214, 158, 46, 0.15);
+    color: #D69E2E;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.pub-diagnostic-detail {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text);
+    margin: 0;
+}
+
+.pub-diagnostic-suggestion-card {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed var(--border);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.pub-diagnostic-suggestion-card i {
+    color: #D69E2E;
+    margin-top: 2px;
+}
+
+.pub-diagnostic-suggestion-card p {
+    margin: 2px 0 0 0;
+    color: var(--muted);
+}
+
+.pub-diagnostic-snippet-container {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.pub-snippet-bar {
+    background: var(--bg);
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    border-bottom: 1px solid var(--border);
+}
+
+.pub-diagnostic-snippet {
+    margin: 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-x: auto;
 }
 
 .pub-health-summary-cards {

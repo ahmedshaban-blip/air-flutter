@@ -652,6 +652,9 @@ export class FlutterPanelController extends ADBBaseController {
             case 'runPubUpgrade':
               await this.pubHealthHandler.runPubUpgrade();
               break;
+            case 'openPubspecAtLine':
+              await this.pubHealthHandler.openPubspecAtLine(message.filePath, message.line, message.column);
+              break;
             case 'disconnectDevice':
               console.log('❌ FlutterPanelController: Disconnecting device...')
               await this.handleDisconnectDevice(message.deviceId);

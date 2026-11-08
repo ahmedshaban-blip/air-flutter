@@ -83,6 +83,18 @@ const { PubHealthService } = require('../out/domain/pub-health');
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 
+  // Test pubspec syntax error parser
+  const userErrorOutput = `flutter pub outdated failed: Command failed: flutter pub outdated --json Error on line 32, column 5 of pubspec.yaml: A dependency may only have one source. ╷ 32 │ ┌ sdk: flutter 33 │ │ # Arabic and RTL localization delegates for Material/Cupertino widgets. 34 │ │ assets: 35 │ │ - assets/4k.webp 50 │ │ flutter_localizations: │ └──^ ╵ Failed to update packages.`;
+
+  const diagnostics = PubHealthService.parsePubspecError(userErrorOutput, '/dummy/project');
+  assert.ok(diagnostics, 'Diagnostics should not be null');
+  assert.strictEqual(diagnostics.isPubspecError, true);
+  assert.strictEqual(diagnostics.line, 32);
+  assert.strictEqual(diagnostics.column, 5);
+  assert.ok(diagnostics.title.includes('Line 32'));
+  assert.ok(diagnostics.suggestion.includes('assets:'));
+  assert.ok(diagnostics.suggestion.includes('flutter:'));
+
   console.log('✅ PubHealthService tests passed!');
 })();
 

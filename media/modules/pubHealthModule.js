@@ -17,6 +17,16 @@ window.AirFlutterPubHealthModule = class AirFlutterPubHealthModule {
         document.getElementById('pubBrowseProjectBtn')?.addEventListener('click', () => {
             this.sendMessage('pubHealthSelectProject', {});
         });
+
+        document.getElementById('pubOpenPubspecLineBtn')?.addEventListener('click', () => {
+            if (this._currentDiagnostics) {
+                this.sendMessage('openPubspecAtLine', {
+                    filePath: this._currentDiagnostics.filePath,
+                    line: this._currentDiagnostics.line || 1,
+                    column: this._currentDiagnostics.column || 1
+                });
+            }
+        });
     }
 
     openPubHealthModal(data) {
@@ -52,7 +62,45 @@ window.AirFlutterPubHealthModule = class AirFlutterPubHealthModule {
         if (data.status === 'error') {
             const errEl = document.getElementById('pubHealthErrorMessage');
             if (errEl) errEl.textContent = data.error || 'Pub check failed';
+
+            const diagBox = document.getElementById('pubHealthDiagnosticBox');
+            if (diagBox) {
+                if (data.diagnostics && data.diagnostics.isPubspecError) {
+                    this._currentDiagnostics = data.diagnostics;
+                    diagBox.hidden = false;
+
+                    const titleEl = document.getElementById('pubDiagnosticTitle');
+                    if (titleEl) titleEl.textContent = data.diagnostics.title || 'pubspec.yaml issue detected';
+
+                    const detailEl = document.getElementById('pubDiagnosticDetail');
+                    if (detailEl) detailEl.textContent = data.diagnostics.detail || '';
+
+                    const sugEl = document.getElementById('pubDiagnosticSuggestion');
+                    if (sugEl) sugEl.textContent = data.diagnostics.suggestion || '';
+
+                    const btnText = document.getElementById('pubOpenBtnText');
+                    if (btnText) {
+                        btnText.textContent = data.diagnostics.line ? `Open Line ${data.diagnostics.line}` : 'Open pubspec.yaml';
+                    }
+
+                    const snippetContainer = document.getElementById('pubDiagnosticSnippetContainer');
+                    const snippetCode = document.getElementById('pubDiagnosticSnippetCode');
+                    if (snippetContainer && snippetCode) {
+                        if (data.diagnostics.codeSnippet) {
+                            snippetContainer.hidden = false;
+                            snippetCode.textContent = data.diagnostics.codeSnippet;
+                        } else {
+                            snippetContainer.hidden = true;
+                        }
+                    }
+                } else {
+                    diagBox.hidden = true;
+                    this._currentDiagnostics = null;
+                }
+            }
         } else if (data.status === 'success' && data.summary) {
+            const diagBox = document.getElementById('pubHealthDiagnosticBox');
+            if (diagBox) diagBox.hidden = true;
             this.renderPubSummary(data.summary);
         }
     }

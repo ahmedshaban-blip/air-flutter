@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { PubHealthService } from '../../../domain/pub-health';
+import { PubHealthService, PubspecSyntaxError, PubspecDiagnostics } from '../../../domain/pub-health';
 import { PanelDeviceContext } from './panelNetworkHandler';
 
 export class PanelPubHealthHandler {
@@ -67,12 +67,41 @@ export class PanelPubHealthHandler {
       this.ctx.postStatus(`Pub health check complete: ${summary.upgradableCount} upgradable, ${summary.majorUpdateCount} major updates`, 'success');
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
+      const diagnostics = error instanceof PubspecSyntaxError
+        ? error.diagnostics
+        : PubHealthService.parsePubspecError(msg, projectPath);
+
       panel?.webview.postMessage({
         command: 'pubHealthState',
         status: 'error',
-        error: msg
+        error: msg,
+        diagnostics
       });
       this.ctx.showErrorMessage(`Pub check: ${msg}`);
+    }
+  }
+
+  public async openPubspecAtLine(filePath?: string, line = 1, column = 1): Promise<void> {
+    const targetFile = filePath || (this.activeProjectPath ? path.join(this.activeProjectPath, 'pubspec.yaml') : undefined);
+    if (!targetFile || !fs.existsSync(targetFile)) {
+      this.ctx.showErrorMessage('pubspec.yaml file not found.');
+      return;
+    }
+
+    try {
+      const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(targetFile));
+      const zeroBasedLine = Math.max(0, line - 1);
+      const zeroBasedCol = Math.max(0, column - 1);
+      const pos = new vscode.Position(zeroBasedLine, zeroBasedCol);
+      const selection = new vscode.Selection(pos, pos);
+
+      await vscode.window.showTextDocument(doc, {
+        preview: false,
+        selection
+      });
+    } catch (e) {
+      const err = e instanceof Error ? e.message : String(e);
+      this.ctx.showErrorMessage(`Failed to open pubspec.yaml: ${err}`);
     }
   }
 

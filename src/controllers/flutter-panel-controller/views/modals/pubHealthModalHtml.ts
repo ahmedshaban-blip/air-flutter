@@ -30,11 +30,40 @@ export function getPubHealthModalHtml(): string {
                 </div>
 
                 <!-- State: Error -->
-                <div class="pub-health-state-view pub-health-error-card" id="pubHealthErrorView" hidden>
-                    <i class="fas fa-triangle-exclamation"></i>
-                    <div>
-                        <strong id="pubHealthErrorTitle">Pub Check Failed</strong>
-                        <p id="pubHealthErrorMessage">Make sure flutter is in your PATH and pubspec.yaml is valid.</p>
+                <div class="pub-health-state-view pub-health-error-wrapper" id="pubHealthErrorView" hidden>
+                    <div class="pub-health-error-card">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <div class="pub-health-error-text">
+                            <strong id="pubHealthErrorTitle">Pub Check Failed</strong>
+                            <p id="pubHealthErrorMessage">Make sure flutter is in your PATH and pubspec.yaml is valid.</p>
+                        </div>
+                    </div>
+
+                    <!-- Syntax / Configuration Diagnostics -->
+                    <div class="pub-diagnostic-box" id="pubHealthDiagnosticBox" hidden>
+                        <div class="pub-diagnostic-header">
+                            <div class="pub-diagnostic-title-wrap">
+                                <span class="pub-diagnostic-badge"><i class="fas fa-bug"></i> Syntax Issue</span>
+                                <strong id="pubDiagnosticTitle">pubspec.yaml issue detected</strong>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="pubOpenPubspecLineBtn" type="button">
+                                <i class="fas fa-arrow-up-right-from-square"></i> <span id="pubOpenBtnText">Open pubspec.yaml</span>
+                            </button>
+                        </div>
+                        <p class="pub-diagnostic-detail" id="pubDiagnosticDetail"></p>
+                        <div class="pub-diagnostic-suggestion-card">
+                            <i class="fas fa-lightbulb"></i>
+                            <div>
+                                <strong>How to fix:</strong>
+                                <p id="pubDiagnosticSuggestion"></p>
+                            </div>
+                        </div>
+                        <div class="pub-diagnostic-snippet-container" id="pubDiagnosticSnippetContainer" hidden>
+                            <div class="pub-snippet-bar">
+                                <span><i class="fas fa-file-code"></i> pubspec.yaml preview</span>
+                            </div>
+                            <pre class="pub-diagnostic-snippet"><code id="pubDiagnosticSnippetCode"></code></pre>
+                        </div>
                     </div>
                 </div>
 
