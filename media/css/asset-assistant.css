@@ -159,14 +159,24 @@
 }
 
 .asset-sort-select {
-    padding: 6px 8px;
+    padding: 6px 10px;
     border: 1px solid var(--rule);
     border-radius: 4px;
-    background: var(--bg-alt, rgba(0, 0, 0, 0.2));
+    background: var(--surface);
     color: var(--ink);
     font-size: 11px;
     font-family: var(--font-mono);
     cursor: pointer;
+}
+
+.asset-sort-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.asset-sort-select option {
+    background-color: var(--surface);
+    color: var(--ink);
 }
 
 .asset-filter-pills {

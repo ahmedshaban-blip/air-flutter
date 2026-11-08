@@ -5,6 +5,7 @@
 
 /* --- Tokens ------------------------------------------------------------- */
 :root {
+    color-scheme: light;
     --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
     --font-mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, 'Courier New', monospace;
 
@@ -33,6 +34,7 @@
 }
 
 body.dark-mode {
+    color-scheme: dark;
     --paper: #0F110E;
     --surface: #151814;
     --surface-2: #1E221B;
@@ -84,6 +86,12 @@ h1, h2, h3, h4, h5, h6, p {
 button {
     font-family: inherit;
     color: inherit;
+}
+
+select,
+option {
+    background-color: var(--surface);
+    color: var(--ink);
 }
 
 a {
