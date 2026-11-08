@@ -11,10 +11,16 @@ export function getPubHealthModalHtml(): string {
             </div>
 
             <div class="modal-body pub-health-modal-body">
-                <!-- Top Actions -->
+                <!-- Top Actions & Project Selector -->
                 <div class="pub-health-toolbar">
-                    <button class="btn btn-primary" id="pubHealthCheckBtn" type="button"><i class="fas fa-rotate"></i> Check Dependencies</button>
-                    <button class="btn btn-quiet" id="pubHealthUpgradeBtn" type="button"><i class="fas fa-arrow-up"></i> Run flutter pub upgrade</button>
+                    <div class="pub-project-selector">
+                        <span class="pub-project-path-label" id="pubProjectPathDisplay">Detecting Flutter project…</span>
+                        <button class="btn btn-quiet" id="pubBrowseProjectBtn" type="button"><i class="fas fa-folder-open"></i> Browse…</button>
+                    </div>
+                    <div class="pub-actions-group">
+                        <button class="btn btn-primary" id="pubHealthCheckBtn" type="button"><i class="fas fa-rotate"></i> Check Dependencies</button>
+                        <button class="btn btn-quiet" id="pubHealthUpgradeBtn" type="button"><i class="fas fa-arrow-up"></i> Run flutter pub upgrade</button>
+                    </div>
                 </div>
 
                 <!-- State: Loading -->

@@ -1,4 +1,5 @@
-import { execFile } from 'child_process';
+import { exec } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 
 export interface PubPackageVersion {
@@ -46,10 +47,11 @@ export class PubHealthService {
     executable: string,
     args: string[],
     cwd: string,
-    timeout = 30000
+    timeout = 35000
   ): Promise<{ stdout: string; stderr: string; errorMessage?: string }> {
+    const fullCmd = `${executable} ${args.join(' ')}`;
     return new Promise(resolve => {
-      execFile(executable, args, { cwd, timeout, windowsHide: true }, (error, stdout, stderr) => {
+      exec(fullCmd, { cwd, timeout, windowsHide: true, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
         resolve({
           stdout: stdout || '',
           stderr: stderr || '',
@@ -60,10 +62,12 @@ export class PubHealthService {
   }
 
   public async checkHealth(projectPath: string): Promise<PubHealthSummary> {
-    const isWindows = process.platform === 'win32';
-    const flutterCmd = isWindows ? 'flutter.bat' : 'flutter';
+    if (!projectPath || !fs.existsSync(path.join(projectPath, 'pubspec.yaml'))) {
+      const folderName = projectPath ? path.basename(projectPath) : 'workspace';
+      throw new Error(`The folder "${folderName}" is not a Flutter project (missing pubspec.yaml). Please select or open a Flutter project.`);
+    }
 
-    const res = await this.runProcess(flutterCmd, ['pub', 'outdated', '--json'], projectPath, 35000);
+    const res = await this.runProcess('flutter', ['pub', 'outdated', '--json'], projectPath, 45000);
     if (!res.stdout && res.errorMessage) {
       throw new Error(`flutter pub outdated failed: ${res.errorMessage}`);
     }

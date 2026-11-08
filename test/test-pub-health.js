@@ -51,6 +51,38 @@ const { PubHealthService } = require('../out/domain/pub-health');
   assert.ok(spPkg);
   assert.strictEqual(spPkg.status, 'major_update');
 
+  // Test missing pubspec.yaml guard
+  const service = new PubHealthService();
+  await assert.rejects(
+    () => service.checkHealth(__dirname),
+    /missing pubspec\.yaml/
+  );
+
+  // Test with mock process
+  const executed = [];
+  const mockService = new PubHealthService(async (exe, args, cwd) => {
+    executed.push({ exe, args, cwd });
+    return { stdout: sampleJson, stderr: '' };
+  });
+
+  // Create temporary fixture with pubspec.yaml
+  const os = require('os');
+  const fs = require('fs');
+  const pathMod = require('path');
+  const tmpDir = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'flutter-fixture-'));
+  fs.writeFileSync(pathMod.join(tmpDir, 'pubspec.yaml'), 'name: fixture\n');
+
+  try {
+    const res = await mockService.checkHealth(tmpDir);
+    assert.strictEqual(res.total, 3);
+    assert.strictEqual(executed.length, 1);
+    assert.strictEqual(executed[0].exe, 'flutter');
+    assert.deepStrictEqual(executed[0].args, ['pub', 'outdated', '--json']);
+    assert.strictEqual(executed[0].cwd, tmpDir);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+
   console.log('✅ PubHealthService tests passed!');
 })();
 

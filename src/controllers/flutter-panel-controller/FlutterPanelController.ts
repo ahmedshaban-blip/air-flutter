@@ -644,7 +644,10 @@ export class FlutterPanelController extends ADBBaseController {
               await this.pubHealthHandler.openModal();
               break;
             case 'checkPubHealth':
-              await this.pubHealthHandler.checkHealth();
+              await this.pubHealthHandler.checkHealth(message.projectPath);
+              break;
+            case 'pubHealthSelectProject':
+              await this.pubHealthHandler.selectProject();
               break;
             case 'runPubUpgrade':
               await this.pubHealthHandler.runPubUpgrade();

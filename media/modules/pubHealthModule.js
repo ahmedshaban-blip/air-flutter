@@ -13,13 +13,29 @@ window.AirFlutterPubHealthModule = class AirFlutterPubHealthModule {
         document.getElementById('pubHealthUpgradeBtn')?.addEventListener('click', () => {
             this.sendMessage('runPubUpgrade', {});
         });
+
+        document.getElementById('pubBrowseProjectBtn')?.addEventListener('click', () => {
+            this.sendMessage('pubHealthSelectProject', {});
+        });
     }
 
-    openPubHealthModal() {
+    openPubHealthModal(data) {
         const modal = document.getElementById('pubHealthModal');
         if (!modal) return;
         modal.hidden = false;
+        if (data?.projectPath) {
+            const pathDisplay = document.getElementById('pubProjectPathDisplay');
+            if (pathDisplay) pathDisplay.textContent = data.projectPath.split(/[/\\]/).pop() || data.projectPath;
+        }
         this.sendMessage('checkPubHealth', {});
+    }
+
+    handlePubHealthProjectPath(path) {
+        const pathDisplay = document.getElementById('pubProjectPathDisplay');
+        if (pathDisplay && path) {
+            pathDisplay.textContent = path.split(/[/\\]/).pop() || path;
+            pathDisplay.title = path;
+        }
     }
 
     handlePubHealthState(data) {

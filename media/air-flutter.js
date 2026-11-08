@@ -687,7 +687,10 @@ class AirFlutterWebview {
                     this.handleApkSizeState?.(message);
                     break;
                 case 'openPubHealthModal':
-                    this.openPubHealthModal?.();
+                    this.openPubHealthModal?.(message.data);
+                    break;
+                case 'pubHealthProjectPath':
+                    this.handlePubHealthProjectPath?.(message.projectPath);
                     break;
                 case 'pubHealthState':
                     this.handlePubHealthState?.(message);

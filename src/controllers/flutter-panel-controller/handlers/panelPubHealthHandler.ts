@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PubHealthService } from '../../../domain/pub-health';
 import { PanelDeviceContext } from './panelNetworkHandler';
 
 export class PanelPubHealthHandler {
   private readonly service = new PubHealthService();
+  private activeProjectPath?: string;
 
   constructor(private readonly ctx: PanelDeviceContext) {}
 
@@ -12,24 +15,36 @@ export class PanelPubHealthHandler {
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
+    const initial = this.resolveProjectPath();
+    this.activeProjectPath = initial;
+
     panel.webview.postMessage({
       command: 'openPubHealthModal',
       data: {
-        projectPath: this.ctx.getInitialProjectPath() || ''
+        projectPath: initial || ''
       }
     });
 
-    await this.checkHealth();
+    if (initial && fs.existsSync(path.join(initial, 'pubspec.yaml'))) {
+      await this.checkHealth(initial);
+    } else {
+      panel.webview.postMessage({
+        command: 'pubHealthState',
+        status: 'error',
+        error: `The current workspace (${initial ? path.basename(initial) : 'none'}) is not a Flutter project (missing pubspec.yaml). Click "Browse" to choose your Flutter app folder.`
+      });
+    }
   }
 
-  public async checkHealth(): Promise<void> {
+  public async checkHealth(targetPath?: string): Promise<void> {
     const panel = this.ctx.getPanel();
-    const projectPath = this.ctx.getInitialProjectPath();
-    if (!projectPath) {
+    const projectPath = targetPath || this.activeProjectPath || this.resolveProjectPath();
+
+    if (!projectPath || !fs.existsSync(path.join(projectPath, 'pubspec.yaml'))) {
       panel?.webview.postMessage({
         command: 'pubHealthState',
         status: 'error',
-        error: 'No active Flutter workspace found.'
+        error: 'No pubspec.yaml found in the current workspace. Click "Browse" to select your Flutter project.'
       });
       return;
     }
@@ -46,7 +61,8 @@ export class PanelPubHealthHandler {
       panel?.webview.postMessage({
         command: 'pubHealthState',
         status: 'success',
-        summary
+        summary,
+        projectPath
       });
       this.ctx.postStatus(`Pub health check complete: ${summary.upgradableCount} upgradable, ${summary.majorUpdateCount} major updates`, 'success');
     } catch (error) {
@@ -56,12 +72,35 @@ export class PanelPubHealthHandler {
         status: 'error',
         error: msg
       });
-      this.ctx.showErrorMessage(`Pub health check failed: ${msg}`);
+      this.ctx.showErrorMessage(`Pub check: ${msg}`);
+    }
+  }
+
+  public async selectProject(): Promise<void> {
+    const uris = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: 'Select Flutter Project'
+    });
+
+    if (uris && uris.length > 0) {
+      const selected = uris[0].fsPath;
+      if (fs.existsSync(path.join(selected, 'pubspec.yaml'))) {
+        this.activeProjectPath = selected;
+        this.ctx.getPanel()?.webview.postMessage({
+          command: 'pubHealthProjectPath',
+          projectPath: selected
+        });
+        await this.checkHealth(selected);
+      } else {
+        this.ctx.showErrorMessage(`Selected folder "${path.basename(selected)}" does not contain a pubspec.yaml file.`);
+      }
     }
   }
 
   public async runPubUpgrade(): Promise<void> {
-    const projectPath = this.ctx.getInitialProjectPath();
+    const projectPath = this.activeProjectPath || this.resolveProjectPath();
     if (!projectPath) return;
 
     const term = vscode.window.createTerminal({ name: 'Flutter Pub Upgrade', cwd: projectPath });
@@ -69,5 +108,16 @@ export class PanelPubHealthHandler {
     term.sendText('flutter pub upgrade');
     this.ctx.showSuccessMessage('Running "flutter pub upgrade" in terminal…');
   }
-}
 
+  private resolveProjectPath(): string | undefined {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) return undefined;
+
+    for (const folder of workspaceFolders) {
+      if (fs.existsSync(path.join(folder.uri.fsPath, 'pubspec.yaml'))) {
+        return folder.uri.fsPath;
+      }
+    }
+    return workspaceFolders[0].uri.fsPath;
+  }
+}
