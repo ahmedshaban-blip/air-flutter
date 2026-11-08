@@ -91,4 +91,32 @@ window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
 assert.strictEqual(modal.hidden, true, 'Modal should hide when Escape key pressed');
 assert.strictEqual(instance.pendingImportFiles.length, 0);
 
+// Verification: Image preview element must be generated for image files in import modal
+instance.openImportModal([{ name: 'test-preview.png', size: 1024, type: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }]);
+const testRow = window.document.querySelector('.asset-import-row');
+const testImg = testRow ? testRow.querySelector('.asset-thumbnail-img') : null;
+assert.ok(testImg, 'Image thumbnail element must be present in asset import row for image files');
+assert.strictEqual(testImg.src.startsWith('data:image/png;base64'), true, 'Image src should be populated with preview data');
+assert.strictEqual(testImg.style.display, 'block', 'Image element should be visible');
+
+// Verification: Non-image font file should show font icon
+instance.openImportModal([{ name: 'custom-font.ttf', size: 5000 }]);
+const fontRow = window.document.querySelector('.asset-import-row');
+assert.ok(fontRow.querySelector('.fa-font'), 'Font icon should be present for .ttf file');
+assert.strictEqual(fontRow.querySelector('.asset-thumbnail-img'), null, 'Image element should not be created for font file');
+
+// Verification: Dropzone click forwards to file input
+const dropZone = window.document.createElement('div');
+dropZone.id = 'assetDropZone';
+const fileInput = window.document.createElement('input');
+fileInput.id = 'assetFileInput';
+fileInput.type = 'file';
+window.document.body.appendChild(dropZone);
+window.document.body.appendChild(fileInput);
+let fileInputClicked = false;
+fileInput.click = () => { fileInputClicked = true; };
+instance.initDragAndDrop();
+dropZone.click();
+assert.strictEqual(fileInputClicked, true, 'Clicking assetDropZone should trigger fileInput click');
+
 console.log('All tests passed successfully!');

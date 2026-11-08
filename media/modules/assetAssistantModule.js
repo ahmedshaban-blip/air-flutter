@@ -105,6 +105,11 @@
             const fileInput = document.getElementById('assetFileInput');
 
             if (dropZone) {
+                dropZone.addEventListener('click', e => {
+                    if (e.target.closest('.asset-browse-btn') || e.target === fileInput) return;
+                    if (fileInput) fileInput.click();
+                });
+
                 ['dragenter', 'dragover'].forEach(name => {
                     dropZone.addEventListener(name, e => {
                         e.preventDefault();
@@ -293,6 +298,39 @@
                     }
                 });
             }
+
+            const importList = document.getElementById('assetImportFileList');
+            const hoverPopover = document.getElementById('assetHoverPopover');
+            if (importList && hoverPopover) {
+                importList.addEventListener('mouseover', e => {
+                    const thumb = e.target.closest('.asset-thumbnail-img');
+                    if (thumb && thumb.dataset.previewSrc) {
+                        const src = thumb.dataset.previewSrc;
+                        const path = thumb.dataset.previewPath || '';
+                        const size = thumb.dataset.previewSize || '';
+                        hoverPopover.innerHTML = `
+                            <div class="asset-popover-card">
+                                <img src="${src}" alt="" class="asset-popover-img" />
+                                <div class="asset-popover-info">
+                                    <span class="asset-popover-path">${this.escapeHtml(path)}</span>
+                                    <span class="asset-popover-size">${this.escapeHtml(size)}</span>
+                                </div>
+                            </div>
+                        `;
+                        const rect = thumb.getBoundingClientRect();
+                        hoverPopover.style.top = `${Math.max(10, rect.top - 80)}px`;
+                        hoverPopover.style.left = `${rect.right + 12}px`;
+                        hoverPopover.hidden = false;
+                    }
+                });
+
+                importList.addEventListener('mouseout', e => {
+                    const thumb = e.target.closest('.asset-thumbnail-img');
+                    if (thumb && hoverPopover) {
+                        hoverPopover.hidden = true;
+                    }
+                });
+            }
         }
 
         openImportModal(files) {
@@ -302,13 +340,40 @@
             if (!modal || !list) return;
 
             list.innerHTML = files.map((file, index) => {
-                const suggestedName = this.toSnakeCase(file.name);
+                const fileName = file.name || 'asset';
+                const suggestedName = this.toSnakeCase(fileName);
+                const isImage = (file.type && file.type.startsWith('image/')) ||
+                    /\.(png|jpe?g|webp|svg|gif|bmp|ico)$/i.test(fileName);
+                const isFont = /\.(ttf|otf|woff2?)$/i.test(fileName);
+
+                let thumbHtml = '';
+                if (isImage) {
+                    thumbHtml = `
+                        <div class="asset-thumb-wrapper asset-import-thumb" data-file-index="${index}">
+                            <img class="asset-thumbnail-img" alt="" style="display:none;" />
+                            <i class="fas fa-image asset-thumb-icon"></i>
+                        </div>
+                    `;
+                } else if (isFont) {
+                    thumbHtml = `
+                        <div class="asset-thumb-wrapper asset-import-thumb">
+                            <i class="fas fa-font asset-thumb-icon"></i>
+                        </div>
+                    `;
+                } else {
+                    thumbHtml = `
+                        <div class="asset-thumb-wrapper asset-import-thumb">
+                            <i class="fas fa-file asset-thumb-icon"></i>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="asset-import-row">
+                        ${thumbHtml}
                         <div class="asset-import-row-orig">
-                            <i class="fas fa-file-image"></i>
-                            <span title="${this.escapeHtml(file.name)}">${this.escapeHtml(file.name)}</span>
-                            <span class="asset-import-size">${this.formatAssetSize(file.size)}</span>
+                            <span class="asset-import-name" title="${this.escapeHtml(fileName)}">${this.escapeHtml(fileName)}</span>
+                            <span class="asset-import-size">${this.formatAssetSize(file.size || 0)}</span>
                         </div>
                         <i class="fas fa-arrow-right asset-import-arrow"></i>
                         <input type="text" class="deep-link-input mono asset-import-name-input" 
@@ -316,6 +381,51 @@
                     </div>
                 `;
             }).join('');
+
+            // Asynchronously populate image previews
+            files.forEach((file, index) => {
+                const fileName = file.name || 'asset';
+                const isImage = (file.type && file.type.startsWith('image/')) ||
+                    /\.(png|jpe?g|webp|svg|gif|bmp|ico)$/i.test(fileName);
+                if (!isImage) return;
+
+                const thumbWrapper = list.querySelector(`.asset-import-thumb[data-file-index="${index}"]`);
+                if (!thumbWrapper) return;
+                const img = thumbWrapper.querySelector('.asset-thumbnail-img');
+                const icon = thumbWrapper.querySelector('.asset-thumb-icon');
+                if (!img) return;
+
+                const setPreviewSrc = (src) => {
+                    img.src = src;
+                    img.dataset.previewSrc = src;
+                    img.dataset.previewPath = fileName;
+                    img.dataset.previewSize = this.formatAssetSize(file.size || 0);
+                    img.style.display = 'block';
+                    if (icon) icon.style.display = 'none';
+                };
+
+                img.onerror = () => {
+                    img.style.display = 'none';
+                    if (icon) icon.style.display = 'inline-block';
+                };
+
+                if (file.previewUri || file.dataUrl) {
+                    setPreviewSrc(file.previewUri || file.dataUrl);
+                } else if (typeof FileReader !== 'undefined' && (file instanceof Blob || (file && typeof file.slice === 'function'))) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        if (reader.result) {
+                            setPreviewSrc(String(reader.result));
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                } else if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function' && file instanceof Blob) {
+                    try {
+                        const blobUrl = URL.createObjectURL(file);
+                        setPreviewSrc(blobUrl);
+                    } catch (e) {}
+                }
+            });
 
             modal.hidden = false;
         }
