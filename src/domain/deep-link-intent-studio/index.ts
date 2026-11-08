@@ -15,6 +15,19 @@ export interface IntentDispatchRequest {
   packageName?: string;
 }
 
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+  deepLink?: string;
+}
+
+export interface PushDispatchRequest {
+  deviceId: string;
+  packageName: string;
+  payload: PushNotificationPayload;
+}
+
 export interface IntentDispatchResult {
   ok: boolean;
   kind: 'launched' | 'unresolved' | 'failed';
@@ -195,6 +208,37 @@ export class DeepLinkIntentStudio {
     if (activity) return `Intent launched in ${activity}.`;
     if (status) return `Intent dispatched successfully (Status: ${status}).`;
     return 'Intent dispatched successfully.';
+  }
+
+  public async dispatchPush(request: PushDispatchRequest): Promise<IntentDispatchResult> {
+    const deviceId = DeepLinkIntentStudio.validateDeviceId(request.deviceId);
+    const packageName = DeepLinkIntentStudio.validatePackageName(request.packageName);
+    if (!packageName) {
+      throw new Error('Package name is required for push notification dispatch.');
+    }
+    const title = request.payload.title || 'Air Flutter Test';
+    const body = request.payload.body || 'Testing push notifications';
+    const deepLink = request.payload.deepLink || '';
+
+    // Construct ADB broadcast command simulating an FCM notification arrival
+    const args = [
+      '-s', deviceId,
+      'shell', 'am', 'broadcast',
+      '-a', `${packageName}.NOTIFICATION_RECEIVED`,
+      '--es', 'title', title,
+      '--es', 'body', body,
+      ...(deepLink ? ['--es', 'click_action', deepLink] : []),
+      packageName
+    ];
+
+    const adb = await this.getADBExecutable();
+    const result = await this.runProcess(adb, args, 15000);
+    return {
+      ok: !result.errorMessage,
+      kind: result.errorMessage ? 'failed' : 'launched',
+      summary: result.errorMessage ? `Broadcast failed: ${result.errorMessage}` : `Push notification dispatched to ${packageName}`,
+      output: result.stdout || result.stderr
+    };
   }
 
   private static execute(executable: string, args: string[], timeout: number): Promise<ProcessResult> {

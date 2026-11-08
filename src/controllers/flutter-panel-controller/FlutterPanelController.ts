@@ -37,6 +37,11 @@ import { PanelCodeCleanupHandler } from './handlers/panelCodeCleanupHandler';
 import { PanelPermissionHandler } from './handlers/panelPermissionHandler';
 import { PanelAppStateHandler } from './handlers/panelAppStateHandler';
 import { PanelDeepLinkHandler } from './handlers/panelDeepLinkHandler';
+import { PanelStorageInspectorHandler } from './handlers/panelStorageInspectorHandler';
+import { PanelDebugOverlaysHandler } from './handlers/panelDebugOverlaysHandler';
+import { PanelMockGpsHandler } from './handlers/panelMockGpsHandler';
+import { PanelApkSizeHandler } from './handlers/panelApkSizeHandler';
+import { PanelPubHealthHandler } from './handlers/panelPubHealthHandler';
 import { SigningKeyOptions } from '../../domain/signing-key-generator';
 import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper';
 import { DeepLinkIntentStudio } from '../../domain/deep-link-intent-studio';
@@ -90,6 +95,11 @@ export class FlutterPanelController extends ADBBaseController {
   private readonly permissionHandler: PanelPermissionHandler;
   private readonly appStateHandler: PanelAppStateHandler;
   private readonly deepLinkHandler: PanelDeepLinkHandler;
+  private readonly storageInspectorHandler: PanelStorageInspectorHandler;
+  private readonly debugOverlaysHandler: PanelDebugOverlaysHandler;
+  private readonly mockGpsHandler: PanelMockGpsHandler;
+  private readonly apkSizeHandler: PanelApkSizeHandler;
+  private readonly pubHealthHandler: PanelPubHealthHandler;
   private operationSequence = 0;
   private initialLoadPending = false;
 
@@ -144,6 +154,11 @@ export class FlutterPanelController extends ADBBaseController {
       context.globalState,
       new DeepLinkIntentStudio(() => this.deviceManager.getADBExecutable())
     );
+    this.storageInspectorHandler = new PanelStorageInspectorHandler(handlerCtx);
+    this.debugOverlaysHandler = new PanelDebugOverlaysHandler(handlerCtx);
+    this.mockGpsHandler = new PanelMockGpsHandler(handlerCtx);
+    this.apkSizeHandler = new PanelApkSizeHandler(handlerCtx);
+    this.pubHealthHandler = new PanelPubHealthHandler(handlerCtx);
   }
 
   async onInit() {
@@ -183,6 +198,15 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.clearAppCache', () => this.withNativeProgress('Clearing app cache…', () => this.handleWipe('cache')))
       .registerCommand('airFlutter.resetAppDatabases', () => this.withNativeProgress('Resetting app databases…', () => this.handleWipe('databases')))
       .registerCommand('airFlutter.factoryResetApp', () => this.withNativeProgress('Resetting app data…', () => this.handleWipe('factory')))
+      .registerCommand('airFlutter.openStorageInspectorModal', (packageId?: string) => this.storageInspectorHandler.openModal(packageId))
+      .registerCommand('airFlutter.openDebugOverlaysModal', () => this.debugOverlaysHandler.openModal())
+      .registerCommand('airFlutter.toggleDebugPaint', () => this.debugOverlaysHandler.toggleOverlay('debugPaint'))
+      .registerCommand('airFlutter.togglePerformanceOverlay', () => this.debugOverlaysHandler.toggleOverlay('performanceOverlay'))
+      .registerCommand('airFlutter.toggleSlowAnimations', () => this.debugOverlaysHandler.toggleOverlay('slowAnimations'))
+      .registerCommand('airFlutter.toggleRepaintRainbow', () => this.debugOverlaysHandler.toggleOverlay('repaintRainbow'))
+      .registerCommand('airFlutter.openMockGpsModal', () => this.mockGpsHandler.openModal())
+      .registerCommand('airFlutter.openApkSizeModal', () => this.apkSizeHandler.openModal())
+      .registerCommand('airFlutter.openPubHealthModal', () => this.pubHealthHandler.openModal())
       .registerCommand('airFlutter.cleanCommentedCode', () => this.withNativeProgress('Scanning for commented-out Dart code…', () => this.codeCleanupHandler.runInteractiveCleanupQuickPick()))
     
     console.log('✅ FlutterPanelController: Essential commands registered successfully')
@@ -555,6 +579,75 @@ export class FlutterPanelController extends ADBBaseController {
               break;
             case 'deleteDeepLinkPreset':
               await this.deepLinkHandler.deletePreset(message.name);
+              break;
+            case 'dispatchPushNotification':
+              await this.deepLinkHandler.dispatchPush(message.payload, message.packageName, message.deviceId);
+              break;
+            case 'loadRuntimePermissions':
+              await this.permissionHandler.handleLoadRuntimePermissions(message.packageId);
+              break;
+            case 'grantRuntimePermission':
+              await this.permissionHandler.handleGrantPermission(message.packageId, message.permission);
+              break;
+            case 'revokeRuntimePermission':
+              await this.permissionHandler.handleRevokePermission(message.packageId, message.permission);
+              break;
+            case 'openStorageInspectorModal':
+              await this.storageInspectorHandler.openModal(message.packageId);
+              break;
+            case 'storageInspectorListFiles':
+              await this.storageInspectorHandler.listFiles(message.serial, message.packageId, message.mode, message.selectedPresets);
+              break;
+            case 'storageInspectorReadPrefs':
+              await this.storageInspectorHandler.readSharedPreferences(message.serial, message.packageId, message.fileName);
+              break;
+            case 'storageInspectorSavePref':
+              await this.storageInspectorHandler.saveSharedPreference(message.serial, message.packageId, message.fileName, message.key, message.value, message.type);
+              break;
+            case 'storageInspectorDeletePref':
+              await this.storageInspectorHandler.deleteSharedPreference(message.serial, message.packageId, message.fileName, message.key);
+              break;
+            case 'storageInspectorListTables':
+              await this.storageInspectorHandler.listSqliteTables(message.serial, message.packageId, message.dbName);
+              break;
+            case 'storageInspectorQueryTable':
+              await this.storageInspectorHandler.querySqliteTable(message.serial, message.packageId, message.dbName, message.query);
+              break;
+            case 'openDebugOverlaysModal':
+              await this.debugOverlaysHandler.openModal();
+              break;
+            case 'getDebugOverlaysState':
+              this.debugOverlaysHandler.postState();
+              break;
+            case 'toggleDebugOverlay':
+              await this.debugOverlaysHandler.toggleOverlay(message.overlay);
+              break;
+            case 'resetDebugOverlays':
+              this.debugOverlaysHandler.resetAll();
+              break;
+            case 'openMockGpsModal':
+              await this.mockGpsHandler.openModal();
+              break;
+            case 'setMockGpsLocation':
+              await this.mockGpsHandler.setLocation(Number(message.lat), Number(message.lon), Number(message.altitude || 0));
+              break;
+            case 'openApkSizeModal':
+              await this.apkSizeHandler.openModal();
+              break;
+            case 'analyzeApkSize':
+              this.apkSizeHandler.analyze(message.apkPath);
+              break;
+            case 'pickAndAnalyzeApk':
+              await this.apkSizeHandler.pickAndAnalyze();
+              break;
+            case 'openPubHealthModal':
+              await this.pubHealthHandler.openModal();
+              break;
+            case 'checkPubHealth':
+              await this.pubHealthHandler.checkHealth();
+              break;
+            case 'runPubUpgrade':
+              await this.pubHealthHandler.runPubUpgrade();
               break;
             case 'disconnectDevice':
               console.log('❌ FlutterPanelController: Disconnecting device...')
@@ -1448,6 +1541,27 @@ export class FlutterPanelController extends ADBBaseController {
 
   private async handleGenerateAgentScaffold(options: AgentScaffoldOptions) {
     return this.agentHandler.handleGenerateAgentScaffold(options);
+  }
+
+  // --- New Flutter Tools Delegations ---
+  public async openStorageInspectorModal(packageId?: string) {
+    return this.storageInspectorHandler.openModal(packageId);
+  }
+
+  public async openDebugOverlaysModal() {
+    return this.debugOverlaysHandler.openModal();
+  }
+
+  public async openMockGpsModal() {
+    return this.mockGpsHandler.openModal();
+  }
+
+  public async openApkSizeModal() {
+    return this.apkSizeHandler.openModal();
+  }
+
+  public async openPubHealthModal() {
+    return this.pubHealthHandler.openModal();
   }
 
   private async openMcpHubModal(workspaceRoot?: string) {

@@ -326,6 +326,16 @@ const vscode = acquireVsCodeApi();
                 agentEngine: 'Opening agent scaffolder…',
                 mcpHub: 'Opening MCP Hub…',
                 compatDoctor: 'Scanning compatibility…',
+                mockGps: 'Setting mock GPS location…',
+                toggleDebugPaint: 'Toggling Debug Paint…',
+                togglePerfOverlay: 'Toggling Performance Overlay…',
+                toggleSlowMotion: 'Toggling Slow Motion…',
+                toggleRepaintRainbow: 'Toggling Repaint Rainbow…',
+                debugOverlaysModal: 'Opening Overlays Studio…',
+                inspectStorage: 'Opening Storage Inspector…',
+                apkSize: 'Opening Size Analyzer…',
+                pubHealth: 'Opening Pub Health…',
+                pushTester: 'Opening Push Tester…',
                 wipeApp: 'Resetting app storage…',
                 pickWipePackage: 'Loading app packages…',
                 applyLocalhostBridge: 'Linking localhost port…',
@@ -502,7 +512,17 @@ const vscode = acquireVsCodeApi();
             ['toolProxy', 'proxy'],
             ['toolAgentEngine', 'agentEngine'],
             ['toolMcpHub', 'mcpHub'],
-            ['toolCompatDoctor', 'compatDoctor']
+            ['toolCompatDoctor', 'compatDoctor'],
+            ['toolMockGps', 'mockGps'],
+            ['toolDebugPaint', 'toggleDebugPaint'],
+            ['toolPerfOverlay', 'togglePerfOverlay'],
+            ['toolSlowMotion', 'toggleSlowMotion'],
+            ['toolRepaintRainbow', 'toggleRepaintRainbow'],
+            ['toolOverlaysModal', 'debugOverlaysModal'],
+            ['toolApkSize', 'apkSize'],
+            ['toolPubHealth', 'pubHealth'],
+            ['toolPushTester', 'pushTester'],
+            ['inspectStorageBtn', 'inspectStorage']
         ].forEach(function (pair) {
             const button = document.getElementById(pair[0]);
             if (!button) {

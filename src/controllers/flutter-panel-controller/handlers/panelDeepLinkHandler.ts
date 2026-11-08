@@ -87,6 +87,53 @@ export class PanelDeepLinkHandler {
     this.ctx.getPanel()?.webview.postMessage({ command: 'deepLinkPresetsUpdated', presets: next });
   }
 
+  public async dispatchPush(payload: { title: string; body: string; deepLink?: string }, packageName?: string, deviceId?: string): Promise<void> {
+    const targetDevice = deviceId || this.ctx.getActiveDeviceSerial();
+    const panel = this.ctx.getPanel();
+    if (!targetDevice) {
+      panel?.webview.postMessage({
+        command: 'pushNotificationState',
+        status: 'error',
+        error: 'No active device connected.'
+      });
+      return;
+    }
+
+    try {
+      panel?.webview.postMessage({
+        command: 'pushNotificationState',
+        status: 'loading',
+        message: 'Broadcasting test push notification…'
+      });
+
+      const res = await this.studio.dispatchPush({
+        deviceId: targetDevice,
+        packageName: packageName || 'com.example.app',
+        payload
+      });
+
+      panel?.webview.postMessage({
+        command: 'pushNotificationState',
+        status: res.ok ? 'success' : 'error',
+        result: res
+      });
+
+      if (res.ok) {
+        this.ctx.showSuccessMessage(res.summary);
+      } else {
+        this.ctx.showErrorMessage(res.summary);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      panel?.webview.postMessage({
+        command: 'pushNotificationState',
+        status: 'error',
+        error: msg
+      });
+      this.ctx.showErrorMessage(`Push test failed: ${msg}`);
+    }
+  }
+
   private compact(output: string): string {
     return output.replace(/\s+/g, ' ').trim().slice(0, 500);
   }

@@ -8,6 +8,11 @@ import { getAgentScaffoldModalHtml } from './modals/agentScaffoldModalHtml';
 import { getCompatDoctorModalHtml } from './modals/compatDoctorModalHtml';
 import { getMcpHubModalHtml } from './modals/mcpHubModalHtml';
 import { getSigningKeyModalHtml } from './modals/signingKeyModalHtml';
+import { getStorageInspectorModalHtml } from './modals/storageInspectorModalHtml';
+import { getDebugOverlaysModalHtml } from './modals/debugOverlaysModalHtml';
+import { getMockGpsModalHtml } from './modals/mockGpsModalHtml';
+import { getApkSizeModalHtml } from './modals/apkSizeModalHtml';
+import { getPubHealthModalHtml } from './modals/pubHealthModalHtml';
 import { LOCALHOST_BRIDGE_PRESETS } from '../../../domain/localhost-bridge';
 
 /**
@@ -32,6 +37,11 @@ export function getPanelWebviewContent(
   const deepLinkCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'deep-link-studio.css')));
   const localhostBridgeCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'localhost-bridge.css')));
   const mcpHubCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'mcp-hub.css')));
+  const storageInspectorCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'storage-inspector.css')));
+  const debugOverlaysCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'debug-overlays.css')));
+  const mockGpsCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'mock-gps.css')));
+  const apkSizeCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'apk-size.css')));
+  const pubHealthCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'pub-health.css')));
   const airFlutterCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
@@ -50,6 +60,11 @@ export function getPanelWebviewContent(
   const localhostBridgeModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'localhostBridgeModule.js')));
   const mirrorSetupModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mirrorSetupModule.js')));
   const mcpHubModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mcpHubModule.js')));
+  const storageInspectorModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'storageInspectorModule.js')));
+  const debugOverlaysModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'debugOverlaysModule.js')));
+  const mockGpsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mockGpsModule.js')));
+  const apkSizeModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'apkSizeModule.js')));
+  const pubHealthModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'pubHealthModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
   const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
     .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
@@ -87,6 +102,11 @@ export function getPanelWebviewContent(
         <link href="${deepLinkCssUri}" rel="stylesheet">
         <link href="${localhostBridgeCssUri}" rel="stylesheet">
         <link href="${mcpHubCssUri}" rel="stylesheet">
+        <link href="${storageInspectorCssUri}" rel="stylesheet">
+        <link href="${debugOverlaysCssUri}" rel="stylesheet">
+        <link href="${mockGpsCssUri}" rel="stylesheet">
+        <link href="${apkSizeCssUri}" rel="stylesheet">
+        <link href="${pubHealthCssUri}" rel="stylesheet">
         <link href="${airFlutterCssUri}" rel="stylesheet">
     </head>
     <body>
@@ -206,6 +226,9 @@ export function getPanelWebviewContent(
                         </div>
                         <p class="app-state-pkg" id="appStatePackage" data-state="empty">detecting package…</p>
                         <div class="app-state-actions">
+                            <button class="btn btn-primary btn-block" id="inspectAppStorageBtn" type="button" onclick="airFlutter.openStorageInspectorModal()">
+                                <i class="fas fa-folder-tree"></i> Explore &amp; Edit Storage
+                            </button>
                             <button class="btn btn-quiet btn-block" id="clearAppCacheBtn" type="button">
                                 <i class="fas fa-broom"></i> Clear cache
                             </button>
@@ -312,6 +335,31 @@ export function getPanelWebviewContent(
                             <button class="cmd" type="button" data-command="mcpHubModal" onclick="window.airFlutter.openMcpHubModal()">
                                 <i class="cmd-icon fas fa-plug"></i>
                                 <span><span class="cmd-label">MCP Hub</span><span class="cmd-run">AI agent MCP servers</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="storageInspectorModal" onclick="airFlutter.openStorageInspectorModal()">
+                                <i class="cmd-icon fas fa-database"></i>
+                                <span><span class="cmd-label">Storage Inspector</span><span class="cmd-run">SharedPreferences &amp; SQLite</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="debugOverlaysModal" onclick="airFlutter.openDebugOverlaysModal()">
+                                <i class="cmd-icon fas fa-layer-group"></i>
+                                <span><span class="cmd-label">Debug Overlays</span><span class="cmd-run">Debug Paint, Perf &amp; Slow-mo</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="mockGpsModal" onclick="airFlutter.openMockGpsModal()">
+                                <i class="cmd-icon fas fa-location-dot"></i>
+                                <span><span class="cmd-label">Mock GPS Studio</span><span class="cmd-run">mock coordinates &amp; routes</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="apkSizeModal" onclick="airFlutter.openApkSizeModal()">
+                                <i class="cmd-icon fas fa-boxes-packing"></i>
+                                <span><span class="cmd-label">Size Analyzer</span><span class="cmd-run">APK/AAB binary composition</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="pubHealthModal" onclick="airFlutter.openPubHealthModal()">
+                                <i class="cmd-icon fas fa-stethoscope"></i>
+                                <span><span class="cmd-label">Pub Health</span><span class="cmd-run">dependencies &amp; outdated check</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
                         </div>
@@ -687,6 +735,11 @@ ${getCompatDoctorModalHtml()}
 ${getMcpHubModalHtml()}
 ${getSigningKeyModalHtml()}
 ${getMirrorSetupModalHtml()}
+${getStorageInspectorModalHtml()}
+${getDebugOverlaysModalHtml()}
+${getMockGpsModalHtml()}
+${getApkSizeModalHtml()}
+${getPubHealthModalHtml()}
 
         <script>
             // Define the bridge IMMEDIATELY, not inside DOMContentLoaded.
@@ -737,6 +790,40 @@ ${getMirrorSetupModalHtml()}
                 },
                 openMcpHubModal: function () {
                     this.delegate('openMcpHub', 'openMcpHubModal');
+                },
+                openStorageInspectorModal: function (packageId) {
+                    const app = window.airFlutterApp;
+                    if (app && typeof app.openStorageInspectorModal === 'function') {
+                        app.openStorageInspectorModal(packageId);
+                        return;
+                    }
+                    if (window.vscode) {
+                        window.vscode.postMessage({ command: 'openStorageInspectorModal', packageId: packageId });
+                    }
+                },
+                openDebugOverlaysModal: function () {
+                    this.delegate('openDebugOverlaysModal', 'openDebugOverlaysModal');
+                },
+                openMockGpsModal: function () {
+                    this.delegate('openMockGpsModal', 'openMockGpsModal');
+                },
+                openApkSizeModal: function () {
+                    this.delegate('openApkSizeModal', 'openApkSizeModal');
+                },
+                openPubHealthModal: function () {
+                    this.delegate('openPubHealthModal', 'openPubHealthModal');
+                },
+                toggleDebugPaint: function () {
+                    if (window.vscode) window.vscode.postMessage({ command: 'toggleDebugOverlay', overlay: 'debugPaint' });
+                },
+                togglePerformanceOverlay: function () {
+                    if (window.vscode) window.vscode.postMessage({ command: 'toggleDebugOverlay', overlay: 'performanceOverlay' });
+                },
+                toggleSlowAnimations: function () {
+                    if (window.vscode) window.vscode.postMessage({ command: 'toggleDebugOverlay', overlay: 'slowAnimations' });
+                },
+                toggleRepaintRainbow: function () {
+                    if (window.vscode) window.vscode.postMessage({ command: 'toggleDebugOverlay', overlay: 'repaintRainbow' });
                 },
                 closeImportModal: function () {
                     const app = window.airFlutterApp;
@@ -824,6 +911,11 @@ ${getMirrorSetupModalHtml()}
         <script src="${localhostBridgeModuleUri}"></script>
         <script src="${mcpHubModuleUri}"></script>
         <script src="${mirrorSetupModuleUri}"></script>
+        <script src="${storageInspectorModuleUri}"></script>
+        <script src="${debugOverlaysModuleUri}"></script>
+        <script src="${mockGpsModuleUri}"></script>
+        <script src="${apkSizeModuleUri}"></script>
+        <script src="${pubHealthModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>
     </html>`;

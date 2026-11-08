@@ -291,6 +291,36 @@ export class SidebarController {
       case 'compatDoctor':
         await this.openCompatDoctorInPanel()
         break
+      case 'mockGps':
+        await vscode.commands.executeCommand('airFlutter.openMockGpsModal')
+        break
+      case 'toggleDebugPaint':
+        await vscode.commands.executeCommand('airFlutter.toggleDebugPaint')
+        break
+      case 'togglePerfOverlay':
+        await vscode.commands.executeCommand('airFlutter.togglePerformanceOverlay')
+        break
+      case 'toggleSlowMotion':
+        await vscode.commands.executeCommand('airFlutter.toggleSlowAnimations')
+        break
+      case 'toggleRepaintRainbow':
+        await vscode.commands.executeCommand('airFlutter.toggleRepaintRainbow')
+        break
+      case 'debugOverlaysModal':
+        await vscode.commands.executeCommand('airFlutter.openDebugOverlaysModal')
+        break
+      case 'inspectStorage':
+        await vscode.commands.executeCommand('airFlutter.openStorageInspectorModal', this.lastWipePackage)
+        break
+      case 'apkSize':
+        await vscode.commands.executeCommand('airFlutter.openApkSizeModal')
+        break
+      case 'pubHealth':
+        await vscode.commands.executeCommand('airFlutter.openPubHealthModal')
+        break
+      case 'pushTester':
+        await vscode.commands.executeCommand('airFlutter.openFlutterPanel')
+        break
       case 'wipeApp':
         await this.runWipe(
           (message.operation as WipeOperation) || 'cache',

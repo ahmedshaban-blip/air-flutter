@@ -131,6 +131,39 @@ export function getSidebarWebviewHtml(
                 <span class="sf-tool-name">Install APK</span>
                 <span class="sf-tool-note">select &amp; install</span>
             </button>
+            <button class="sf-tool" type="button" id="toolMockGps" data-tool="mockGps" title="Set and simulate mock GPS coordinates">
+                <span class="sf-tool-name">Mock GPS</span>
+                <span class="sf-tool-note">mock location</span>
+            </button>
+            </div>
+        </details>
+
+        <details class="sf-tool-group" data-tool-group="overlays">
+            <summary>
+                <span class="sf-tool-group-title">Flutter Overlays</span>
+                <span class="sf-tool-group-meta"><span>5 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+            </summary>
+            <div class="sf-tool-grid">
+            <button class="sf-tool" type="button" id="toolDebugPaint" data-tool="toggleDebugPaint" title="Toggle Flutter Debug Paint (borders &amp; bounds)">
+                <span class="sf-tool-name">Debug Paint</span>
+                <span class="sf-tool-note">layout bounds (p)</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolPerfOverlay" data-tool="togglePerfOverlay" title="Toggle Performance Overlay (GPU/UI frames)">
+                <span class="sf-tool-name">Perf Overlay</span>
+                <span class="sf-tool-note">GPU &amp; UI graph (P)</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolSlowMotion" data-tool="toggleSlowMotion" title="Toggle 5x Slow Motion animations">
+                <span class="sf-tool-name">Slow Motion</span>
+                <span class="sf-tool-note">5x animations (S)</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolRepaintRainbow" data-tool="toggleRepaintRainbow" title="Toggle Repaint Rainbow (rotating repaint colors)">
+                <span class="sf-tool-name">Repaint Rainbow</span>
+                <span class="sf-tool-note">color repaints (t)</span>
+            </button>
+            <button class="sf-tool sf-tool-wide" type="button" id="toolOverlaysModal" data-tool="debugOverlaysModal" title="Open All Flutter Overlays Studio">
+                <span class="sf-tool-name">All Overlays Studio</span>
+                <span class="sf-tool-note">interactive overlay manager</span>
+            </button>
             </div>
         </details>
 
@@ -221,18 +254,30 @@ export function getSidebarWebviewHtml(
                 <span class="sf-tool-name">Compat Doctor</span>
                 <span class="sf-tool-note">Gradle, AGP, Java &amp; iOS</span>
             </button>
+            <button class="sf-tool" type="button" id="toolApkSize" data-tool="apkSize" title="Analyze APK &amp; App Bundle binary sizes">
+                <span class="sf-tool-name">Size Analyzer</span>
+                <span class="sf-tool-note">APK/AAB weights</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolPubHealth" data-tool="pubHealth" title="Check pubspec.yaml dependencies and outdated packages">
+                <span class="sf-tool-name">Pub Health</span>
+                <span class="sf-tool-note">dependencies check</span>
+            </button>
             </div>
         </details>
 
         <details class="sf-tool-group" data-tool-group="advanced">
             <summary>
                 <span class="sf-tool-group-title">Network &amp; automation</span>
-                <span class="sf-tool-group-meta"><span>3 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolProxy" data-tool="proxy" title="Configure HTTP Proxy and Private DNS for network traffic inspection">
                 <span class="sf-tool-name">Proxy / DNS</span>
                 <span class="sf-tool-note">network inspector</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolPushTester" data-tool="pushTester" title="Test push notification payloads and FCM broadcasts">
+                <span class="sf-tool-name">Push Tester</span>
+                <span class="sf-tool-note">FCM payloads</span>
             </button>
             <button class="sf-tool" type="button" id="toolAgentEngine" data-tool="agentEngine" title="Scaffold AI Sub-Agents and Multi-Agent Workflows">
                 <span class="sf-tool-name">AI Agent Engine</span>
@@ -256,6 +301,10 @@ export function getSidebarWebviewHtml(
         </div>
         <p class="sf-wipe-pkg" id="wipePackage" title="Detected applicationId">detecting package…</p>
         <div class="sf-tool-grid sf-wipe-grid">
+            <button class="sf-tool sf-tool-wide" type="button" id="inspectStorageBtn" data-tool="inspectStorage" title="Inspect and edit SharedPreferences and SQLite without erasing">
+                <span class="sf-tool-name">Explore &amp; Edit Storage</span>
+                <span class="sf-tool-note">SharedPreferences &amp; SQLite</span>
+            </button>
             <button class="sf-tool" type="button" id="wipeCache" data-wipe="cache" title="Clear cached files only; preferences are kept on debug builds">
                 <span class="sf-tool-name">Clear cache</span>
                 <span class="sf-tool-note">keep prefs &amp; db</span>

@@ -59,6 +59,11 @@ class AirFlutterWebview {
             this.initLocalhostBridge();
             this.initMirrorSetupModal();
             this.initMcpModal();
+            this.initStorageInspector?.();
+            this.initDebugOverlays?.();
+            this.initMockGps?.();
+            this.initApkSize?.();
+            this.initPubHealth?.();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -648,6 +653,45 @@ class AirFlutterWebview {
                 case 'deepLinkDispatchResult':
                     this.handleDeepLinkDispatchResult(message.result, message.recentUris);
                     break;
+                case 'openStorageInspectorModal':
+                    this.openStorageInspectorModal?.(message.data?.packageId);
+                    break;
+                case 'storageInspectorState':
+                    this.handleStorageInspectorState?.(message);
+                    break;
+                case 'storageInspectorSharedPrefsLoaded':
+                    this.handleStorageSharedPrefsLoaded?.(message.items);
+                    break;
+                case 'storageInspectorTablesLoaded':
+                    this.handleStorageTablesLoaded?.(message.tables);
+                    break;
+                case 'storageInspectorQueryLoaded':
+                    this.handleStorageQueryLoaded?.(message.queryResult);
+                    break;
+                case 'openDebugOverlaysModal':
+                    this.openDebugOverlaysModal?.();
+                    break;
+                case 'debugOverlaysState':
+                    this.handleDebugOverlaysState?.(message.state);
+                    break;
+                case 'openMockGpsModal':
+                    this.openMockGpsModal?.();
+                    break;
+                case 'mockGpsState':
+                    this.handleMockGpsState?.(message);
+                    break;
+                case 'openApkSizeModal':
+                    this.openApkSizeModal?.(message.data);
+                    break;
+                case 'apkSizeState':
+                    this.handleApkSizeState?.(message);
+                    break;
+                case 'openPubHealthModal':
+                    this.openPubHealthModal?.();
+                    break;
+                case 'pubHealthState':
+                    this.handlePubHealthState?.(message);
+                    break;
                 case 'deepLinkDispatchError':
                     this.handleDeepLinkDispatchError(message.message);
                     break;
@@ -827,6 +871,11 @@ mixinModule(AirFlutterWebview, window.AirFlutterDeepLinkStudioModule);
 mixinModule(AirFlutterWebview, window.AirFlutterLocalhostBridgeModule);
 mixinModule(AirFlutterWebview, window.AirFlutterMirrorSetupModule);
 mixinModule(AirFlutterWebview, window.AirFlutterMcpModule);
+mixinModule(AirFlutterWebview, window.AirFlutterStorageInspectorModule);
+mixinModule(AirFlutterWebview, window.AirFlutterDebugOverlaysModule);
+mixinModule(AirFlutterWebview, window.AirFlutterMockGpsModule);
+mixinModule(AirFlutterWebview, window.AirFlutterApkSizeModule);
+mixinModule(AirFlutterWebview, window.AirFlutterPubHealthModule);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();

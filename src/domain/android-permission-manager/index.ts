@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { execFile } from 'child_process';
 import {
   PlatformType,
   AndroidProtectionLevel,
@@ -288,3 +289,83 @@ export class AndroidPermissionManager {
     return `${xml.slice(0, insertionIndex)}${tags}${eol}${xml.slice(insertionIndex)}`;
   }
 }
+
+export interface DeviceRuntimePermission {
+  name: string;
+  granted: boolean;
+  label: string;
+}
+
+export class AndroidRuntimePermissionService {
+  constructor(
+    private readonly getADBExecutable: () => Promise<string>,
+    private readonly runProcess: (
+      executable: string,
+      args: string[],
+      timeout?: number
+    ) => Promise<{ stdout: string; stderr: string; errorMessage?: string }> = AndroidRuntimePermissionService.executeProcess
+  ) {}
+
+  public static async executeProcess(
+    executable: string,
+    args: string[],
+    timeout = 10000
+  ): Promise<{ stdout: string; stderr: string; errorMessage?: string }> {
+    return new Promise(resolve => {
+      execFile(executable, args, { timeout, windowsHide: true }, (error, stdout, stderr) => {
+        resolve({
+          stdout: stdout || '',
+          stderr: stderr || '',
+          errorMessage: error ? error.message : undefined
+        });
+      });
+    });
+  }
+
+  public async getPermissions(serial: string, packageId: string): Promise<DeviceRuntimePermission[]> {
+    const adb = await this.getADBExecutable();
+    const res = await this.runProcess(adb, ['-s', serial, 'shell', 'dumpsys', 'package', packageId.trim()], 15000);
+    return AndroidRuntimePermissionService.parseDumpsysPermissions(res.stdout);
+  }
+
+  public static parseDumpsysPermissions(dumpsysOutput: string): DeviceRuntimePermission[] {
+    const permissions: DeviceRuntimePermission[] = [];
+    if (!dumpsysOutput) return permissions;
+    const lines = dumpsysOutput.split(/\r?\n/);
+    let inRuntimeSection = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/runtime permissions:/i.test(trimmed)) {
+        inRuntimeSection = true;
+        continue;
+      }
+      if (inRuntimeSection && /^[a-zA-Z0-9_\s]+:/.test(trimmed) && !trimmed.includes('permission')) {
+        inRuntimeSection = false;
+      }
+
+      const match = trimmed.match(/^([a-zA-Z0-9_.]+):\s*granted=(true|false)/i);
+      if (match) {
+        const name = match[1];
+        const granted = match[2].toLowerCase() === 'true';
+        const label = name.split('.').pop() || name;
+        permissions.push({ name, granted, label });
+      }
+    }
+
+    return permissions;
+  }
+
+  public async grantPermission(serial: string, packageId: string, permission: string): Promise<boolean> {
+    const adb = await this.getADBExecutable();
+    const res = await this.runProcess(adb, ['-s', serial, 'shell', 'pm', 'grant', packageId.trim(), permission.trim()], 10000);
+    return !res.errorMessage && !res.stderr.includes('Exception');
+  }
+
+  public async revokePermission(serial: string, packageId: string, permission: string): Promise<boolean> {
+    const adb = await this.getADBExecutable();
+    const res = await this.runProcess(adb, ['-s', serial, 'shell', 'pm', 'revoke', packageId.trim(), permission.trim()], 10000);
+    return !res.errorMessage && !res.stderr.includes('Exception');
+  }
+}
+

@@ -1,0 +1,131 @@
+.pub-health-modal-card {
+    max-width: 820px;
+    width: 95%;
+    max-height: 85vh;
+}
+
+.pub-health-modal-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.pub-health-toolbar {
+    display: flex;
+    gap: 10px;
+}
+
+.pub-health-state-view {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.pub-health-initial-view i {
+    font-size: 36px;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
+
+.pub-health-error-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+    background: rgba(226, 85, 43, 0.08);
+    border: 1px solid var(--accent);
+    padding: 16px;
+    border-radius: 4px;
+}
+
+.pub-health-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.pub-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.pub-summary-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+}
+
+.pub-summary-card strong {
+    font-size: 18px;
+    color: var(--text);
+}
+
+.pub-summary-card.is-success strong {
+    color: #38A169;
+}
+
+.pub-summary-card.is-warning strong {
+    color: #D69E2E;
+}
+
+.pub-summary-card.is-danger strong {
+    color: #E2552B;
+}
+
+.pub-table-wrapper {
+    max-height: 380px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.pub-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.pub-table th, .pub-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.pub-table th {
+    background: var(--panel);
+    font-family: var(--font-mono);
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.pub-status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.pub-status-pill.is-ok {
+    background: rgba(56, 161, 105, 0.15);
+    color: #38A169;
+}
+
+.pub-status-pill.is-warn {
+    background: rgba(214, 158, 46, 0.15);
+    color: #D69E2E;
+}
+
+.pub-status-pill.is-danger {
+    background: rgba(226, 85, 43, 0.15);
+    color: #E2552B;
+}
+

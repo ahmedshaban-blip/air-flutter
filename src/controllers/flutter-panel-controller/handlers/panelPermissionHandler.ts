@@ -6,15 +6,92 @@ import {
   AndroidPermissionManager,
   IOS_PERMISSION_CATALOG,
   IosPermissionManager,
+  AndroidRuntimePermissionService,
   getPermissionCategories
 } from '../../../domain/android-permission-manager';
-import { PanelHandlerContext } from './panelCompatHandler';
+import { PanelDeviceContext } from './panelNetworkHandler';
 
 const NO_CHANGES_MESSAGE = 'Selected permissions already exist in AndroidManifest.xml. No changes made.';
 const NO_CHANGES_IOS_MESSAGE = 'Selected permissions already exist in Info.plist. No changes made.';
 
 export class PanelPermissionHandler {
-  constructor(private readonly ctx: PanelHandlerContext) {}
+  private readonly runtimeService: AndroidRuntimePermissionService;
+
+  constructor(private readonly ctx: PanelDeviceContext) {
+    this.runtimeService = new AndroidRuntimePermissionService(() => this.ctx.getADBExecutable());
+  }
+
+  public async handleLoadRuntimePermissions(packageId: string): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    const panel = this.ctx.getPanel();
+    if (!serial) {
+      panel?.webview.postMessage({
+        command: 'runtimePermissionsState',
+        status: 'error',
+        error: 'No active device connected to query runtime permissions.'
+      });
+      return;
+    }
+
+    try {
+      panel?.webview.postMessage({
+        command: 'runtimePermissionsState',
+        status: 'loading',
+        message: `Querying runtime permissions for ${packageId}…`
+      });
+
+      const permissions = await this.runtimeService.getPermissions(serial, packageId);
+
+      panel?.webview.postMessage({
+        command: 'runtimePermissionsState',
+        status: 'success',
+        permissions,
+        packageId,
+        serial
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      panel?.webview.postMessage({
+        command: 'runtimePermissionsState',
+        status: 'error',
+        error: msg
+      });
+    }
+  }
+
+  public async handleGrantPermission(packageId: string, permission: string): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) return;
+    try {
+      const ok = await this.runtimeService.grantPermission(serial, packageId, permission);
+      if (ok) {
+        this.ctx.showSuccessMessage(`Granted ${permission}`);
+        await this.handleLoadRuntimePermissions(packageId);
+      } else {
+        this.ctx.showErrorMessage(`Failed to grant ${permission}`);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Error granting permission: ${msg}`);
+    }
+  }
+
+  public async handleRevokePermission(packageId: string, permission: string): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) return;
+    try {
+      const ok = await this.runtimeService.revokePermission(serial, packageId, permission);
+      if (ok) {
+        this.ctx.showSuccessMessage(`Revoked ${permission}`);
+        await this.handleLoadRuntimePermissions(packageId);
+      } else {
+        this.ctx.showErrorMessage(`Failed to revoke ${permission}`);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Error revoking permission: ${msg}`);
+    }
+  }
 
   public async handleLoadPermissions(platform: 'android' | 'ios' = 'android'): Promise<void> {
     try {
