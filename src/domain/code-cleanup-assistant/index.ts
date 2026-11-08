@@ -55,6 +55,8 @@ export interface UnusedPackage {
   name: string;
   section: 'dependencies' | 'dev_dependencies';
   line: number;
+  usageType?: 'config' | 'tool' | 'unknown';
+  usageDetail?: string;
 }
 
 export interface CodeCleanupReport {
@@ -321,6 +323,7 @@ export class CodeCleanupAssistant {
 
   private static async findUnusedPackages(pubspecPath: string, sources: DartSource[]): Promise<UnusedPackage[]> {
     const pubspec = await fs.promises.readFile(pubspecPath, 'utf8');
+    const projectPath = path.dirname(pubspecPath);
     const dependencies = this.pubspecDependencies(pubspec);
     const importedPackages = new Set<string>();
     const importPattern = /\b(?:import|export)\s+['"]package:([^/'"]+)\//g;
@@ -328,7 +331,76 @@ export class CodeCleanupAssistant {
       let match: RegExpExecArray | null;
       while ((match = importPattern.exec(source.content)) !== null) importedPackages.add(match[1]);
     }
-    return dependencies.filter(dependency => !importedPackages.has(dependency.name));
+
+    let analysisOptionsContent = '';
+    const analysisOptionsPath = path.join(projectPath, 'analysis_options.yaml');
+    if (await this.exists(analysisOptionsPath)) {
+      try {
+        analysisOptionsContent = await fs.promises.readFile(analysisOptionsPath, 'utf8');
+      } catch {
+        // ignore read error
+      }
+    }
+
+    const knownDevTools = new Set([
+      'build_runner',
+      'flutter_launcher_icons',
+      'flutter_native_splash',
+      'flutter_gen_runner',
+      'intl_utils',
+      'slang_build_runner',
+      'build_web_compilers',
+      'dart_frog_cli'
+    ]);
+
+    const unusedList = dependencies.filter(dependency => !importedPackages.has(dependency.name));
+
+    return Promise.all(unusedList.map(async (dependency) => {
+      const pkgName = dependency.name;
+
+      // 1. Check if configured as top-level section in pubspec.yaml (e.g. `flutter_launcher_icons:`)
+      const topLevelPattern = new RegExp(`^${pkgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:`, 'm');
+      if (topLevelPattern.test(pubspec)) {
+        return {
+          ...dependency,
+          usageType: 'config' as const,
+          usageDetail: 'pubspec.yaml'
+        };
+      }
+
+      // 2. Check for standalone config files (e.g. flutter_launcher_icons.yaml, flutter_native_splash.yaml)
+      const standaloneYaml = path.join(projectPath, `${pkgName}.yaml`);
+      if (await this.exists(standaloneYaml)) {
+        return {
+          ...dependency,
+          usageType: 'config' as const,
+          usageDetail: `${pkgName}.yaml`
+        };
+      }
+
+      // 3. Check analysis_options.yaml (e.g. flutter_lints, lints, very_good_analysis)
+      if (analysisOptionsContent.includes(pkgName)) {
+        return {
+          ...dependency,
+          usageType: 'config' as const,
+          usageDetail: 'analysis_options.yaml'
+        };
+      }
+
+      // 4. Known CLI / generator dev tools
+      if (dependency.section === 'dev_dependencies' && knownDevTools.has(pkgName)) {
+        return {
+          ...dependency,
+          usageType: 'tool' as const,
+          usageDetail: 'CLI / Generator tool'
+        };
+      }
+
+      return {
+        ...dependency,
+        usageType: 'unknown' as const
+      };
+    }));
   }
 
   private static pubspecDependencies(pubspec: string): PubspecDependency[] {

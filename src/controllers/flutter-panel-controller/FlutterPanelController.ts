@@ -199,6 +199,27 @@ export class FlutterPanelController extends ADBBaseController {
     );
   }
 
+  private getLocalResourceRoots(): vscode.Uri[] {
+    const roots: vscode.Uri[] = [
+      vscode.Uri.joinPath(this.context.extensionUri, 'media'),
+      vscode.Uri.joinPath(this.context.extensionUri, 'src', 'webview'),
+      vscode.Uri.file(path.join(this.context.extensionPath, 'media'))
+    ];
+
+    if (vscode.workspace.workspaceFolders) {
+      for (const folder of vscode.workspace.workspaceFolders) {
+        roots.push(folder.uri);
+      }
+    }
+
+    const initialProject = this.getInitialProjectPath();
+    if (initialProject) {
+      roots.push(vscode.Uri.file(initialProject));
+    }
+
+    return roots;
+  }
+
   private async openFlutterPanel() {
     console.log('🚀 FlutterPanelController: Opening Air Flutter Panel')
     
@@ -221,11 +242,7 @@ export class FlutterPanelController extends ADBBaseController {
         enableScripts: true,
         retainContextWhenHidden: true,
         enableCommandUris: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(this.context.extensionUri, 'media'),
-          vscode.Uri.joinPath(this.context.extensionUri, 'src', 'webview'),
-          vscode.Uri.file(path.join(this.context.extensionPath, 'media'))
-        ],
+        localResourceRoots: this.getLocalResourceRoots(),
         enableForms: true,
         enableFindWidget: true
       }

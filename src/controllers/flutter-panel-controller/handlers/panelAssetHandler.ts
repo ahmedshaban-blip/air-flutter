@@ -223,9 +223,10 @@ export class PanelAssetHandler {
     }
   }
 
-  private enrichReport(report: AssetScanResult, projectPath: string): AssetScanResult {
+  public enrichReport(report: AssetScanResult, projectPath: string): AssetScanResult {
     const panel = this.ctx.getPanel();
     if (!panel) return report;
+    this.ensureProjectInLocalResourceRoots(panel, projectPath);
     for (const file of report.files) {
       const abs = path.resolve(projectPath, file.path);
       file.previewUri = panel.webview.asWebviewUri(vscode.Uri.file(abs)).toString();
@@ -236,6 +237,28 @@ export class PanelAssetHandler {
       }
     }
     return report;
+  }
+
+  private ensureProjectInLocalResourceRoots(panel: vscode.WebviewPanel, projectPath: string): void {
+    try {
+      const projectUri = vscode.Uri.file(projectPath);
+      const currentRoots = panel.webview.options.localResourceRoots || [];
+      const normalizedProjectPath = path.resolve(projectPath).toLowerCase();
+
+      const alreadyIncluded = currentRoots.some(root => {
+        const rootPath = path.resolve(root.fsPath).toLowerCase();
+        return normalizedProjectPath === rootPath || normalizedProjectPath.startsWith(rootPath + path.sep);
+      });
+
+      if (!alreadyIncluded) {
+        panel.webview.options = {
+          ...panel.webview.options,
+          localResourceRoots: [...currentRoots, projectUri]
+        };
+      }
+    } catch {
+      // Ignore errors if mock or environment does not support updating options
+    }
   }
 
   private getFlutterProjectPath(): string | undefined {

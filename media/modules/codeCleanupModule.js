@@ -68,22 +68,32 @@
                 ? `<button class="btn btn-danger cleanup-bulk-btn" data-cleanup-action="remove-all-commented" type="button">Remove All (${commentedCount})</button>`
                 : '';
 
+            const packagesBanner = unusedPackages.length > 0
+                ? `<div class="cleanup-advisory-callout">
+                    <span class="cleanup-callout-icon">ℹ️</span>
+                    <div class="cleanup-callout-text">
+                        <strong>Review before removing:</strong> Packages listed here have no direct <code>import</code> in Dart files. Check if they are CLI tools, lints, or configured in <code>pubspec.yaml</code> before deleting them.
+                    </div>
+                </div>`
+                : '';
+
             const groups = [
                 this.cleanupGroup('Unused Dart files', unusedFiles.map(file => this.unusedFileRow(file))),
                 this.cleanupGroup('Dead code & unused declarations', findings.filter(finding => finding.kind !== 'commented-code').map(finding => this.findingRow(finding))),
                 this.cleanupGroup('Commented-out code', commentedFindings.map(finding => this.commentedCodeRow(finding)), bulkCommentedAction),
-                this.cleanupGroup('Unused packages (review)', unusedPackages.map(pkg => this.packageRow(pkg)))
+                this.cleanupGroup('Unused packages (review)', unusedPackages.map(pkg => this.packageRow(pkg)), '', packagesBanner)
             ];
             results.innerHTML = groups.join('');
         }
 
-        cleanupGroup(title, rows, headerAction = '') {
+        cleanupGroup(title, rows, headerAction = '', bannerHtml = '') {
             return `
                 <section class="cleanup-group">
                     <h3>
                         <span>${this.escapeHtml(title)} <em>${rows.length}</em></span>
                         ${headerAction}
                     </h3>
+                    ${bannerHtml}
                     <div>${rows.length ? rows.join('') : '<p class="cleanup-empty">No findings</p>'}</div>
                 </section>`;
         }
@@ -129,11 +139,37 @@
         }
 
         packageRow(pkg) {
-            return this.cleanupRow(
-                pkg.name,
-                `${pkg.section} · No Dart import found; verify native/config-only usage.`,
-                `<button class="btn btn-quiet cleanup-open" data-cleanup-action="open" data-file="pubspec.yaml" data-line="${pkg.line}">Open pubspec</button>`
-            );
+            let badgeClass = 'cleanup-badge-warning';
+            let badgeIcon = '⚠️';
+            let badgeText = 'Verify Usage';
+            let descHtml = 'No Dart import found. Verify if used by native code or assets before removing.';
+
+            if (pkg.usageType === 'config') {
+                badgeClass = 'cleanup-badge-config';
+                badgeIcon = '⚙️';
+                badgeText = `Config: ${pkg.usageDetail || 'pubspec.yaml'}`;
+                descHtml = `No Dart import found, but configured in <strong>${this.escapeHtml(pkg.usageDetail || 'project config')}</strong>. Safe to keep.`;
+            } else if (pkg.usageType === 'tool') {
+                badgeClass = 'cleanup-badge-tool';
+                badgeIcon = '🛠️';
+                badgeText = 'CLI / Dev Tool';
+                descHtml = `CLI / Code generation tool (${this.escapeHtml(pkg.usageDetail || 'tool')}) without direct Dart imports.`;
+            }
+
+            return `
+                <div class="cleanup-row cleanup-pkg-row">
+                    <div class="cleanup-info">
+                        <div class="cleanup-pkg-header">
+                            <span class="cleanup-title">${this.escapeHtml(pkg.name)}</span>
+                            <span class="cleanup-badge cleanup-badge-section">${this.escapeHtml(pkg.section)}</span>
+                            <span class="cleanup-badge ${badgeClass}">${badgeIcon} ${this.escapeHtml(badgeText)}</span>
+                        </div>
+                        <span class="cleanup-description">${descHtml}</span>
+                    </div>
+                    <div class="cleanup-actions">
+                        <button class="btn btn-quiet cleanup-open" data-cleanup-action="open" data-file="pubspec.yaml" data-line="${pkg.line}">Open pubspec</button>
+                    </div>
+                </div>`;
         }
 
         cleanupRow(title, description, actions) {

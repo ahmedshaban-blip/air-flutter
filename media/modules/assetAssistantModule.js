@@ -182,6 +182,19 @@
                     }
                 });
 
+                assetTree.addEventListener('error', e => {
+                    const img = e.target;
+                    if (img && img.classList && img.classList.contains('asset-thumbnail-img')) {
+                        const wrapper = img.closest('.asset-thumb-wrapper');
+                        if (wrapper && !wrapper.querySelector('.asset-thumb-icon')) {
+                            img.style.display = 'none';
+                            const icon = document.createElement('i');
+                            icon.className = 'fas fa-image asset-thumb-icon';
+                            wrapper.appendChild(icon);
+                        }
+                    }
+                }, true);
+
                 assetTree.addEventListener('mouseover', e => {
                     const thumb = e.target.closest('.asset-thumbnail-img');
                     if (thumb && hoverPopover) {
@@ -197,6 +210,12 @@
                                 </div>
                             </div>
                         `;
+                        const popoverImg = hoverPopover.querySelector('.asset-popover-img');
+                        if (popoverImg) {
+                            popoverImg.addEventListener('error', () => {
+                                popoverImg.style.display = 'none';
+                            });
+                        }
                         const rect = thumb.getBoundingClientRect();
                         hoverPopover.style.top = `${Math.max(10, rect.top - 80)}px`;
                         hoverPopover.style.left = `${rect.right + 12}px`;
@@ -556,7 +575,8 @@
                         <div class="asset-thumb-wrapper">
                             <img src="${file.previewUri}" class="asset-thumbnail-img" alt="" 
                                  data-preview-src="${file.previewUri}" data-preview-path="${this.escapeHtml(file.path)}" 
-                                 data-preview-size="${this.formatAssetSize(file.size)}" />
+                                 data-preview-size="${this.formatAssetSize(file.size)}"
+                                 onerror="this.style.display='none';if(!this.parentElement.querySelector('.asset-thumb-icon')){var i=document.createElement('i');i.className='fas fa-image asset-thumb-icon';this.parentElement.appendChild(i);}" />
                         </div>
                     `;
                 } else if (file.kind === 'font') {
