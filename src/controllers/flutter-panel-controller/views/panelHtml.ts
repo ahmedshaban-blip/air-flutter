@@ -32,6 +32,7 @@ export function getPanelWebviewContent(
   const deepLinkCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'deep-link-studio.css')));
   const localhostBridgeCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'localhost-bridge.css')));
   const mcpHubCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'mcp-hub.css')));
+  const airFlutterCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
   const proxyModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'proxyModule.js')));
@@ -86,6 +87,7 @@ export function getPanelWebviewContent(
         <link href="${deepLinkCssUri}" rel="stylesheet">
         <link href="${localhostBridgeCssUri}" rel="stylesheet">
         <link href="${mcpHubCssUri}" rel="stylesheet">
+        <link href="${airFlutterCssUri}" rel="stylesheet">
     </head>
     <body>
         <div class="ff-shell">

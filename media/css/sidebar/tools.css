@@ -119,13 +119,14 @@
     display: inline-block;
     width: 12px;
     height: 12px;
-    border: 2px solid currentColor;
-    border-right-color: transparent;
+    border: 2px solid rgba(127, 127, 127, 0.25);
+    border-top-color: currentColor;
     border-radius: 50%;
-    animation: sf-operation-spin 650ms linear infinite;
+    animation: sf-operation-spin 0.75s linear infinite !important;
     position: absolute;
     top: 8px;
     right: 8px;
+    box-sizing: border-box;
 }
 
 .sf-tool.is-recording {

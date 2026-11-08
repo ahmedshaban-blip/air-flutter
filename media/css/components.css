@@ -218,11 +218,12 @@
     content: '';
     width: 14px;
     height: 14px;
-    border: 2px solid var(--accent);
-    border-right-color: transparent;
+    border: 2px solid rgba(127, 127, 127, 0.25);
+    border-top-color: var(--accent);
     border-radius: 50%;
-    animation: af-spin 650ms linear infinite;
+    animation: af-spin 0.75s linear infinite !important;
     justify-self: center;
+    box-sizing: border-box;
 }
 
 .cmd-label {
