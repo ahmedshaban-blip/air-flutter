@@ -213,6 +213,12 @@
             }
         }
 
+        closeImportModal() {
+            const modal = document.getElementById('assetImportModal');
+            if (modal) modal.hidden = true;
+            this.pendingImportFiles = [];
+        }
+
         initImportModal() {
             const closeBtn = document.getElementById('assetImportCloseBtn');
             const cancelBtn = document.getElementById('assetImportCancelBtn');
@@ -220,10 +226,19 @@
             const modal = document.getElementById('assetImportModal');
 
             [closeBtn, cancelBtn].forEach(btn => {
-                if (btn) btn.addEventListener('click', () => {
-                    if (modal) modal.hidden = true;
-                    this.pendingImportFiles = [];
+                if (btn) btn.addEventListener('click', () => this.closeImportModal());
+            });
+
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) this.closeImportModal();
                 });
+            }
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal && !modal.hidden) {
+                    this.closeImportModal();
+                }
             });
 
             if (confirmBtn) {
@@ -250,8 +265,7 @@
                         }
 
                         this.sendMessage('importAssets', { files: payloadFiles });
-                        if (modal) modal.hidden = true;
-                        this.pendingImportFiles = [];
+                        this.closeImportModal();
                     } catch (err) {
                         console.error('Import failed', err);
                     } finally {

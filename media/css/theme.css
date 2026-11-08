@@ -138,6 +138,10 @@ samp {
     font-variant-numeric: tabular-nums;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;

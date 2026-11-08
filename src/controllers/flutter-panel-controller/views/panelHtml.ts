@@ -552,7 +552,7 @@ export function getPanelWebviewContent(
                     <div class="asset-modal-content">
                         <div class="asset-modal-head">
                             <h3><i class="fas fa-file-import"></i> Import Assets</h3>
-                            <button type="button" class="asset-modal-close" id="assetImportCloseBtn">&times;</button>
+                            <button type="button" class="asset-modal-close" id="assetImportCloseBtn" onclick="window.airFlutter.closeImportModal()">&times;</button>
                         </div>
                         <div class="asset-modal-body">
                             <label class="asset-modal-label">
@@ -567,7 +567,7 @@ export function getPanelWebviewContent(
                             <div id="assetImportFileList" class="asset-import-file-list"></div>
                         </div>
                         <div class="asset-modal-foot">
-                            <button type="button" class="btn btn-quiet" id="assetImportCancelBtn">Cancel</button>
+                            <button type="button" class="btn btn-quiet" id="assetImportCancelBtn" onclick="window.airFlutter.closeImportModal()">Cancel</button>
                             <button type="button" class="btn btn-primary" id="assetImportConfirmBtn">Import &amp; Sync</button>
                         </div>
                     </div>
@@ -711,6 +711,15 @@ ${getMirrorSetupModalHtml()}
                 },
                 openMcpHubModal: function () {
                     this.delegate('openMcpHub', 'openMcpHubModal');
+                },
+                closeImportModal: function () {
+                    const app = window.airFlutterApp;
+                    if (app && typeof app.closeImportModal === 'function') {
+                        app.closeImportModal();
+                        return;
+                    }
+                    const modal = document.getElementById('assetImportModal');
+                    if (modal) modal.hidden = true;
                 },
 
                 /**

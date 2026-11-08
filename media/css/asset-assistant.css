@@ -423,6 +423,14 @@
     backdrop-filter: blur(2px);
 }
 
+.asset-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.asset-hover-popover[hidden] {
+    display: none !important;
+}
+
 .asset-modal-content {
     width: 90%;
     max-width: 480px;
