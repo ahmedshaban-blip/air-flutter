@@ -801,7 +801,8 @@ export class CommentedCodeBlockDetector {
     uncommentedText: string
   ): { valid: boolean; bonus: number } {
     // 1. Verify balanced parentheses `()`, braces `{}`, and brackets `[]`
-    if (!this.areDelimitersBalanced(uncommentedText)) {
+    // (allows unclosed outer class brace if a class declaration is commented out)
+    if (!this.areDelimitersBalanced(uncommentedText, true)) {
       return { valid: false, bonus: 0 };
     }
 
@@ -866,8 +867,10 @@ export class CommentedCodeBlockDetector {
 
   /**
    * String-aware delimiter balance checker for `()`, `{}`, and `[]`.
+   * When allowUnclosedOuterClassBrace is true, allows exactly one unmatched outer `{`
+   * if the code begins with a top-level class, enum, mixin, or extension declaration.
    */
-  public static areDelimitersBalanced(code: string): boolean {
+  public static areDelimitersBalanced(code: string, allowUnclosedOuterClassBrace = false): boolean {
     const stack: string[] = [];
     const pairs: Record<string, string> = { ')': '(', '}': '{', ']': '[' };
     let inSingleQuote = false;
@@ -897,7 +900,15 @@ export class CommentedCodeBlockDetector {
       }
     }
 
-    return stack.length === 0 && !inSingleQuote && !inDoubleQuote;
+    if (inSingleQuote || inDoubleQuote) return false;
+    if (stack.length === 0) return true;
+
+    if (allowUnclosedOuterClassBrace && stack.length === 1 && stack[0] === '{') {
+      const trimmed = code.trim();
+      return /^(?:abstract\s+|base\s+|final\s+|interface\s+|sealed\s+|mixin\s+)*(?:class|enum|mixin|extension|typedef)\s+[A-Za-z_$][\w$]*/.test(trimmed);
+    }
+
+    return false;
   }
 
   /**

@@ -134,7 +134,7 @@ const { CommentedCodeBlockDetector } = require('../out/domain/code-cleanup-assis
   assert.ok(commentedClassBlocks[0].uncommentedText.includes('class _SystemStatesCard extends StatelessWidget'));
   assert.ok(commentedClassBlocks[0].uncommentedText.includes('Widget build(BuildContext context)'));
 
-  // 6b. Even if a trailing commented class is missing its final closing `}`, preceding balanced blocks + inner methods are still detected
+  // 6b. Even if a trailing commented class is missing its final closing `}`, it is still detected as valid commented code
   const partialUnclosedEndSource = [
     '// enum SystemStateType { offline, loading, error, empty }',
     '',
@@ -152,8 +152,8 @@ const { CommentedCodeBlockDetector } = require('../out/domain/code-cleanup-assis
   ].join('\n');
 
   const partialBlocks = CommentedCodeBlockDetector.detectInSource(partialUnclosedEndSource, 'lib/partial_end.dart');
-  assert.ok(partialBlocks.length >= 1, 'Must still detect balanced commented classes even when a trailing class is missing its closing brace');
-  assert.ok(partialBlocks[0].uncommentedText.includes('class _SystemStatesCard extends StatelessWidget'));
+  assert.ok(partialBlocks.length >= 1, 'Must detect commented code even when class closing brace is omitted');
+  assert.ok(partialBlocks[0].uncommentedText.includes('_StateTile'), 'Should include _StateTile even without its trailing closing brace');
 
   // 7. Async batch detection with Dart Analyzer fallback
   const batchBlocks = await CommentedCodeBlockDetector.detectInFiles([
