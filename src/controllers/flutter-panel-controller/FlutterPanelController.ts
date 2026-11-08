@@ -183,6 +183,7 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.clearAppCache', () => this.withNativeProgress('Clearing app cache…', () => this.handleWipe('cache')))
       .registerCommand('airFlutter.resetAppDatabases', () => this.withNativeProgress('Resetting app databases…', () => this.handleWipe('databases')))
       .registerCommand('airFlutter.factoryResetApp', () => this.withNativeProgress('Resetting app data…', () => this.handleWipe('factory')))
+      .registerCommand('airFlutter.cleanCommentedCode', () => this.withNativeProgress('Scanning for commented-out Dart code…', () => this.codeCleanupHandler.runInteractiveCleanupQuickPick()))
     
     console.log('✅ FlutterPanelController: Essential commands registered successfully')
   }
@@ -481,7 +482,16 @@ export class FlutterPanelController extends ADBBaseController {
               await this.codeCleanupHandler.scan();
               break;
             case 'openCodeCleanupTarget':
-              await this.codeCleanupHandler.openTarget(message.file, message.line, message.column);
+              await this.codeCleanupHandler.openTarget(message.file, message.line, message.column, message.endLine);
+              break;
+            case 'removeCommentedCodeBlock':
+              await this.codeCleanupHandler.removeCommentedBlock(message.file, message.line, message.endLine);
+              break;
+            case 'uncommentCodeBlock':
+              await this.codeCleanupHandler.uncommentBlock(message.file, message.line, message.endLine);
+              break;
+            case 'removeAllCommentedCode':
+              await this.codeCleanupHandler.removeAllCommentedCode();
               break;
             case 'deleteUnusedDartFile':
               await this.codeCleanupHandler.deleteUnusedDartFile(message.file);

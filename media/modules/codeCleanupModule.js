@@ -11,10 +11,15 @@
                     const payload = {
                         file: button.dataset.file,
                         line: Number(button.dataset.line || 1),
-                        column: Number(button.dataset.column || 1)
+                        column: Number(button.dataset.column || 1),
+                        endLine: button.dataset.endLine ? Number(button.dataset.endLine) : undefined
                     };
-                    if (button.dataset.cleanupAction === 'open') this.sendMessage('openCodeCleanupTarget', payload);
-                    if (button.dataset.cleanupAction === 'delete-file') this.sendMessage('deleteUnusedDartFile', payload);
+                    const action = button.dataset.cleanupAction;
+                    if (action === 'open') this.sendMessage('openCodeCleanupTarget', payload);
+                    if (action === 'delete-file') this.sendMessage('deleteUnusedDartFile', payload);
+                    if (action === 'remove-block') this.sendMessage('removeCommentedCodeBlock', payload);
+                    if (action === 'uncomment-block') this.sendMessage('uncommentCodeBlock', payload);
+                    if (action === 'remove-all-commented') this.sendMessage('removeAllCommentedCode', {});
                 });
             }
         }
@@ -46,30 +51,39 @@
             const findings = report.findings || [];
             const unusedFiles = report.unusedFiles || [];
             const unusedPackages = report.unusedPackages || [];
-            const commentedCount = findings.filter(finding => finding.kind === 'commented-code').length;
+            const commentedFindings = findings.filter(finding => finding.kind === 'commented-code');
+            const commentedCount = commentedFindings.length;
+            const commentedLineCount = commentedFindings.reduce((sum, f) => sum + (f.lineCount || 1), 0);
             const analyzerCount = findings.length - commentedCount;
             summary.innerHTML = `
                 <span><strong>${unusedFiles.length}</strong> unused files</span>
                 <span><strong>${analyzerCount}</strong> code findings</span>
-                <span><strong>${commentedCount}</strong> commented code</span>
+                <span><strong>${commentedCount}</strong> commented blocks (${commentedLineCount} lines)</span>
                 <span><strong>${unusedPackages.length}</strong> packages to review</span>`;
             status.textContent = report.analyzerError
                 ? `Static checks completed, but Dart Analyzer reported: ${report.analyzerError}`
                 : 'Code cleanup scan complete. Review findings before changing code.';
 
+            const bulkCommentedAction = commentedCount > 0
+                ? `<button class="btn btn-danger cleanup-bulk-btn" data-cleanup-action="remove-all-commented" type="button">Remove All (${commentedCount})</button>`
+                : '';
+
             const groups = [
                 this.cleanupGroup('Unused Dart files', unusedFiles.map(file => this.unusedFileRow(file))),
                 this.cleanupGroup('Dead code & unused declarations', findings.filter(finding => finding.kind !== 'commented-code').map(finding => this.findingRow(finding))),
-                this.cleanupGroup('Commented-out code', findings.filter(finding => finding.kind === 'commented-code').map(finding => this.findingRow(finding))),
+                this.cleanupGroup('Commented-out code', commentedFindings.map(finding => this.commentedCodeRow(finding)), bulkCommentedAction),
                 this.cleanupGroup('Unused packages (review)', unusedPackages.map(pkg => this.packageRow(pkg)))
             ];
             results.innerHTML = groups.join('');
         }
 
-        cleanupGroup(title, rows) {
+        cleanupGroup(title, rows, headerAction = '') {
             return `
                 <section class="cleanup-group">
-                    <h3>${this.escapeHtml(title)} <span>${rows.length}</span></h3>
+                    <h3>
+                        <span>${this.escapeHtml(title)} <em>${rows.length}</em></span>
+                        ${headerAction}
+                    </h3>
                     <div>${rows.length ? rows.join('') : '<p class="cleanup-empty">No findings</p>'}</div>
                 </section>`;
         }
@@ -89,6 +103,29 @@
                 finding.message,
                 `<button class="btn btn-quiet cleanup-open" data-cleanup-action="open" data-file="${this.escapeHtml(finding.file)}" data-line="${finding.line}" data-column="${finding.column}">Open target</button>`
             );
+        }
+
+        commentedCodeRow(finding) {
+            const endLine = finding.endLine || finding.line;
+            const rangeLabel = endLine > finding.line
+                ? `${finding.file}:${finding.line}-${endLine}`
+                : `${finding.file}:${finding.line}`;
+            const previewSnippet = finding.uncommentedText
+                ? `<code class="cleanup-code-preview">${this.escapeHtml(finding.uncommentedText.slice(0, 140))}${finding.uncommentedText.length > 140 ? '…' : ''}</code>`
+                : '';
+            const actions = `
+                <button class="btn btn-quiet cleanup-open" data-cleanup-action="open" data-file="${this.escapeHtml(finding.file)}" data-line="${finding.line}" data-column="${finding.column}" data-end-line="${endLine}">Preview</button>
+                <button class="btn btn-quiet cleanup-uncomment" data-cleanup-action="uncomment-block" data-file="${this.escapeHtml(finding.file)}" data-line="${finding.line}" data-end-line="${endLine}">Uncomment</button>
+                <button class="btn btn-danger cleanup-delete" data-cleanup-action="remove-block" data-file="${this.escapeHtml(finding.file)}" data-line="${finding.line}" data-end-line="${endLine}">Remove</button>`;
+            return `
+                <div class="cleanup-row">
+                    <div class="cleanup-info">
+                        <span class="cleanup-title">${this.escapeHtml(rangeLabel)}</span>
+                        <span class="cleanup-description">${this.escapeHtml(finding.message)}</span>
+                        ${previewSnippet}
+                    </div>
+                    <div class="cleanup-actions">${actions}</div>
+                </div>`;
         }
 
         packageRow(pkg) {

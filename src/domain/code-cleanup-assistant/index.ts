@@ -1,6 +1,19 @@
 import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  CommentBlockRange,
+  CommentedCodeBlockDetector,
+  DetectedCommentedCodeBlock,
+  DetectorOptions
+} from './commentedCodeDetector';
+
+export {
+  CommentBlockRange,
+  CommentedCodeBlockDetector,
+  DetectedCommentedCodeBlock,
+  DetectorOptions
+};
 
 const IGNORED_DIRECTORIES = new Set([
   '.dart_tool', '.git', '.idea', '.vscode', 'build', 'coverage', 'ios/Pods', 'node_modules'
@@ -11,21 +24,6 @@ const REVIEW_DIAGNOSTICS = new Set([
   'unused_field', 'unused_import', 'unused_label', 'unused_local_variable',
   'unused_result', 'unused_shown_name'
 ]);
-const COMMENTED_DART_PATTERNS = [
-  /^(?:import|export)\s+['"][^'"]+['"](?:\s+(?:as|show|hide)\s+[\w$, ]+)?\s*;$/,
-  /^part\s+(?:of\s+[\w.]+|['"][^'"]+['"])\s*;$/,
-  /^(?:class|enum|mixin|extension|typedef)\s+[A-Za-z_$][\w$]*/,
-  /^(?:(?:final|const|var|late(?:\s+final)?)\s+|[A-Za-z_$][\w$<>,? ]*\s+)[A-Za-z_$][\w$]*\s*(?:=|\?\?=)\s*.+;$/,
-  /^(?:final|const|var|late(?:\s+final)?)\s+[A-Za-z_$][\w$]*(?:\s+[A-Za-z_$][\w$]*)?\s*;$/,
-  /^(?:[A-Za-z_$][\w$<>,? ]*|void)\s+[A-Za-z_$][\w$]*\s*\([^)]*\)\s*(?:async\*?|sync\*)?\s*(?:\{.*\}|=>\s*.+;|;)$/,
-  /^[A-Z][\w$]*(?:\.[A-Za-z_$][\w$]*)?\s*\([^)]*\)\s*(?::[^{}]+)?\{.*\}$/,
-  /^(?:else\s+)?(?:if|for|while|switch|catch)\s*\(.+\)\s*\{(?:.*\})?$/,
-  /^(?:else|try|do)\s*\{(?:.*\})?$/,
-  /^(?:return(?:\s+.+)?|throw\s+.+|break|continue);$/,
-  /^(?:await\s+)?[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\s*\([^;]*\)\s*;$/,
-  /^[A-Za-z_$][\w$.[\]]*\s*(?:=|\+=|-=|\*=|\/=|\?\?=)\s*.+;$/,
-  /^(?:const\s+)?[A-Z][\w$.]*(?:<[^>]+>)?\s*\(.*\)\s*[,;]$/
-];
 
 export type CleanupFindingKind = 'dead-code' | 'unused-declaration' | 'commented-code';
 
@@ -37,6 +35,14 @@ export interface CodeCleanupFinding {
   line: number;
   column: number;
   length: number;
+  endLine?: number;
+  endColumn?: number;
+  lineCount?: number;
+  commentStyle?: 'single-line' | 'multi-line';
+  rawText?: string;
+  uncommentedText?: string;
+  restoredCodeText?: string;
+  confidenceScore?: number;
 }
 
 export interface UnusedDartFile {
@@ -72,18 +78,24 @@ interface PubspecDependency {
 }
 
 export class CodeCleanupAssistant {
-  public static async scan(projectPath: string): Promise<CodeCleanupReport> {
+  public static async scan(
+    projectPath: string,
+    contentOverrides?: ReadonlyMap<string, string>
+  ): Promise<CodeCleanupReport> {
     const root = await fs.promises.realpath(path.resolve(projectPath));
     const pubspecPath = path.join(root, 'pubspec.yaml');
     await fs.promises.access(pubspecPath);
 
-    const dartSources = await this.readDartSources(root);
+    const dartSources = await this.readDartSources(root, contentOverrides);
     const productionSources = this.productionBuildSources(dartSources, root);
-    const analyzer = await this.runAnalyzer(root);
+    const [analyzer, commentedFindings] = await Promise.all([
+      this.runAnalyzer(root),
+      this.findCommentedCode(productionSources, root)
+    ]);
     const findings = [
       ...this.parseAnalyzerOutput(analyzer.output, root),
       ...this.findUnreferencedPublicFunctions(dartSources),
-      ...this.findCommentedCode(productionSources)
+      ...commentedFindings
     ].sort(this.compareFindings);
 
     return {
@@ -93,6 +105,22 @@ export class CodeCleanupAssistant {
       unusedPackages: await this.findUnusedPackages(pubspecPath, dartSources),
       analyzerError: analyzer.error
     };
+  }
+
+  public static async scanCommentedCodeBlocks(
+    projectPath: string,
+    contentOverrides?: ReadonlyMap<string, string>
+  ): Promise<DetectedCommentedCodeBlock[]> {
+    const root = await fs.promises.realpath(path.resolve(projectPath));
+    const pubspecPath = path.join(root, 'pubspec.yaml');
+    await fs.promises.access(pubspecPath);
+
+    const dartSources = await this.readDartSources(root, contentOverrides);
+    const productionSources = this.productionBuildSources(dartSources, root);
+    return CommentedCodeBlockDetector.detectInFiles(productionSources, {
+      projectPath: root,
+      useDartAnalyzerFallback: true
+    });
   }
 
   public static parseAnalyzerOutput(output: string, projectPath: string): CodeCleanupFinding[] {
@@ -137,7 +165,10 @@ export class CodeCleanupAssistant {
     return fields;
   }
 
-  private static async readDartSources(projectPath: string): Promise<DartSource[]> {
+  private static async readDartSources(
+    projectPath: string,
+    contentOverrides?: ReadonlyMap<string, string>
+  ): Promise<DartSource[]> {
     const sources: DartSource[] = [];
     const visit = async (directory: string): Promise<void> => {
       if (!await this.exists(directory)) return;
@@ -147,10 +178,13 @@ export class CodeCleanupAssistant {
         if (entry.isDirectory() && !this.isIgnoredDirectory(relativePath)) {
           await visit(absolutePath);
         } else if (entry.isFile() && entry.name.endsWith('.dart')) {
+          const override =
+            contentOverrides?.get(relativePath) ??
+            contentOverrides?.get(path.resolve(absolutePath));
           sources.push({
             absolutePath,
             relativePath,
-            content: await fs.promises.readFile(absolutePath, 'utf8')
+            content: override !== undefined ? override : await fs.promises.readFile(absolutePath, 'utf8')
           });
         }
       }
@@ -229,33 +263,15 @@ export class CodeCleanupAssistant {
     return [...dependencies];
   }
 
-  private static findCommentedCode(sources: DartSource[]): CodeCleanupFinding[] {
-    const findings: CodeCleanupFinding[] = [];
-    for (const source of sources) {
-      const lines = source.content.split(/\r?\n/);
-      for (let index = 0; index < lines.length; index++) {
-        const match = lines[index].match(/^\s*\/\/\s?(.*)$/);
-        if (match && this.looksLikeCode(match[1])) {
-          findings.push(this.commentedCodeFinding(source.relativePath, index, lines[index], '//'));
-          continue;
-        }
-
-        const blockStart = lines[index].match(/^\s*\/\*(?!\*)(.*)$/);
-        if (!blockStart) continue;
-        const blockLines = [blockStart[1]];
-        let blockEnd = index;
-        while (!blockLines[blockLines.length - 1].includes('*/') && blockEnd + 1 < lines.length) {
-          blockEnd++;
-          blockLines.push(lines[blockEnd]);
-        }
-        const blockCode = blockLines.join('\n').replace(/\*\//g, '').trim();
-        if (this.looksLikeCode(blockCode)) {
-          findings.push(this.commentedCodeFinding(source.relativePath, index, lines[index], '/*'));
-        }
-        index = blockEnd;
-      }
-    }
-    return findings;
+  private static async findCommentedCode(
+    sources: DartSource[],
+    projectPath: string
+  ): Promise<CodeCleanupFinding[]> {
+    const blocks = await CommentedCodeBlockDetector.detectInFiles(sources, {
+      projectPath,
+      useDartAnalyzerFallback: true
+    });
+    return blocks.map(block => this.commentedCodeFindingFromBlock(block));
   }
 
   private static findUnreferencedPublicFunctions(sources: DartSource[]): CodeCleanupFinding[] {
@@ -283,32 +299,24 @@ export class CodeCleanupAssistant {
     return findings;
   }
 
-  private static commentedCodeFinding(
-    relativePath: string,
-    zeroBasedLine: number,
-    sourceLine: string,
-    marker: '//' | '/*'
-  ): CodeCleanupFinding {
+  private static commentedCodeFindingFromBlock(block: DetectedCommentedCodeBlock): CodeCleanupFinding {
     return {
       kind: 'commented-code',
       code: 'commented_out_code',
-      message: 'This comment looks like disabled Dart code. Review it manually.',
-      file: relativePath,
-      line: zeroBasedLine + 1,
-      column: sourceLine.indexOf(marker) + 1,
-      length: Math.max(2, sourceLine.length)
+      message: block.reason,
+      file: block.file,
+      line: block.startLine,
+      column: block.startColumn,
+      length: Math.max(2, block.rawText.length),
+      endLine: block.endLine,
+      endColumn: block.endColumn,
+      lineCount: block.lineCount,
+      commentStyle: block.commentStyle,
+      rawText: block.rawText,
+      uncommentedText: block.uncommentedText,
+      restoredCodeText: block.restoredCodeText,
+      confidenceScore: block.confidenceScore
     };
-  }
-
-  private static looksLikeCode(comment: string): boolean {
-    const text = comment
-      .split(/\r?\n/)
-      .map(line => line.replace(/^\s*\*\s?/, '').trim())
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    if (!text || text.startsWith('/') || /^(TODO|FIXME|NOTE)\b/i.test(text)) return false;
-    return COMMENTED_DART_PATTERNS.some(pattern => pattern.test(text));
   }
 
   private static async findUnusedPackages(pubspecPath: string, sources: DartSource[]): Promise<UnusedPackage[]> {

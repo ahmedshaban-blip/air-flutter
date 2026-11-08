@@ -256,6 +256,12 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
     category: 'Air Flutter',
     description: 'Capture a screenshot, filtered Logcat, and device diagnostics for a GitHub report'
   },
+  {
+    id: 'airFlutter.cleanCommentedCode',
+    title: '🧹 Clean Commented-Out Dart Code',
+    category: 'Air Flutter',
+    description: 'Detect, preview, uncomment, or remove commented-out Dart/Flutter code blocks'
+  },
 
   // Firebase Commands
   {

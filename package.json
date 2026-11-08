@@ -359,10 +359,20 @@
         "command": "airFlutter.checkMcpPrerequisites",
         "title": "Check MCP Prerequisites",
         "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.cleanCommentedCode",
+        "title": "Clean Commented-Out Dart Code (Detect, Remove, Uncomment)",
+        "category": "Air Flutter",
+        "icon": "$(clear-all)"
       }
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "airFlutter.cleanCommentedCode",
+          "when": "workspaceHasAirFlutter"
+        },
         {
           "command": "airFlutter.runCompatDoctor",
           "when": "workspaceHasAirFlutter"
