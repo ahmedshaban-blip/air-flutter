@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AssetAssistant } from '../../../domain/asset-assistant';
+import { AssetAssistant, AssetScanResult } from '../../../domain/asset-assistant';
 import { PanelHandlerContext } from './panelCompatHandler';
 
 export class PanelAssetHandler {
@@ -13,6 +13,7 @@ export class PanelAssetHandler {
       if (!projectPath) return this.postUnavailable();
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantLoading', loading: true });
       const report = await AssetAssistant.scan(projectPath);
+      this.enrichReport(report, projectPath);
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report });
     } catch (error) {
       this.reportError('Asset scan failed', error);
@@ -25,6 +26,7 @@ export class PanelAssetHandler {
       if (!projectPath) return this.postUnavailable();
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantLoading', loading: true });
       const report = await AssetAssistant.scanAndSync(projectPath);
+      this.enrichReport(report, projectPath);
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report });
       const message = report.pubspecUpdated
         ? `Added ${report.missingFromPubspec.length} missing asset(s) to pubspec.yaml.`
@@ -42,6 +44,7 @@ export class PanelAssetHandler {
       if (!projectPath) return this.postUnavailable();
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantLoading', loading: true });
       const report = await AssetAssistant.scan(projectPath);
+      this.enrichReport(report, projectPath);
       let generation = await AssetAssistant.generateConstants(projectPath, report.files);
 
       if (generation.requiresConfirmation) {
@@ -73,38 +76,166 @@ export class PanelAssetHandler {
   }
 
   public async deleteUnusedAsset(relativeFile: string): Promise<void> {
+    return this.deleteAssetsBatch([relativeFile]);
+  }
+
+  public async deleteAssetsBatch(relativeFiles: string[]): Promise<void> {
     try {
       const projectPath = this.getFlutterProjectPath();
       if (!projectPath) return this.postUnavailable();
-      const freshReport = await AssetAssistant.scan(projectPath);
-      const approved = freshReport.files.some(asset => asset.path === relativeFile && asset.safeToDelete);
-      if (!approved) throw new Error('This asset is now referenced or no longer qualifies for safe deletion.');
-      if (!relativeFile.startsWith('assets/')) throw new Error('Only files under assets/ can be deleted.');
-      const absoluteFile = path.resolve(projectPath, relativeFile);
-      const relative = path.relative(path.resolve(projectPath, 'assets'), absoluteFile);
-      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-        throw new Error('The requested asset is outside the assets directory.');
-      }
-      const choice = await vscode.window.showWarningMessage(
-        `Delete the unused asset ${relativeFile}? This cannot be undone by Air Flutter.`,
-        { modal: true },
-        'Delete asset'
-      );
-      if (choice !== 'Delete asset') return;
+      if (!relativeFiles || relativeFiles.length === 0) return;
 
-      await fs.promises.unlink(absoluteFile);
-      const pubspecPath = path.join(projectPath, 'pubspec.yaml');
-      const pubspec = await fs.promises.readFile(pubspecPath, 'utf8');
-      const updatedPubspec = AssetAssistant.removeAssetDeclaration(pubspec, relativeFile);
-      if (updatedPubspec !== pubspec) await fs.promises.writeFile(pubspecPath, updatedPubspec, 'utf8');
+      const freshReport = await AssetAssistant.scan(projectPath);
+      const safeMap = new Map(freshReport.files.map(f => [f.path, f.safeToDelete]));
+      
+      const invalidFiles = relativeFiles.filter(f => !f.startsWith('assets/'));
+      if (invalidFiles.length > 0) {
+        throw new Error('Only files inside the assets/ directory can be deleted.');
+      }
+
+      const count = relativeFiles.length;
+      const prompt = count === 1
+        ? `Delete the unused asset ${relativeFiles[0]}? This cannot be undone.`
+        : `Delete ${count} selected unused asset(s)? This cannot be undone.`;
+
+      const choice = await vscode.window.showWarningMessage(
+        prompt,
+        { modal: true },
+        'Delete'
+      );
+      if (choice !== 'Delete') return;
+
+      // Expand to include variants if a primary asset is deleted
+      const allPathsToDelete = new Set<string>();
+      for (const rel of relativeFiles) {
+        allPathsToDelete.add(rel);
+        const parent = freshReport.files.find(f => f.path === rel);
+        if (parent && parent.variants) {
+          for (const v of parent.variants) {
+            allPathsToDelete.add(v.path);
+          }
+        }
+      }
+
+      const { deleted } = await AssetAssistant.deleteAssetFiles(projectPath, Array.from(allPathsToDelete));
+      
       const report = await AssetAssistant.scan(projectPath);
+      this.enrichReport(report, projectPath);
       const constantsPath = path.join(projectPath, 'lib', 'core', 'constants', 'app_assets.dart');
-      if (fs.existsSync(constantsPath)) await AssetAssistant.generateConstants(projectPath, report.files);
+      if (fs.existsSync(constantsPath)) {
+        await AssetAssistant.generateConstants(projectPath, report.files);
+      }
+
       this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report });
-      this.ctx.postStatus(`Deleted unused asset: ${relativeFile}`, 'success');
+      const msg = `Deleted ${deleted.length} asset file(s).`;
+      this.ctx.postStatus(msg, 'success');
+      this.ctx.showSuccessMessage(msg);
     } catch (error) {
-      this.reportError('Could not delete asset', error);
+      this.reportError('Could not delete assets', error);
     }
+  }
+
+  public async openAssetInEditor(relativeFile: string): Promise<void> {
+    try {
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return;
+      const absPath = path.resolve(projectPath, relativeFile);
+      if (fs.existsSync(absPath)) {
+        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(absPath));
+      }
+    } catch (error) {
+      this.reportError('Failed to open asset', error);
+    }
+  }
+
+  public async importAssets(files: Array<{ name: string; targetDir: string; base64: string }>): Promise<void> {
+    try {
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
+      if (!files || files.length === 0) return;
+
+      const savedPaths: string[] = [];
+      for (const item of files) {
+        const cleanName = AssetAssistant.toSnakeCase(item.name);
+        const targetDir = item.targetDir && item.targetDir.startsWith('assets')
+          ? item.targetDir
+          : path.join('assets', item.targetDir || 'images').replace(/\\/g, '/');
+        const absDir = path.resolve(projectPath, targetDir);
+        await fs.promises.mkdir(absDir, { recursive: true });
+        const absFile = path.join(absDir, cleanName);
+        const buffer = Buffer.from(item.base64, 'base64');
+        await fs.promises.writeFile(absFile, buffer);
+        savedPaths.push(path.relative(projectPath, absFile).replace(/\\/g, '/'));
+      }
+
+      const syncResult = await AssetAssistant.scanAndSync(projectPath);
+      this.enrichReport(syncResult, projectPath);
+      const constantsPath = path.join(projectPath, 'lib', 'core', 'constants', 'app_assets.dart');
+      if (fs.existsSync(constantsPath)) {
+        await AssetAssistant.generateConstants(projectPath, syncResult.files);
+      }
+
+      this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report: syncResult });
+      const msg = `Imported ${savedPaths.length} asset(s) and synced with pubspec.yaml.`;
+      this.ctx.postStatus(msg, 'success');
+      this.ctx.showSuccessMessage(msg);
+    } catch (error) {
+      this.reportError('Asset import failed', error);
+    }
+  }
+
+  public async saveOptimizedAsset(originalPath: string, newPath: string, base64: string): Promise<void> {
+    try {
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
+
+      const absOriginal = path.resolve(projectPath, originalPath);
+      const absNew = path.resolve(projectPath, newPath);
+      const buffer = Buffer.from(base64, 'base64');
+
+      await fs.promises.writeFile(absNew, buffer);
+
+      if (absOriginal !== absNew && fs.existsSync(absOriginal)) {
+        await fs.promises.unlink(absOriginal);
+        const pubspecPath = path.join(projectPath, 'pubspec.yaml');
+        if (fs.existsSync(pubspecPath)) {
+          const pubspec = await fs.promises.readFile(pubspecPath, 'utf8');
+          const updated = AssetAssistant.replaceAssetDeclaration(pubspec, originalPath, newPath);
+          if (updated !== pubspec) {
+            await fs.promises.writeFile(pubspecPath, updated, 'utf8');
+          }
+        }
+      }
+
+      const report = await AssetAssistant.scan(projectPath);
+      this.enrichReport(report, projectPath);
+      const constantsPath = path.join(projectPath, 'lib', 'core', 'constants', 'app_assets.dart');
+      if (fs.existsSync(constantsPath)) {
+        await AssetAssistant.generateConstants(projectPath, report.files);
+      }
+
+      this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report });
+      const msg = `Optimized ${originalPath} -> ${newPath}`;
+      this.ctx.postStatus(msg, 'success');
+      this.ctx.showSuccessMessage(msg);
+    } catch (error) {
+      this.reportError('Failed to save optimized asset', error);
+    }
+  }
+
+  private enrichReport(report: AssetScanResult, projectPath: string): AssetScanResult {
+    const panel = this.ctx.getPanel();
+    if (!panel) return report;
+    for (const file of report.files) {
+      const abs = path.resolve(projectPath, file.path);
+      file.previewUri = panel.webview.asWebviewUri(vscode.Uri.file(abs)).toString();
+      if (file.variants) {
+        for (const v of file.variants) {
+          v.previewUri = panel.webview.asWebviewUri(vscode.Uri.file(path.resolve(projectPath, v.path))).toString();
+        }
+      }
+    }
+    return report;
   }
 
   private getFlutterProjectPath(): string | undefined {

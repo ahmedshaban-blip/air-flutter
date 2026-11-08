@@ -468,7 +468,19 @@ export function getPanelWebviewContent(
                                 <i class="fas fa-code"></i> Generate Asset Constants
                             </button>
                         </div>
-                        <p class="asset-help">Scans nested files, flags assets over 1 MB, detects unsafe names and formats, and preserves pubspec comments while syncing.</p>
+
+                        <div id="assetDropZone" class="asset-dropzone">
+                            <i class="fas fa-cloud-arrow-up asset-dropzone-icon"></i>
+                            <div class="asset-dropzone-text">
+                                <span>Drop assets here or</span>
+                                <label class="btn btn-quiet btn-xs asset-browse-btn">
+                                    <input type="file" id="assetFileInput" multiple accept="image/*,.svg,.ttf,.otf,.woff,.woff2" hidden>
+                                    <span>Browse</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <p class="asset-help">Smart Flutter asset manager with 2x/3x resolution awareness, instant WebP optimization, 1-click widget snippet copy, and bulk unused cleanup.</p>
                         <p class="asset-status" id="assetAssistantStatus" role="status">Open this tab to scan the current Flutter project.</p>
                     </div>
 
@@ -480,8 +492,83 @@ export function getPanelWebviewContent(
                         <div class="asset-summary" id="assetAssistantSummary">
                             <span><strong>0</strong> files</span>
                         </div>
+
+                        <div class="asset-toolbar">
+                            <div class="asset-search-row">
+                                <div class="asset-search-wrapper">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                    <input type="text" id="assetSearchInput" class="asset-search-input" placeholder="Search by name or path...">
+                                    <button type="button" id="assetSearchClearBtn" class="asset-search-clear" hidden>&times;</button>
+                                </div>
+                                <div class="asset-sort-wrapper">
+                                    <select id="assetSortSelect" class="asset-sort-select" title="Sort assets">
+                                        <option value="name-asc">Name (A-Z)</option>
+                                        <option value="name-desc">Name (Z-A)</option>
+                                        <option value="size-desc">Size (Largest first)</option>
+                                        <option value="size-asc">Size (Smallest first)</option>
+                                        <option value="usage-desc">Usage (Most used)</option>
+                                        <option value="usage-asc">Usage (Least used)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="asset-filter-pills">
+                                <button type="button" class="asset-filter-pill is-active" data-asset-filter="all">All</button>
+                                <button type="button" class="asset-filter-pill" data-asset-filter="unused">Unused</button>
+                                <button type="button" class="asset-filter-pill" data-asset-filter="warnings">Warnings</button>
+                                <button type="button" class="asset-filter-pill" data-asset-filter="undeclared">Undeclared</button>
+                                <button type="button" class="asset-filter-pill" data-asset-filter="image">Images</button>
+                                <button type="button" class="asset-filter-pill" data-asset-filter="svg">SVGs</button>
+                                <button type="button" class="asset-filter-pill" data-asset-filter="font">Fonts</button>
+                            </div>
+                        </div>
+
+                        <div id="assetBulkBar" class="asset-bulk-bar" hidden>
+                            <div class="asset-bulk-info">
+                                <label class="asset-select-all-label">
+                                    <input type="checkbox" id="assetSelectAllCheckbox">
+                                    <span id="assetSelectedCount">0 selected</span>
+                                </label>
+                                <span id="assetSelectedSize" class="asset-selected-size"></span>
+                            </div>
+                            <div class="asset-bulk-actions">
+                                <button type="button" id="bulkDeleteBtn" class="btn btn-danger btn-xs" disabled>
+                                    <i class="fas fa-trash"></i> Delete Selected
+                                </button>
+                                <button type="button" id="bulkCompressBtn" class="btn btn-quiet btn-xs" disabled>
+                                    <i class="fas fa-compress"></i> Convert to WebP
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="asset-tree" id="assetFileTree">
                             <p class="empty"><i class="fas fa-folder-tree"></i><span>Waiting for asset scan</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="assetHoverPopover" class="asset-hover-popover" hidden></div>
+
+                <div id="assetImportModal" class="asset-modal-overlay" hidden>
+                    <div class="asset-modal-content">
+                        <div class="asset-modal-head">
+                            <h3><i class="fas fa-file-import"></i> Import Assets</h3>
+                            <button type="button" class="asset-modal-close" id="assetImportCloseBtn">&times;</button>
+                        </div>
+                        <div class="asset-modal-body">
+                            <label class="asset-modal-label">
+                                <span>Target Folder:</span>
+                                <select id="assetImportFolderSelect" class="deep-link-input">
+                                    <option value="assets/images">assets/images</option>
+                                    <option value="assets/icons">assets/icons</option>
+                                    <option value="assets/fonts">assets/fonts</option>
+                                    <option value="assets">assets/</option>
+                                </select>
+                            </label>
+                            <div id="assetImportFileList" class="asset-import-file-list"></div>
+                        </div>
+                        <div class="asset-modal-foot">
+                            <button type="button" class="btn btn-quiet" id="assetImportCancelBtn">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="assetImportConfirmBtn">Import &amp; Sync</button>
                         </div>
                     </div>
                 </div>

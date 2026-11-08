@@ -20,6 +20,13 @@ const DART_RESERVED_WORDS = new Set([
 export type AssetKind = 'image' | 'svg' | 'font' | 'other';
 export type AssetWarningCode = 'heavy' | 'spaces' | 'non-standard-format';
 
+export interface AssetVariant {
+  path: string;
+  size: number;
+  ratio: string;
+  previewUri?: string;
+}
+
 export interface AssetFile {
   path: string;
   size: number;
@@ -29,6 +36,10 @@ export interface AssetFile {
   used: boolean;
   usageCount: number;
   safeToDelete: boolean;
+  previewUri?: string;
+  isVariant?: boolean;
+  parentPath?: string;
+  variants?: AssetVariant[];
 }
 
 export interface AssetScanResult {
@@ -74,22 +85,33 @@ export class AssetAssistant {
 
     await this.assertFlutterProject(pubspecPath);
     const files = await this.scanDirectory(assetsPath, root);
+    this.detectAndGroupVariants(files);
     await this.applyUsageAnalysis(root, files);
     const pubspec = await fs.promises.readFile(pubspecPath, 'utf8');
     const declaredAssets = this.parsePubspecAssets(pubspec).entries;
 
     for (const file of files) {
-      file.declared = this.isDeclared(file.path, declaredAssets);
+      if (file.isVariant && file.parentPath) {
+        const parent = files.find(f => f.path === file.parentPath);
+        file.declared = parent ? parent.declared : this.isDeclared(file.path, declaredAssets);
+      } else {
+        file.declared = this.isDeclared(file.path, declaredAssets);
+      }
     }
 
-    const missingFromPubspec = files.filter(file => !file.declared).map(file => file.path);
+    const missingFromPubspec = files.filter(file => !file.declared && !file.isVariant).map(file => file.path);
     let pubspecUpdated = false;
     if (mode === 'sync' && missingFromPubspec.length > 0) {
       const updated = this.injectAssets(pubspec, missingFromPubspec);
       await fs.promises.writeFile(pubspecPath, updated, 'utf8');
       pubspecUpdated = true;
       for (const file of files) {
-        file.declared = true;
+        if (!file.isVariant) {
+          file.declared = true;
+        } else if (file.parentPath) {
+          const parent = files.find(f => f.path === file.parentPath);
+          file.declared = parent ? parent.declared : true;
+        }
       }
     }
 
@@ -106,22 +128,30 @@ export class AssetAssistant {
 
   public static async generateConstants(
     projectPath: string,
-    files: AssetFile[]
+    files: AssetFile[],
+    customOutputPath?: string
   ): Promise<GenerateResult> {
-    return this.writeConstants(projectPath, files, 'preserve-custom');
+    return this.writeConstants(projectPath, files, 'preserve-custom', customOutputPath);
   }
 
-  public static async replaceConstants(projectPath: string, files: AssetFile[]): Promise<GenerateResult> {
-    return this.writeConstants(projectPath, files, 'replace');
+  public static async replaceConstants(
+    projectPath: string,
+    files: AssetFile[],
+    customOutputPath?: string
+  ): Promise<GenerateResult> {
+    return this.writeConstants(projectPath, files, 'replace', customOutputPath);
   }
 
   private static async writeConstants(
     projectPath: string,
     files: AssetFile[],
-    policy: 'preserve-custom' | 'replace'
+    policy: 'preserve-custom' | 'replace',
+    customOutputPath?: string
   ): Promise<GenerateResult> {
-    const relativeOutputPath = 'lib/core/constants/app_assets.dart';
-    const outputPath = path.join(path.resolve(projectPath), ...relativeOutputPath.split('/'));
+    const relativeOutputPath = customOutputPath || 'lib/core/constants/app_assets.dart';
+    const outputPath = path.isAbsolute(relativeOutputPath)
+      ? relativeOutputPath
+      : path.join(path.resolve(projectPath), ...relativeOutputPath.split('/'));
     if (await this.fileExists(outputPath)) {
       const current = await fs.promises.readFile(outputPath, 'utf8');
       if (!current.includes(GENERATED_MARKER) && policy === 'preserve-custom') {
@@ -129,7 +159,8 @@ export class AssetAssistant {
       }
     }
 
-    const constants = this.createConstants(files.map(file => file.path));
+    const exportableFiles = files.filter(file => !file.isVariant);
+    const constants = this.createConstants(exportableFiles.map(file => file.path));
     const content = [
       GENERATED_MARKER,
       '',
@@ -143,7 +174,71 @@ export class AssetAssistant {
 
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.promises.writeFile(outputPath, content, 'utf8');
-    return { outputPath, generatedCount: files.length, requiresConfirmation: false };
+    return { outputPath, generatedCount: exportableFiles.length, requiresConfirmation: false };
+  }
+
+  public static async deleteAssetFiles(
+    projectPath: string,
+    assetPaths: string[]
+  ): Promise<{ deleted: string[]; failed: string[] }> {
+    const root = path.resolve(projectPath);
+    const pubspecPath = path.join(root, 'pubspec.yaml');
+    let pubspec = (await this.fileExists(pubspecPath)) ? await fs.promises.readFile(pubspecPath, 'utf8') : '';
+    const deleted: string[] = [];
+    const failed: string[] = [];
+
+    for (const relPath of assetPaths) {
+      const normalized = this.normalizeAssetPath(relPath);
+      const absPath = path.resolve(root, normalized);
+      try {
+        if (await this.fileExists(absPath)) {
+          await fs.promises.unlink(absPath);
+          deleted.push(normalized);
+        }
+        if (pubspec) {
+          pubspec = this.removeAssetDeclaration(pubspec, normalized);
+        }
+      } catch {
+        failed.push(normalized);
+      }
+    }
+
+    if (pubspec) {
+      await fs.promises.writeFile(pubspecPath, pubspec, 'utf8');
+    }
+
+    return { deleted, failed };
+  }
+
+  public static toSnakeCase(fileName: string): string {
+    const ext = path.extname(fileName);
+    const base = path.basename(fileName, ext);
+    const cleanBase = base
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase();
+    return `${cleanBase || 'asset'}${ext.toLowerCase()}`;
+  }
+
+  public static replaceAssetDeclaration(pubspec: string, oldPath: string, newPath: string): string {
+    const normalizedOld = this.normalizeAssetPath(oldPath);
+    const normalizedNew = this.normalizeAssetPath(newPath);
+    const newline = pubspec.includes('\r\n') ? '\r\n' : '\n';
+    const hasTrailingNewline = pubspec.endsWith('\n');
+    const lines = pubspec.split(/\r?\n/);
+    if (hasTrailingNewline) lines.pop();
+    const parsed = this.parsePubspecLines(lines);
+    if (parsed.assetsLine < 0) return pubspec;
+
+    for (let index = parsed.assetsLine + 1; index < parsed.blockEndLine; index++) {
+      const match = lines[index].match(/^(\s*-\s+)(.+?)(\s*(?:#.*)?)$/);
+      if (match && this.normalizeAssetPath(this.unquoteYamlValue(match[2])) === normalizedOld) {
+        lines[index] = `${match[1]}${this.yamlValue(normalizedNew)}${match[3]}`;
+        break;
+      }
+    }
+    return lines.join(newline) + (hasTrailingNewline ? newline : '');
   }
 
   public static injectAssets(pubspec: string, assetPaths: string[]): string {
@@ -290,6 +385,50 @@ export class AssetAssistant {
       asset.usageCount = usageCount;
       asset.used = usageCount > 0;
       asset.safeToDelete = !asset.used && (asset.kind === 'image' || asset.kind === 'svg');
+    }
+
+    for (const asset of assets) {
+      if (asset.isVariant && asset.parentPath) {
+        const parent = assets.find(p => p.path === asset.parentPath);
+        if (parent) {
+          asset.used = parent.used;
+          asset.usageCount = parent.usageCount;
+          asset.safeToDelete = parent.safeToDelete;
+        }
+      }
+    }
+  }
+
+  private static detectAndGroupVariants(files: AssetFile[]): void {
+    const fileMap = new Map<string, AssetFile>();
+    for (const file of files) {
+      fileMap.set(file.path, file);
+    }
+
+    const variantRegex = /^([0-9]+(?:\.[0-9]+)?)[xX]$/;
+
+    for (const file of files) {
+      const parts = file.path.split('/');
+      if (parts.length >= 3) {
+        const potentialRatioDir = parts[parts.length - 2];
+        const match = potentialRatioDir.match(variantRegex);
+        if (match) {
+          const ratio = match[1] + 'x';
+          const parentParts = [...parts.slice(0, parts.length - 2), parts[parts.length - 1]];
+          const parentCandidate = parentParts.join('/');
+          const parent = fileMap.get(parentCandidate);
+          if (parent) {
+            file.isVariant = true;
+            file.parentPath = parent.path;
+            parent.variants = parent.variants || [];
+            parent.variants.push({
+              path: file.path,
+              size: file.size,
+              ratio
+            });
+          }
+        }
+      }
     }
   }
 

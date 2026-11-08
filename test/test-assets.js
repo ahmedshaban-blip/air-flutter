@@ -100,6 +100,43 @@ const { CodeCleanupAssistant } = require('../out/domain/code-cleanup-assistant')
       .replace('void unusedPublicFeature() {}\n', '')
   );
 
+  // Test resolution variants (2.0x, 3.0x)
+  fs.mkdirSync(path.join(project, 'assets', 'images', '2.0x'), { recursive: true });
+  fs.mkdirSync(path.join(project, 'assets', 'images', '3.0x'), { recursive: true });
+  fs.writeFileSync(path.join(project, 'assets', 'images', '2.0x', 'new_logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  fs.writeFileSync(path.join(project, 'assets', 'images', '3.0x', 'new_logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+  const variantScan = await AssetAssistant.scan(project);
+  const logoAsset = variantScan.files.find(f => f.path === 'assets/images/new_logo.png');
+  assert.ok(logoAsset, 'Base logo asset should exist');
+  assert.ok(logoAsset.variants && logoAsset.variants.length === 2, 'Should detect 2 variants for logo');
+  assert.strictEqual(logoAsset.variants[0].ratio, '2.0x');
+  assert.strictEqual(logoAsset.variants[1].ratio, '3.0x');
+
+  const variant2x = variantScan.files.find(f => f.path === 'assets/images/2.0x/new_logo.png');
+  assert.ok(variant2x.isVariant);
+  assert.strictEqual(variant2x.parentPath, 'assets/images/new_logo.png');
+  assert.strictEqual(variant2x.used, true, 'Variant should mirror parent used status');
+  assert.ok(!variantScan.missingFromPubspec.includes('assets/images/2.0x/new_logo.png'), 'Variants must not be marked missing from pubspec');
+
+  const variantConstants = await AssetAssistant.generateConstants(project, variantScan.files);
+  const variantDart = fs.readFileSync(variantConstants.outputPath, 'utf8');
+  assert.ok(!variantDart.includes('2.0x'), 'Variants should not have duplicate constants generated');
+
+  // Test toSnakeCase
+  assert.strictEqual(AssetAssistant.toSnakeCase('Hero Banner (1).PNG'), 'hero_banner_1.png');
+  assert.strictEqual(AssetAssistant.toSnakeCase('myAppLogo.svg'), 'my_app_logo.svg');
+
+  // Test replaceAssetDeclaration
+  const testYaml = 'flutter:\n  assets:\n    - assets/images/logo.png\n';
+  const replacedYaml = AssetAssistant.replaceAssetDeclaration(testYaml, 'assets/images/logo.png', 'assets/images/logo.webp');
+  assert.ok(replacedYaml.includes('assets/images/logo.webp'));
+
+  // Test deleteAssetFiles
+  const delResult = await AssetAssistant.deleteAssetFiles(project, ['assets/images/unused_banner.png']);
+  assert.strictEqual(delResult.deleted.length, 1);
+  assert.ok(!fs.existsSync(path.join(project, 'assets', 'images', 'unused_banner.png')));
+
   console.log(`Asset Assistant tests passed. Fixture: ${project}`);
 })().catch(error => {
   console.error(error);

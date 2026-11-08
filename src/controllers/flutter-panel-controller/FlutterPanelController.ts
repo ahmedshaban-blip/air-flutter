@@ -465,6 +465,18 @@ export class FlutterPanelController extends ADBBaseController {
             case 'deleteUnusedAsset':
               await this.assetHandler.deleteUnusedAsset(message.file);
               break;
+            case 'deleteAssetsBatch':
+              await this.assetHandler.deleteAssetsBatch(message.files);
+              break;
+            case 'openAssetInEditor':
+              await this.assetHandler.openAssetInEditor(message.file);
+              break;
+            case 'importAssets':
+              await this.assetHandler.importAssets(message.files);
+              break;
+            case 'saveOptimizedAsset':
+              await this.assetHandler.saveOptimizedAsset(message.originalPath, message.newPath, message.base64);
+              break;
             case 'runCodeCleanupScan':
               await this.codeCleanupHandler.scan();
               break;
