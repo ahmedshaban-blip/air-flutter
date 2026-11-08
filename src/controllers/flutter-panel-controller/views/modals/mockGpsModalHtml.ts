@@ -26,6 +26,12 @@ export function getMockGpsModalHtml(): string {
                     </div>
                 </div>
 
+                <!-- Custom Saved Locations -->
+                <div class="gps-section" id="gpsCustomPresetsSection" hidden>
+                    <label class="gps-label">Saved Locations</label>
+                    <div class="gps-presets-grid" id="gpsCustomPresetsGrid"></div>
+                </div>
+
                 <!-- Custom coordinates form -->
                 <div class="gps-form-grid">
                     <div class="modal-field">
@@ -43,9 +49,32 @@ export function getMockGpsModalHtml(): string {
                 </div>
 
                 <div class="gps-actions-bar">
-                    <button class="btn btn-primary btn-block" id="gpsSetLocationBtn" type="button">
+                    <button class="btn btn-primary" id="gpsSetLocationBtn" type="button">
                         <i class="fas fa-paper-plane"></i> Apply Location to Device
                     </button>
+                    <button class="btn btn-quiet" id="gpsResetBtn" type="button" title="Reset coordinates to default">
+                        <i class="fas fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Save Location Prompt Card -->
+                <div class="gps-save-prompt" id="gpsSaveLocationPrompt" hidden>
+                    <div class="gps-save-prompt-header">
+                        <div class="gps-save-prompt-title">
+                            <i class="fas fa-bookmark"></i>
+                            <span>Save this location for future use?</span>
+                        </div>
+                        <button class="gps-save-prompt-close" id="gpsDismissSaveBtn" type="button" aria-label="Dismiss">&times;</button>
+                    </div>
+                    <div class="gps-save-prompt-body">
+                        <input type="text" id="gpsCustomLocationName" placeholder="Enter name (e.g. My Office, Warehouse A)" spellcheck="false" autocomplete="off" />
+                        <div class="gps-save-prompt-actions">
+                            <button class="btn btn-primary btn-sm" id="gpsConfirmSaveBtn" type="button">
+                                <i class="fas fa-floppy-disk"></i> Save Location
+                            </button>
+                            <button class="btn btn-quiet btn-sm" id="gpsCancelSaveBtn" type="button">Not Now</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- State Feedback -->

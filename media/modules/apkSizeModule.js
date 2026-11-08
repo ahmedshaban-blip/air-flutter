@@ -27,16 +27,29 @@ window.AirFlutterApkSizeModule = class AirFlutterApkSizeModule {
         modal.hidden = false;
 
         const select = document.getElementById('apkDetectedSelect');
-        if (select && data?.defaultApks) {
-            select.innerHTML = '<option value="">Choose a built package…</option>';
-            data.defaultApks.forEach(apk => {
-                const opt = document.createElement('option');
-                opt.value = apk;
-                opt.textContent = apk.split(/[/\\]/).pop();
-                select.appendChild(opt);
-            });
-            if (data.defaultApks.length > 0) {
-                select.value = data.defaultApks[0];
+        if (select) {
+            select.innerHTML = '';
+            const apks = Array.isArray(data?.defaultApks) ? data.defaultApks : [];
+            if (apks.length === 0) {
+                const emptyOpt = document.createElement('option');
+                emptyOpt.value = '';
+                emptyOpt.disabled = true;
+                emptyOpt.selected = true;
+                emptyOpt.textContent = 'No built packages found in workspace';
+                select.appendChild(emptyOpt);
+            } else {
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Choose a built package…';
+                select.appendChild(placeholder);
+
+                apks.forEach(apk => {
+                    const opt = document.createElement('option');
+                    opt.value = apk;
+                    opt.textContent = apk.split(/[/\\]/).pop();
+                    select.appendChild(opt);
+                });
+                select.value = apks[0];
             }
         }
     }
@@ -68,6 +81,25 @@ window.AirFlutterApkSizeModule = class AirFlutterApkSizeModule {
         if (fn) fn.textContent = rep.fileName;
         if (fs) fs.textContent = (rep.fileSizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
         if (ufs) ufs.textContent = (rep.totalUncompressedBytes / (1024 * 1024)).toFixed(2) + ' MB';
+
+        // Keep select dropdown synchronized with the analyzed file
+        const select = document.getElementById('apkDetectedSelect');
+        if (select && rep.filePath) {
+            let optionExists = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === rep.filePath) {
+                    optionExists = true;
+                    break;
+                }
+            }
+            if (!optionExists) {
+                const opt = document.createElement('option');
+                opt.value = rep.filePath;
+                opt.textContent = rep.fileName || rep.filePath.split(/[/\\]/).pop();
+                select.appendChild(opt);
+            }
+            select.value = rep.filePath;
+        }
 
         // Render composite bar
         const bar = document.getElementById('apkCompositeBar');
@@ -110,10 +142,10 @@ window.AirFlutterApkSizeModule = class AirFlutterApkSizeModule {
         rep.topFiles.forEach(f => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><code>${f.path}</code></td>
-                <td><span class="apk-cat-pill">${f.category}</span></td>
-                <td>${(f.size / 1024).toFixed(1)} KB</td>
-                <td>${(f.compressedSize / 1024).toFixed(1)} KB</td>
+                <td class="apk-cell-path" title="${f.path}"><code>${f.path}</code></td>
+                <td class="apk-cell-cat"><span class="apk-cat-pill">${f.category}</span></td>
+                <td class="apk-cell-size">${(f.size / 1024).toFixed(1)} KB</td>
+                <td class="apk-cell-compressed">${(f.compressedSize / 1024).toFixed(1)} KB</td>
             `;
             tbody.appendChild(tr);
         });

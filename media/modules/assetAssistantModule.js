@@ -96,6 +96,18 @@
                 });
             }
 
+            const bulkAddToPubspecBtn = document.getElementById('bulkAddToPubspecBtn');
+            if (bulkAddToPubspecBtn) {
+                bulkAddToPubspecBtn.addEventListener('click', () => {
+                    const paths = Array.from(this.selectedAssetPaths);
+                    if (paths.length > 0) {
+                        bulkAddToPubspecBtn.disabled = true;
+                        bulkAddToPubspecBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Adding…';
+                        this.sendMessage('addAssetsToPubspec', { files: paths });
+                    }
+                });
+            }
+
             const bulkCompressBtn = document.getElementById('bulkCompressBtn');
             if (bulkCompressBtn) {
                 bulkCompressBtn.addEventListener('click', () => this.compressSelectedAssets());
@@ -154,6 +166,14 @@
                         deleteBtn.disabled = true;
                         deleteBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                         this.sendMessage('deleteUnusedAsset', { file: deleteBtn.dataset.deleteAsset });
+                        return;
+                    }
+
+                    const addBtn = e.target.closest('button[data-add-asset]');
+                    if (addBtn) {
+                        addBtn.disabled = true;
+                        addBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
+                        this.sendMessage('addAssetsToPubspec', { files: [addBtn.dataset.addAsset] });
                         return;
                     }
 
@@ -269,6 +289,17 @@
                 }
             });
 
+            const importSelectAll = document.getElementById('assetImportSelectAllCheckbox');
+            if (importSelectAll) {
+                importSelectAll.addEventListener('change', () => {
+                    const checked = importSelectAll.checked;
+                    document.querySelectorAll('.asset-import-checkbox').forEach(cb => {
+                        cb.checked = checked;
+                    });
+                    this.updateImportSelectionSummary();
+                });
+            }
+
             if (confirmBtn) {
                 confirmBtn.addEventListener('click', async () => {
                     const folderSelect = document.getElementById('assetImportFolderSelect');
@@ -282,6 +313,10 @@
                         for (let i = 0; i < this.pendingImportFiles.length; i++) {
                             const originalFile = this.pendingImportFiles[i];
                             const row = rows[i];
+                            const checkbox = row ? row.querySelector('.asset-import-checkbox') : null;
+                            if (checkbox && !checkbox.checked) {
+                                continue;
+                            }
                             const nameInput = row ? row.querySelector('.asset-import-name-input') : null;
                             const finalName = nameInput ? nameInput.value.trim() : originalFile.name;
                             const base64 = await this.readFileAsBase64(originalFile);
@@ -290,6 +325,10 @@
                                 targetDir,
                                 base64
                             });
+                        }
+
+                        if (payloadFiles.length === 0) {
+                            return;
                         }
 
                         this.sendMessage('importAssets', { files: payloadFiles });
@@ -337,11 +376,39 @@
             }
         }
 
+        updateImportSelectionSummary() {
+            const all = document.querySelectorAll('.asset-import-checkbox');
+            const checked = Array.from(all).filter(cb => cb.checked).length;
+            const summary = document.getElementById('assetImportSelectionSummary');
+            if (summary) {
+                summary.textContent = `${checked} of ${all.length} selected`;
+            }
+            const confirmBtn = document.getElementById('assetImportConfirmBtn');
+            if (confirmBtn) {
+                confirmBtn.disabled = checked === 0;
+            }
+            const selectAll = document.getElementById('assetImportSelectAllCheckbox');
+            if (selectAll && all.length > 0) {
+                selectAll.checked = checked === all.length;
+                selectAll.indeterminate = checked > 0 && checked < all.length;
+            }
+        }
+
         openImportModal(files) {
             this.pendingImportFiles = files;
             const modal = document.getElementById('assetImportModal');
             const list = document.getElementById('assetImportFileList');
             if (!modal || !list) return;
+
+            const folderSelect = document.getElementById('assetImportFolderSelect');
+            if (folderSelect && files.length > 0) {
+                const allFonts = files.every(f => /\.(ttf|otf|woff2?)$/i.test(f.name || ''));
+                if (allFonts) {
+                    folderSelect.value = 'assets/fonts';
+                } else if (folderSelect.value === 'assets/fonts') {
+                    folderSelect.value = 'assets/images';
+                }
+            }
 
             list.innerHTML = files.map((file, index) => {
                 const fileName = file.name || 'asset';
@@ -373,18 +440,25 @@
                 }
 
                 return `
-                    <div class="asset-import-row">
+                    <div class="asset-import-row" style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" class="asset-import-checkbox" checked data-file-index="${index}" title="Include this file" />
                         ${thumbHtml}
                         <div class="asset-import-row-orig">
                             <span class="asset-import-name" title="${this.escapeHtml(fileName)}">${this.escapeHtml(fileName)}</span>
                             <span class="asset-import-size">${this.formatAssetSize(file.size || 0)}</span>
                         </div>
+                        <span class="pub-status-pill ${isFont ? 'is-warn' : 'is-ok'}" style="font-size:10px;">${isFont ? 'Font' : 'Asset'}</span>
                         <i class="fas fa-arrow-right asset-import-arrow"></i>
                         <input type="text" class="deep-link-input mono asset-import-name-input" 
                                value="${this.escapeHtml(suggestedName)}" data-file-index="${index}" />
                     </div>
                 `;
             }).join('');
+
+            list.querySelectorAll('.asset-import-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => this.updateImportSelectionSummary());
+            });
+            this.updateImportSelectionSummary();
 
             // Asynchronously populate image previews
             files.forEach((file, index) => {
@@ -760,6 +834,11 @@
                         <div class="asset-file-actions">
                             <span class="asset-file-size">${this.formatAssetSize(file.size)}</span>
                             <span class="${file.used ? 'asset-used' : 'asset-unused'}">${file.used ? `Used · ${file.usageCount}` : 'Unused'}</span>
+                            ${!file.declared
+                                ? `<button class="btn btn-primary btn-xs asset-add-single-btn" data-add-asset="${this.escapeHtml(file.path)}" title="Add to pubspec.yaml">
+                                    <i class="fas fa-plus"></i> Add
+                                   </button>`
+                                : ''}
                             <button class="btn btn-quiet btn-icon asset-copy-btn" title="Copy Flutter widget (${this.escapeHtml(widgetSnippet)})" data-copy-snippet="${this.escapeHtml(widgetSnippet)}">
                                 <i class="fas fa-copy"></i>
                             </button>
@@ -784,6 +863,7 @@
             const bulkBar = document.getElementById('assetBulkBar');
             const countLabel = document.getElementById('assetSelectedCount');
             const sizeLabel = document.getElementById('assetSelectedSize');
+            const bulkAddToPubspecBtn = document.getElementById('bulkAddToPubspecBtn');
             const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
             const bulkCompressBtn = document.getElementById('bulkCompressBtn');
             const selectAll = document.getElementById('assetSelectAllCheckbox');
@@ -798,20 +878,27 @@
                 let totalSelectedBytes = 0;
                 let hasUnused = false;
                 let hasCompressible = false;
+                let hasUndeclared = false;
 
                 (this.currentReport?.files || []).forEach(f => {
                     if (this.selectedAssetPaths.has(f.path)) {
                         totalSelectedBytes += f.size;
                         if (f.safeToDelete) hasUnused = true;
                         if (f.kind === 'image' && !f.path.endsWith('.webp')) hasCompressible = true;
+                        if (!f.declared) hasUndeclared = true;
                     }
                 });
 
                 if (sizeLabel) sizeLabel.textContent = `(${this.formatAssetSize(totalSelectedBytes)})`;
+                if (bulkAddToPubspecBtn) {
+                    bulkAddToPubspecBtn.disabled = !hasUndeclared;
+                    bulkAddToPubspecBtn.innerHTML = '<i class="fas fa-plus"></i> Add Selected to pubspec.yaml';
+                }
                 if (bulkDeleteBtn) bulkDeleteBtn.disabled = !hasUnused;
                 if (bulkCompressBtn) bulkCompressBtn.disabled = !hasCompressible;
             } else {
                 bulkBar.hidden = true;
+                if (bulkAddToPubspecBtn) bulkAddToPubspecBtn.disabled = true;
                 if (bulkDeleteBtn) bulkDeleteBtn.disabled = true;
                 if (bulkCompressBtn) bulkCompressBtn.disabled = true;
             }

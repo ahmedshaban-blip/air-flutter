@@ -21,6 +21,10 @@ export function getApkSizeModalHtml(): string {
                     </div>
                     <button class="btn btn-primary" id="apkRunAnalyzeBtn" type="button"><i class="fas fa-chart-pie"></i> Analyze</button>
                 </div>
+                <div class="apk-selector-hint">
+                    <i class="fas fa-circle-info"></i>
+                    <span>Auto-detects compiled APK/AAB binaries from <code>build/app/outputs/</code>. Run <code>flutter build apk</code> to produce one, or click <strong>Browse…</strong> to inspect any package.</span>
+                </div>
 
                 <!-- State: Loading -->
                 <div class="apk-state-view" id="apkLoadingView" hidden>

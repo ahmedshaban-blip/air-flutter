@@ -1,7 +1,8 @@
 .apk-size-modal-card {
-    max-width: 820px;
+    max-width: 860px;
     width: 95%;
-    max-height: 85vh;
+    max-height: 88vh;
+    min-width: 320px;
 }
 
 .apk-size-modal-body {
@@ -16,6 +17,33 @@
     display: flex;
     justify-content: space-between;
     gap: 12px;
+}
+
+.apk-selector-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.45;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+
+.apk-selector-hint i {
+    color: var(--accent);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.apk-selector-hint code {
+    font-family: var(--font-mono);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 1px 4px;
+    border-radius: 3px;
 }
 
 .apk-file-selector {
@@ -142,6 +170,7 @@
 
 .apk-table-wrapper {
     max-height: 280px;
+    overflow-x: auto;
     overflow-y: auto;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -149,6 +178,8 @@
 
 .apk-table {
     width: 100%;
+    min-width: 520px;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 12px;
 }
@@ -157,6 +188,7 @@
     padding: 6px 10px;
     border-bottom: 1px solid var(--border);
     text-align: left;
+    box-sizing: border-box;
 }
 
 .apk-table th {
@@ -166,11 +198,41 @@
     font-size: 11px;
 }
 
+.apk-table th:nth-child(1) { width: 44%; }
+.apk-table th:nth-child(2) { width: 24%; }
+.apk-table th:nth-child(3) { width: 16%; text-align: right; }
+.apk-table th:nth-child(4) { width: 16%; text-align: right; }
+
+.apk-cell-path {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.apk-cell-path code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.apk-cell-cat {
+    white-space: nowrap;
+}
+
+.apk-cell-size, .apk-cell-compressed {
+    white-space: nowrap;
+    text-align: right;
+    font-family: var(--font-mono);
+}
+
 .apk-cat-pill {
+    display: inline-block;
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 10px;
     font-family: var(--font-mono);
     background: rgba(255,255,255,0.06);
+    white-space: nowrap;
 }
 

@@ -168,7 +168,16 @@ export class PanelAssetHandler {
         savedPaths.push(path.relative(projectPath, absFile).replace(/\\/g, '/'));
       }
 
-      const syncResult = await AssetAssistant.scanAndSync(projectPath);
+      const pubspecPath = path.join(projectPath, 'pubspec.yaml');
+      if (fs.existsSync(pubspecPath)) {
+        const pubspec = await fs.promises.readFile(pubspecPath, 'utf8');
+        const { updated } = AssetAssistant.addSelectedToPubspec(pubspec, savedPaths);
+        if (updated !== pubspec) {
+          await fs.promises.writeFile(pubspecPath, updated, 'utf8');
+        }
+      }
+
+      const syncResult = await AssetAssistant.scan(projectPath);
       this.enrichReport(syncResult, projectPath);
       const constantsPath = path.join(projectPath, 'lib', 'core', 'constants', 'app_assets.dart');
       if (fs.existsSync(constantsPath)) {
@@ -181,6 +190,44 @@ export class PanelAssetHandler {
       this.ctx.showSuccessMessage(msg);
     } catch (error) {
       this.reportError('Asset import failed', error);
+    }
+  }
+
+  public async addAssetsToPubspec(assetPaths: string[]): Promise<void> {
+    try {
+      const projectPath = this.getFlutterProjectPath();
+      if (!projectPath) return this.postUnavailable();
+      if (!assetPaths || assetPaths.length === 0) return;
+
+      const pubspecPath = path.join(projectPath, 'pubspec.yaml');
+      if (!fs.existsSync(pubspecPath)) {
+        throw new Error('pubspec.yaml was not found in project');
+      }
+
+      const pubspec = await fs.promises.readFile(pubspecPath, 'utf8');
+      const { updated, addedImages, addedFonts } = AssetAssistant.addSelectedToPubspec(pubspec, assetPaths);
+
+      if (updated !== pubspec) {
+        await fs.promises.writeFile(pubspecPath, updated, 'utf8');
+      }
+
+      const freshReport = await AssetAssistant.scan(projectPath);
+      this.enrichReport(freshReport, projectPath);
+
+      const constantsPath = path.join(projectPath, 'lib', 'core', 'constants', 'app_assets.dart');
+      if (fs.existsSync(constantsPath)) {
+        await AssetAssistant.generateConstants(projectPath, freshReport.files);
+      }
+
+      this.ctx.getPanel()?.webview.postMessage({ command: 'assetAssistantReport', report: freshReport });
+      const counts: string[] = [];
+      if (addedImages.length > 0) counts.push(`${addedImages.length} asset(s)`);
+      if (addedFonts.length > 0) counts.push(`${addedFonts.length} font(s)`);
+      const msg = `Added ${counts.join(' and ') || '0 assets'} to pubspec.yaml.`;
+      this.ctx.postStatus(msg, 'success');
+      this.ctx.showSuccessMessage(msg);
+    } catch (error) {
+      this.reportError('Failed to add assets to pubspec.yaml', error);
     }
   }
 

@@ -28,10 +28,71 @@
     min-width: 260px;
 }
 
+.storage-package-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.storage-pkg-badge {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: rgba(226, 85, 43, 0.1);
+    border: 1px solid rgba(226, 85, 43, 0.25);
+    border-radius: 3px;
+    padding: 1px 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.storage-pkg-badge[hidden] {
+    display: none !important;
+}
+
 .storage-input-action {
     display: flex;
     gap: 8px;
     margin-top: 4px;
+}
+
+.storage-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.storage-input-wrapper input {
+    width: 100%;
+    padding-right: 32px;
+    box-sizing: border-box;
+}
+
+.storage-input-wrapper input[readonly] {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    cursor: default;
+}
+
+.storage-edit-pkg-btn {
+    position: absolute;
+    right: 4px;
+    background: transparent !important;
+    border: none !important;
+    color: var(--muted) !important;
+    padding: 4px 6px !important;
+    font-size: 12px;
+    cursor: pointer;
+    line-height: 1;
+    border-radius: 3px;
+}
+
+.storage-edit-pkg-btn:hover {
+    color: var(--accent) !important;
+    background: rgba(226, 85, 43, 0.1) !important;
 }
 
 .storage-mode-toggle {

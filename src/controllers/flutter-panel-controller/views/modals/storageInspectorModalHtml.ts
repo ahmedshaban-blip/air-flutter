@@ -14,9 +14,17 @@ export function getStorageInspectorModalHtml(): string {
                 <!-- Target controls -->
                 <div class="storage-controls-bar">
                     <div class="storage-package-input-group">
-                        <label for="storagePackageInput">Package ID</label>
+                        <div class="storage-package-label-row">
+                            <label for="storagePackageInput">Package ID</label>
+                            <span class="storage-pkg-badge" id="storagePkgBadge" hidden><i class="fas fa-wand-magic-sparkles"></i> Auto-detected</span>
+                        </div>
                         <div class="storage-input-action">
-                            <input type="text" id="storagePackageInput" placeholder="com.example.app" spellcheck="false" autocomplete="off" />
+                            <div class="storage-input-wrapper">
+                                <input type="text" id="storagePackageInput" placeholder="com.example.app" spellcheck="false" autocomplete="off" />
+                                <button class="btn btn-quiet storage-edit-pkg-btn" id="storageEditPackageBtn" type="button" title="Edit Package ID manually">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
                             <button class="btn btn-primary" id="storageRefreshFilesBtn" type="button"><i class="fas fa-search"></i> Inspect</button>
                         </div>
                     </div>

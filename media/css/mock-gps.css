@@ -41,7 +41,113 @@
 }
 
 .gps-actions-bar {
+    display: flex;
+    gap: 10px;
     margin-top: 8px;
+}
+
+.gps-actions-bar #gpsSetLocationBtn {
+    flex: 1;
+}
+
+.gps-save-prompt {
+    background: rgba(226, 85, 43, 0.08);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.gps-save-prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.gps-save-prompt-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.gps-save-prompt-title i {
+    color: var(--accent);
+}
+
+.gps-save-prompt-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 4px;
+}
+
+.gps-save-prompt-close:hover {
+    color: var(--text);
+}
+
+.gps-save-prompt-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gps-save-prompt-body input {
+    background: var(--input-bg, #1a1a1a);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gps-save-prompt-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.gps-custom-preset-chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.gps-custom-preset-chip .gps-custom-btn {
+    border: none;
+    border-radius: 0;
+    padding: 5px 8px;
+    font-size: 12px;
+    background: transparent;
+}
+
+.gps-preset-del-btn {
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 6px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.gps-preset-del-btn:hover {
+    color: var(--accent);
+    background: rgba(226, 85, 43, 0.1);
 }
 
 .gps-status-card {

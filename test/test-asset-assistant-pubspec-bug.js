@@ -75,4 +75,36 @@ const assetsUnderDep = updatedLines.slice(depFlutterIdx, depFlutterIdx + 8).some
 assert.strictEqual(assetsUnderDep, false, 'assets: MUST NOT exist under dependencies: flutter:');
 assert.ok(updated.includes('    - assets/4k.webp'), 'assets/4k.webp must be injected under root assets:');
 
+// 5. Test that fonts are NEVER injected into assets:
+assert.ok(!updated.includes('NotoKufiArabic-Black.ttf'), 'Undeclared font MUST NOT be injected into assets:');
+assert.ok(!updated.includes('NotoKufiArabic-Thin.ttf'), 'Undeclared font MUST NOT be injected into assets:');
+
+// 6. Test inferFontDetails
+const fontInfo = AssetAssistant.inferFontDetails('assets/fonts/NotoKufiArabic-Black.ttf');
+assert.strictEqual(fontInfo.family, 'NotoKufiArabic');
+assert.strictEqual(fontInfo.weight, 900);
+
+const thinFont = AssetAssistant.inferFontDetails('assets/fonts/NotoKufiArabic-Thin.ttf');
+assert.strictEqual(thinFont.family, 'NotoKufiArabic');
+assert.strictEqual(thinFont.weight, 100);
+
+// 7. Test injectFonts properly inserts font into existing family under flutter: fonts:
+const fontInjected = AssetAssistant.injectFonts(cleaned, ['assets/fonts/NotoKufiArabic-Black.ttf']);
+assert.ok(fontInjected.includes('- asset: assets/fonts/NotoKufiArabic-Black.ttf'));
+assert.ok(fontInjected.includes('weight: 900'));
+// Make sure it did NOT create duplicate family
+const famMatches = fontInjected.match(/family:\s*NotoKufiArabic/g);
+assert.strictEqual(famMatches.length, 1, 'Should only have one NotoKufiArabic family');
+
+// 8. Test addSelectedToPubspec with selective images and fonts
+const selectiveResult = AssetAssistant.addSelectedToPubspec(cleaned, [
+  'assets/4k.webp',
+  'assets/fonts/NotoKufiArabic-ExtraBold.ttf'
+]);
+assert.deepStrictEqual(selectiveResult.addedImages, ['assets/4k.webp']);
+assert.deepStrictEqual(selectiveResult.addedFonts, ['assets/fonts/NotoKufiArabic-ExtraBold.ttf']);
+assert.ok(selectiveResult.updated.includes('- assets/4k.webp'), 'Image must be in assets:');
+assert.ok(selectiveResult.updated.includes('- asset: assets/fonts/NotoKufiArabic-ExtraBold.ttf'), 'Font must be in fonts:');
+assert.ok(selectiveResult.updated.includes('weight: 800'), 'Font weight 800 must be inferred');
+
 console.log('✅ All AssetAssistant pubspec tests passed!');

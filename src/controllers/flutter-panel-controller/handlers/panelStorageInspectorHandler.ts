@@ -4,6 +4,7 @@ import {
   StorageInspectorMode,
   KNOWN_STORAGE_PRESETS
 } from '../../../domain/storage-inspector';
+import { AppStateWiper } from '../../../domain/app-state-wiper';
 import { PanelDeviceContext } from './panelNetworkHandler';
 
 export class PanelStorageInspectorHandler {
@@ -18,18 +19,31 @@ export class PanelStorageInspectorHandler {
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
+    let effectivePackageId = packageId;
+    let isAutoDetected = false;
+    if (!effectivePackageId) {
+      const projectPath = this.ctx.getInitialProjectPath();
+      if (projectPath) {
+        effectivePackageId = AppStateWiper.readApplicationId(projectPath);
+        if (effectivePackageId) {
+          isAutoDetected = true;
+        }
+      }
+    }
+
     const serial = this.ctx.getActiveDeviceSerial();
     panel.webview.postMessage({
       command: 'openStorageInspectorModal',
       data: {
         serial: serial || '',
-        packageId: packageId || '',
-        presets: KNOWN_STORAGE_PRESETS
+        packageId: effectivePackageId || '',
+        presets: KNOWN_STORAGE_PRESETS,
+        isAutoDetected
       }
     });
 
-    if (serial && packageId) {
-      await this.listFiles(serial, packageId, 'auto', []);
+    if (serial && effectivePackageId) {
+      await this.listFiles(serial, effectivePackageId, 'auto', []);
     }
   }
 

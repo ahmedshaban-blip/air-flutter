@@ -138,13 +138,49 @@ export class ApkSizeAnalyzerService {
   }
 
   public static findDefaultApks(projectPath: string): string[] {
-    const candidates = [
-      path.join(projectPath, 'build', 'app', 'outputs', 'flutter-apk', 'app-debug.apk'),
-      path.join(projectPath, 'build', 'app', 'outputs', 'flutter-apk', 'app-release.apk'),
-      path.join(projectPath, 'build', 'app', 'outputs', 'apk', 'debug', 'app-debug.apk'),
-      path.join(projectPath, 'build', 'app', 'outputs', 'bundle', 'release', 'app-release.aab')
+    const outputsDir = path.join(projectPath, 'build', 'app', 'outputs');
+    const discovered = new Set<string>();
+
+    const standardCandidates = [
+      path.join(outputsDir, 'flutter-apk', 'app-release.apk'),
+      path.join(outputsDir, 'flutter-apk', 'app-debug.apk'),
+      path.join(outputsDir, 'apk', 'release', 'app-release.apk'),
+      path.join(outputsDir, 'apk', 'debug', 'app-debug.apk'),
+      path.join(outputsDir, 'bundle', 'release', 'app-release.aab')
     ];
-    return candidates.filter(p => fs.existsSync(p));
+    for (const c of standardCandidates) {
+      if (fs.existsSync(c)) {
+        discovered.add(c);
+      }
+    }
+
+    if (fs.existsSync(outputsDir)) {
+      const scanDir = (dir: string, depth = 0) => {
+        if (depth > 4) return;
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              scanDir(fullPath, depth + 1);
+            } else if (entry.isFile() && (entry.name.endsWith('.apk') || entry.name.endsWith('.aab'))) {
+              discovered.add(fullPath);
+            }
+          }
+        } catch {
+          // ignore directory reading errors
+        }
+      };
+      scanDir(outputsDir);
+    }
+
+    return Array.from(discovered).sort((a, b) => {
+      try {
+        return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
+      } catch {
+        return 0;
+      }
+    });
   }
 }
 

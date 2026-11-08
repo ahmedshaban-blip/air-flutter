@@ -45,6 +45,20 @@ const { MockGpsService, GPS_PRESETS } = require('../out/domain/mock-gps');
   assert.strictEqual(devRes.mode, 'broadcast');
   assert.strictEqual(adbCalls.length, 2); // set-location-enabled + broadcast
 
+  // Reset Location - Emulator
+  adbCalls.length = 0;
+  const emuReset = await service.resetLocation('emulator-5554');
+  assert.strictEqual(emuReset.ok, true);
+  assert.strictEqual(emuReset.mode, 'emulator');
+  assert.deepStrictEqual(adbCalls[0].args, ['-s', 'emulator-5554', 'emu', 'geo', 'fix', '0', '0', '0']);
+
+  // Reset Location - Physical Device
+  adbCalls.length = 0;
+  const devReset = await service.resetLocation('physical_device_serial');
+  assert.strictEqual(devReset.ok, true);
+  assert.strictEqual(devReset.mode, 'broadcast');
+  assert.strictEqual(adbCalls.length, 2);
+
   console.log('✅ MockGpsService tests passed!');
 })();
 

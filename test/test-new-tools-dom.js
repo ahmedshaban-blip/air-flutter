@@ -24,7 +24,7 @@ const { getSidebarWebviewHtml } = require('../out/controllers/sidebar-controller
     </body>
   `;
 
-  const dom = new JSDOM(modalHtml, { runScripts: 'outside-only' });
+  const dom = new JSDOM(modalHtml, { url: 'http://localhost', runScripts: 'outside-only' });
   const { window } = dom;
 
   // Load client modules
@@ -49,6 +49,17 @@ const { getSidebarWebviewHtml } = require('../out/controllers/sidebar-controller
   assert.ok(window.document.getElementById('storageInspectorModal'));
   assert.ok(window.document.getElementById('storagePackageInput'));
   assert.ok(window.document.getElementById('storageRefreshFilesBtn'));
+  assert.ok(window.document.getElementById('storageEditPackageBtn'));
+
+  // Test auto-detected package ID and manual pencil unlock
+  storageMod.openStorageInspectorModal({ packageId: 'com.auto.detected', isAutoDetected: true });
+  assert.strictEqual(window.document.getElementById('storagePackageInput').value, 'com.auto.detected');
+  assert.strictEqual(window.document.getElementById('storagePackageInput').readOnly, true);
+  assert.strictEqual(window.document.getElementById('storagePkgBadge').hidden, false);
+
+  window.document.getElementById('storageEditPackageBtn').click();
+  assert.strictEqual(window.document.getElementById('storagePackageInput').readOnly, false);
+  assert.strictEqual(window.document.getElementById('storagePkgBadge').hidden, true);
 
   // Test mode radio toggle
   const presetsRadio = window.document.querySelector('input[name="storageModuleMode"][value="presets"]');
@@ -105,16 +116,54 @@ const { getSidebarWebviewHtml } = require('../out/controllers/sidebar-controller
   assert.strictEqual(messages.at(-1).cmd, 'setMockGpsLocation');
   assert.strictEqual(messages.at(-1).payload.lat, 30.0444);
 
+  // Test location save prompt on success
+  gpsMod.handleMockGpsState({ status: 'success', result: { message: 'Location set' } });
+  const savePrompt = window.document.getElementById('gpsSaveLocationPrompt');
+  assert.ok(savePrompt);
+  assert.strictEqual(savePrompt.hidden, false);
+
+  window.document.getElementById('gpsCustomLocationName').value = 'Office Test';
+  window.document.getElementById('gpsConfirmSaveBtn').click();
+  assert.strictEqual(savePrompt.hidden, true);
+  assert.ok(window.document.getElementById('gpsCustomPresetsGrid').children.length > 0);
+
+  // Test reset button
+  const resetBtn = window.document.getElementById('gpsResetBtn');
+  assert.ok(resetBtn);
+  resetBtn.click();
+  assert.strictEqual(messages.at(-1).cmd, 'resetMockGps');
+  assert.strictEqual(window.document.getElementById('gpsLatInput').value, '');
+
   // --- APK Size Module ---
   const apkMod = new window.AirFlutterApkSizeModule();
   Object.assign(apkMod, fakeBridge);
   apkMod.initApkSize();
 
   assert.ok(window.document.getElementById('apkSizeModal'));
+  assert.ok(window.document.querySelector('.apk-selector-hint'));
+
+  // Test empty package list fallback
+  apkMod.openApkSizeModal({ defaultApks: [] });
+  assert.strictEqual(window.document.getElementById('apkDetectedSelect').options[0].textContent, 'No built packages found in workspace');
+
   apkMod.openApkSizeModal({ defaultApks: ['/build/app-debug.apk'] });
   assert.strictEqual(window.document.getElementById('apkDetectedSelect').value, '/build/app-debug.apk');
   window.document.getElementById('apkRunAnalyzeBtn').click();
   assert.strictEqual(messages.at(-1).cmd, 'analyzeApkSize');
+
+  // Test report table rendering with column classes & titles
+  apkMod.renderApkReport({
+    fileName: 'app-debug.apk',
+    fileSizeBytes: 1024 * 1024 * 20,
+    totalUncompressedBytes: 1024 * 1024 * 25,
+    categories: [{ category: 'native_lib', label: 'Native Libs', size: 1000, percentage: 50 }],
+    topFiles: [{ path: 'lib/arm64-v8a/libflutter.so', category: 'native_lib', size: 5000, compressedSize: 2000 }]
+  });
+  const firstRow = window.document.querySelector('#apkTopFilesTbody tr');
+  assert.ok(firstRow);
+  assert.ok(firstRow.querySelector('.apk-cell-path[title="lib/arm64-v8a/libflutter.so"]'));
+  assert.ok(firstRow.querySelector('.apk-cell-cat'));
+  assert.ok(firstRow.querySelector('.apk-cell-size'));
 
   // --- Pub Health Module ---
   const pubMod = new window.AirFlutterPubHealthModule();

@@ -117,6 +117,38 @@ export class MockGpsService {
     }
   }
 
+  public async resetLocation(serial: string): Promise<GpsDispatchResult> {
+    const adb = await this.getADBExecutable();
+    const isEmulator = serial.startsWith('emulator-');
+
+    if (isEmulator) {
+      await this.runProcess(adb, ['-s', serial, 'emu', 'geo', 'fix', '0', '0', '0'], 10000);
+      return {
+        ok: true,
+        latitude: 0,
+        longitude: 0,
+        altitude: 0,
+        mode: 'emulator',
+        message: 'Emulator mock GPS reset to default coordinates (0, 0).'
+      };
+    } else {
+      await this.runProcess(adb, [
+        '-s', serial, 'shell', 'am', 'broadcast',
+        '-a', 'com.airflutter.MOCK_LOCATION_RESET'
+      ], 10000);
+      await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'set-location-enabled', 'true'], 5000);
+
+      return {
+        ok: true,
+        latitude: 0,
+        longitude: 0,
+        altitude: 0,
+        mode: 'broadcast',
+        message: 'Mock GPS reset to default on connected device.'
+      };
+    }
+  }
+
   public static calculateWaypoints(
     startLat: number,
     startLon: number,

@@ -516,6 +516,9 @@ export class FlutterPanelController extends ADBBaseController {
             case 'importAssets':
               await this.assetHandler.importAssets(message.files);
               break;
+            case 'addAssetsToPubspec':
+              await this.assetHandler.addAssetsToPubspec(message.files);
+              break;
             case 'saveOptimizedAsset':
               await this.assetHandler.saveOptimizedAsset(message.originalPath, message.newPath, message.base64);
               break;
@@ -630,6 +633,9 @@ export class FlutterPanelController extends ADBBaseController {
               break;
             case 'setMockGpsLocation':
               await this.mockGpsHandler.setLocation(Number(message.lat), Number(message.lon), Number(message.altitude || 0));
+              break;
+            case 'resetMockGps':
+              await this.mockGpsHandler.resetLocation();
               break;
             case 'openApkSizeModal':
               await this.apkSizeHandler.openModal();

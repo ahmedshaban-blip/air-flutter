@@ -654,7 +654,7 @@ class AirFlutterWebview {
                     this.handleDeepLinkDispatchResult(message.result, message.recentUris);
                     break;
                 case 'openStorageInspectorModal':
-                    this.openStorageInspectorModal?.(message.data?.packageId);
+                    this.openStorageInspectorModal?.(message.data);
                     break;
                 case 'storageInspectorState':
                     this.handleStorageInspectorState?.(message);

@@ -67,5 +67,47 @@ export class PanelMockGpsHandler {
       });
     }
   }
+
+  public async resetLocation(): Promise<void> {
+    const panel = this.ctx.getPanel();
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) {
+      panel?.webview.postMessage({
+        command: 'mockGpsState',
+        status: 'success',
+        result: {
+          ok: true,
+          message: 'Coordinates reset to default.'
+        }
+      });
+      return;
+    }
+
+    try {
+      panel?.webview.postMessage({
+        command: 'mockGpsState',
+        status: 'loading',
+        message: 'Resetting mock GPS to default…'
+      });
+
+      const res = await this.service.resetLocation(serial);
+      this.ctx.showSuccessMessage(res.message);
+      this.ctx.postStatus(res.message, 'success');
+
+      panel?.webview.postMessage({
+        command: 'mockGpsState',
+        status: 'success',
+        result: res
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Failed to reset GPS: ${msg}`);
+      panel?.webview.postMessage({
+        command: 'mockGpsState',
+        status: 'error',
+        error: msg
+      });
+    }
+  }
 }
 

@@ -22,6 +22,18 @@ window.AirFlutterStorageInspectorModule = class AirFlutterStorageInspectorModule
             this.runStorageInspect();
         });
 
+        // Edit Package ID button
+        document.getElementById('storageEditPackageBtn')?.addEventListener('click', () => {
+            const input = document.getElementById('storagePackageInput');
+            const badge = document.getElementById('storagePkgBadge');
+            if (input) {
+                input.readOnly = false;
+                input.focus();
+                input.select();
+            }
+            if (badge) badge.hidden = true;
+        });
+
         // Retry button
         document.getElementById('storageRetryBtn')?.addEventListener('click', () => {
             this.runStorageInspect();
@@ -88,15 +100,30 @@ window.AirFlutterStorageInspectorModule = class AirFlutterStorageInspectorModule
         });
     }
 
-    openStorageInspectorModal(packageId) {
+    openStorageInspectorModal(dataOrPkg) {
         const modal = document.getElementById('storageInspectorModal');
         if (!modal) return;
         modal.hidden = false;
 
+        const packageId = typeof dataOrPkg === 'object' ? dataOrPkg?.packageId : dataOrPkg;
+        const isAuto = typeof dataOrPkg === 'object' ? Boolean(dataOrPkg?.isAutoDetected) : false;
+
         const pkgInput = document.getElementById('storagePackageInput');
+        const badge = document.getElementById('storagePkgBadge');
+
         if (pkgInput && packageId) {
             pkgInput.value = packageId;
+            if (isAuto) {
+                pkgInput.readOnly = true;
+                if (badge) badge.hidden = false;
+            } else {
+                pkgInput.readOnly = false;
+                if (badge) badge.hidden = true;
+            }
             this.runStorageInspect();
+        } else if (pkgInput) {
+            pkgInput.readOnly = false;
+            if (badge) badge.hidden = true;
         }
     }
 

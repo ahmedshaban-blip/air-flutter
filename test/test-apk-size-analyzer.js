@@ -50,6 +50,21 @@ const { ApkSizeAnalyzerService } = require('../out/domain/apk-size-analyzer');
     // Top files
     assert.strictEqual(report.topFiles.length, 5);
     assert.strictEqual(report.topFiles[0].path, 'lib/arm64-v8a/libapp.so');
+
+    // 3. Test findDefaultApks recursive discovery
+    const mockProjectDir = path.join(os.tmpdir(), `test-flutter-project-${Date.now()}`);
+    const flavorDir = path.join(mockProjectDir, 'build', 'app', 'outputs', 'apk', 'staging');
+    fs.mkdirSync(flavorDir, { recursive: true });
+    const dummyApk = path.join(flavorDir, 'app-staging-release.apk');
+    fs.writeFileSync(dummyApk, 'dummy');
+
+    try {
+      const found = ApkSizeAnalyzerService.findDefaultApks(mockProjectDir);
+      assert.strictEqual(found.length, 1);
+      assert.strictEqual(found[0], dummyApk);
+    } finally {
+      fs.rmSync(mockProjectDir, { recursive: true, force: true });
+    }
   } finally {
     if (fs.existsSync(tempApkPath)) {
       fs.unlinkSync(tempApkPath);

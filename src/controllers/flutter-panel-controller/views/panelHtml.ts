@@ -590,6 +590,9 @@ export function getPanelWebviewContent(
                                 <span id="assetSelectedSize" class="asset-selected-size"></span>
                             </div>
                             <div class="asset-bulk-actions">
+                                <button type="button" id="bulkAddToPubspecBtn" class="btn btn-primary btn-xs" disabled>
+                                    <i class="fas fa-plus"></i> Add Selected to pubspec.yaml
+                                </button>
                                 <button type="button" id="bulkDeleteBtn" class="btn btn-danger btn-xs" disabled>
                                     <i class="fas fa-trash"></i> Delete Selected
                                 </button>
@@ -623,6 +626,13 @@ export function getPanelWebviewContent(
                                     <option value="assets">assets/</option>
                                 </select>
                             </label>
+                            <div class="asset-import-select-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <label class="asset-select-all-label" style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px;">
+                                    <input type="checkbox" id="assetImportSelectAllCheckbox" checked>
+                                    <span>Select All</span>
+                                </label>
+                                <span id="assetImportSelectionSummary" class="ff-section-note" style="font-size:11px;"></span>
+                            </div>
                             <div id="assetImportFileList" class="asset-import-file-list"></div>
                         </div>
                         <div class="asset-modal-foot">
