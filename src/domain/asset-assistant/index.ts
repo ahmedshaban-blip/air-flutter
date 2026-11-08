@@ -101,16 +101,20 @@ export class AssetAssistant {
 
     const missingFromPubspec = files.filter(file => !file.declared && !file.isVariant).map(file => file.path);
     let pubspecUpdated = false;
-    if (mode === 'sync' && missingFromPubspec.length > 0) {
-      const updated = this.injectAssets(pubspec, missingFromPubspec);
-      await fs.promises.writeFile(pubspecPath, updated, 'utf8');
-      pubspecUpdated = true;
-      for (const file of files) {
-        if (!file.isVariant) {
-          file.declared = true;
-        } else if (file.parentPath) {
-          const parent = files.find(f => f.path === file.parentPath);
-          file.declared = parent ? parent.declared : true;
+    if (mode === 'sync') {
+      const { cleaned, rescuedAssets } = this.cleanMisplacedAssetsUnderDependencies(pubspec);
+      const allMissing = Array.from(new Set([...missingFromPubspec, ...rescuedAssets]));
+      if (allMissing.length > 0 || cleaned !== pubspec) {
+        const updated = this.injectAssets(pubspec, allMissing);
+        await fs.promises.writeFile(pubspecPath, updated, 'utf8');
+        pubspecUpdated = true;
+        for (const file of files) {
+          if (!file.isVariant) {
+            file.declared = true;
+          } else if (file.parentPath) {
+            const parent = files.find(f => f.path === file.parentPath);
+            parent ? (file.declared = parent.declared) : (file.declared = true);
+          }
         }
       }
     }
@@ -241,21 +245,92 @@ export class AssetAssistant {
     return lines.join(newline) + (hasTrailingNewline ? newline : '');
   }
 
-  public static injectAssets(pubspec: string, assetPaths: string[]): string {
+  public static cleanMisplacedAssetsUnderDependencies(pubspec: string): { cleaned: string; rescuedAssets: string[] } {
+    const lines = pubspec.split(/\r?\n/);
     const newline = pubspec.includes('\r\n') ? '\r\n' : '\n';
     const hasTrailingNewline = pubspec.endsWith('\n');
-    const lines = pubspec.split(/\r?\n/);
+    if (hasTrailingNewline) lines.pop();
+
+    let inDep = false;
+    let depFlutterLine = -1;
+    let depFlutterIndent = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^dependencies\s*:\s*(?:#.*)?$/.test(line)) {
+        inDep = true;
+        continue;
+      }
+      if (inDep && /^[a-zA-Z0-9_-]+\s*:\s*(?:#.*)?$/.test(line) && !line.startsWith(' ') && !line.startsWith('\t')) {
+        inDep = false;
+        continue;
+      }
+      if (inDep) {
+        const match = line.match(/^(\s+)flutter\s*:\s*(?:#.*)?$/);
+        if (match) {
+          depFlutterLine = i;
+          depFlutterIndent = match[1].length;
+          break;
+        }
+      }
+    }
+
+    if (depFlutterLine === -1) {
+      return { cleaned: pubspec, rescuedAssets: [] };
+    }
+
+    const depFlutterEnd = this.findBlockEnd(lines, depFlutterLine + 1, depFlutterIndent);
+    let misplacedAssetsStart = -1;
+    let misplacedAssetsIndent = -1;
+
+    for (let i = depFlutterLine + 1; i < depFlutterEnd; i++) {
+      const match = lines[i].match(/^(\s+)assets\s*:\s*(?:#.*)?$/);
+      if (match && match[1].length > depFlutterIndent) {
+        misplacedAssetsStart = i;
+        misplacedAssetsIndent = match[1].length;
+        break;
+      }
+    }
+
+    if (misplacedAssetsStart === -1) {
+      return { cleaned: pubspec, rescuedAssets: [] };
+    }
+
+    const misplacedAssetsEnd = this.findBlockEnd(lines, misplacedAssetsStart + 1, misplacedAssetsIndent);
+    const rescuedAssets: string[] = [];
+
+    for (let i = misplacedAssetsStart + 1; i < misplacedAssetsEnd; i++) {
+      const itemMatch = lines[i].match(/^\s*-\s+(.+?)\s*$/);
+      if (itemMatch) {
+        const val = this.normalizeAssetPath(this.unquoteYamlValue(itemMatch[1]));
+        if (val) rescuedAssets.push(val);
+      }
+    }
+
+    // Remove the misplaced block
+    lines.splice(misplacedAssetsStart, misplacedAssetsEnd - misplacedAssetsStart);
+
+    const cleaned = lines.join(newline) + (hasTrailingNewline ? newline : '');
+    return { cleaned, rescuedAssets };
+  }
+
+  public static injectAssets(pubspec: string, assetPaths: string[]): string {
+    const { cleaned: preCleanedPubspec, rescuedAssets } = this.cleanMisplacedAssetsUnderDependencies(pubspec);
+    const newline = preCleanedPubspec.includes('\r\n') ? '\r\n' : '\n';
+    const hasTrailingNewline = preCleanedPubspec.endsWith('\n');
+    const lines = preCleanedPubspec.split(/\r?\n/);
     if (hasTrailingNewline) {
       lines.pop();
     }
 
+    const allCandidateAssets = [...rescuedAssets, ...assetPaths];
     const parsed = this.parsePubspecLines(lines);
-    const missing = Array.from(new Set(assetPaths.map(this.normalizeAssetPath)))
+    const missing = Array.from(new Set(allCandidateAssets.map(this.normalizeAssetPath)))
       .filter(assetPath => !this.isDeclared(assetPath, parsed.entries))
       .sort((a, b) => a.localeCompare(b));
 
     if (missing.length === 0) {
-      return pubspec;
+      return preCleanedPubspec;
     }
 
     if (parsed.assetsLine >= 0) {
@@ -494,12 +569,34 @@ export class AssetAssistant {
     let assetsIndent = 2;
     let inlineEmptyAssets = false;
 
+    // 1. First look for top-level root 'flutter:' key (indent = 0)
     for (let index = 0; index < lines.length; index++) {
-      const match = lines[index].match(/^(\s*)flutter\s*:\s*(?:#.*)?$/);
+      const match = lines[index].match(/^flutter\s*:\s*(?:#.*)?$/);
       if (match) {
         flutterLine = index;
-        flutterIndent = match[1].length;
+        flutterIndent = 0;
         break;
+      }
+    }
+
+    // 2. Fallback: If no indent-0 flutter:, find flutter: not nested under dependencies/dev_dependencies
+    if (flutterLine === -1) {
+      let currentSection = '';
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        const trimmed = line.trim();
+        const topMatch = line.match(/^([a-zA-Z0-9_-]+)\s*:\s*(?:#.*)?$/);
+        if (topMatch && !line.startsWith(' ') && !line.startsWith('\t')) {
+          currentSection = topMatch[1];
+        }
+        if (currentSection !== 'dependencies' && currentSection !== 'dev_dependencies' && currentSection !== 'dependency_overrides') {
+          const match = line.match(/^(\s*)flutter\s*:\s*(?:#.*)?$/);
+          if (match) {
+            flutterLine = index;
+            flutterIndent = match[1].length;
+            break;
+          }
+        }
       }
     }
 
@@ -528,6 +625,19 @@ export class AssetAssistant {
         itemIndent = match[1].length;
         const value = this.unquoteYamlValue(match[2]);
         if (value) entries.push(this.normalizeAssetPath(value));
+      }
+    }
+
+    // Also parse font assets declared under flutter: fonts: so they are marked as declared
+    if (flutterLine >= 0) {
+      const flutterEnd = this.findBlockEnd(lines, flutterLine + 1, flutterIndent);
+      for (let index = flutterLine + 1; index < flutterEnd; index++) {
+        const fontAssetMatch = lines[index].match(/^\s*-\s*asset\s*:\s*(.+?)\s*(?:#.*)?$/)
+          || lines[index].match(/^\s*asset\s*:\s*(.+?)\s*(?:#.*)?$/);
+        if (fontAssetMatch) {
+          const fontVal = this.unquoteYamlValue(fontAssetMatch[1]);
+          if (fontVal) entries.push(this.normalizeAssetPath(fontVal));
+        }
       }
     }
 
