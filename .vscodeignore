@@ -16,8 +16,9 @@ tsconfig.test-mcp.json
 package-lock.json
 
 # Authoring notes, not part of the shipped extension
+AGENTS.md
 PRODUCT.md
-docs/mcp-workspace-paths-research.md
+docs/**
 
 # Docs assets live on GitHub; README points at raw.githubusercontent.com URLs
 screenshots/**
