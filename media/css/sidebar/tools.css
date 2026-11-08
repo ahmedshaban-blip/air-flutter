@@ -86,6 +86,7 @@
 }
 
 .sf-tool {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -111,6 +112,20 @@
     border-color: var(--accent);
     color: var(--accent);
     animation: sf-pulse 1s ease-in-out infinite;
+}
+
+.sf-tool.is-busy::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: sf-operation-spin 650ms linear infinite;
+    position: absolute;
+    top: 8px;
+    right: 8px;
 }
 
 .sf-tool.is-recording {

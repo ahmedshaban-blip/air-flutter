@@ -98,7 +98,7 @@ class AirFlutterWebview {
             return;
         }
         if (!refreshBtn.dataset.idleHtml) refreshBtn.dataset.idleHtml = refreshBtn.innerHTML;
-        refreshBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i>';
+        refreshBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
         refreshBtn.disabled = true;
 
         this.sendMessage('refreshDevices', {});
@@ -257,7 +257,7 @@ class AirFlutterWebview {
 
             if (action === 'connect-usb') {
                 button.disabled = true;
-                button.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Connecting…';
+                button.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Connecting…';
                 this.sendMessage('connectUsbDevice', { deviceId });
             } else if (action === 'mirror') {
                 this.openMirrorSetup(deviceId, button.dataset.deviceName, 'screen');
@@ -266,10 +266,14 @@ class AirFlutterWebview {
             } else if (action === 'mirror-keys') {
                 this.openMirrorSetup(deviceId, button.dataset.deviceName, 'keyboard');
             } else if (action === 'wake') {
+                button.disabled = true;
+                button.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                 this.sendMessage('wakeDevice', { deviceId });
                 this.addStatusMessage(`Waking screen: ${deviceId}`, 'info');
+                setTimeout(() => { button.disabled = false; button.innerHTML = '<span class="mirror-btn-title">Wake screen</span>'; }, 1500);
             } else if (action === 'toggle-display') {
                 button.disabled = true;
+                button.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                 this.sendMessage('toggleMirrorDisplay', { deviceId });
                 this.addStatusMessage(
                     this.mirroringState.displayOff ? `Waking screen: ${deviceId}` : `Turning display off: ${deviceId}`,
@@ -279,12 +283,12 @@ class AirFlutterWebview {
                 this.sendMessage('mirrorDevice', { deviceId, mode: 'virtual-display' });
             } else if (action === 'disconnect') {
                 button.disabled = true;
-                button.innerHTML = '<i class="fas fa-rotate fa-spin"></i>';
+                button.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                 this.sendMessage('disconnectDevice', { deviceId });
                 this.addStatusMessage(`Disconnecting device: ${deviceId}`, 'info');
             } else if (action === 'connect-network') {
                 button.disabled = true;
-                button.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Connecting…';
+                button.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Connecting…';
                 this.sendMessage('connectNetworkDevice', { endpoint });
             }
         });
@@ -308,7 +312,7 @@ class AirFlutterWebview {
         const stopMirrorBtn = document.getElementById('stopMirrorBtn');
         if (stopMirrorBtn) {
             stopMirrorBtn.disabled = true;
-            stopMirrorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Stopping…';
+            stopMirrorBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Stopping…';
         }
         this.sendMessage('stopMirroring', {});
         this.addStatusMessage('Stopping screen mirroring…', 'info');

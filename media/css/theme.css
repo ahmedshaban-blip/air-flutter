@@ -585,3 +585,63 @@ samp {
         gap: 8px;
     }
 }
+
+/* --- Loading Spinners & Busy States -------------------------------------- */
+.af-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: af-spin 650ms linear infinite;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+.af-spinner-lg {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-width: 2.5px;
+}
+
+.af-spinner-sm {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 11px;
+    border-width: 1.75px;
+}
+
+@keyframes af-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .af-spinner { animation-duration: 1400ms; }
+}
+
+.af-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 16px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    font-family: var(--font-sans);
+}
+
+.af-loading-container .af-spinner {
+    color: var(--accent);
+}
+
+.btn.is-busy {
+    opacity: 0.75 !important;
+    cursor: wait !important;
+    pointer-events: none;
+}
+

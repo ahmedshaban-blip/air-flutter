@@ -38,8 +38,8 @@ export function getCompatDoctorModalHtml(): string {
                     </div>
 
                     <!-- Loading / Spinner State -->
-                    <div id="compatDoctorLoading" style="display: none; text-align: center; padding: 32px 0;">
-                        <i class="fas fa-circle-notch fa-spin fa-2x" style="color: var(--primary);"></i>
+                    <div id="compatDoctorLoading" class="af-loading-container" style="display: none; padding: 36px 0;">
+                        <span class="af-spinner af-spinner-lg"></span>
                         <p style="margin-top: 12px; font-weight: 500;">Inspecting Gradle, AGP, Java runtime &amp; iOS deployment target...</p>
                     </div>
 

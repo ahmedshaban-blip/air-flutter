@@ -26,7 +26,7 @@ window.AirFlutterFlavorsModule = class AirFlutterFlavorsModule {
             setupBtn.addEventListener('click', () => {
                 const projectPath = document.getElementById('flavorsProjectPathInput')?.value?.trim();
                 setupBtn.disabled = true;
-                setupBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Setting up…';
+                setupBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Setting up Flavors…';
                 this.sendMessage('setupFlavors', { projectPath, flavors: ['dev', 'staging', 'prod'] });
             });
         }
@@ -39,8 +39,14 @@ window.AirFlutterFlavorsModule = class AirFlutterFlavorsModule {
                     this.showToast('Select a flavor first', 'error');
                     return;
                 }
+                runBtn.disabled = true;
+                runBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Launching…';
                 this.sendMessage('runFlavor', { projectPath, flavor: selectedFlavor.name, target: selectedFlavor.entrypoint });
-                closeModal();
+                setTimeout(() => {
+                    runBtn.disabled = false;
+                    runBtn.innerHTML = '<i class="fas fa-play"></i> Run';
+                    closeModal();
+                }, 1200);
             });
         }
 
@@ -53,7 +59,7 @@ window.AirFlutterFlavorsModule = class AirFlutterFlavorsModule {
                     return;
                 }
                 buildApkBtn.disabled = true;
-                buildApkBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Building…';
+                buildApkBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Building APK…';
                 this.sendMessage('buildFlavorApk', { projectPath, flavor: selectedFlavor.name, target: selectedFlavor.entrypoint });
             });
         }
@@ -67,7 +73,7 @@ window.AirFlutterFlavorsModule = class AirFlutterFlavorsModule {
                     return;
                 }
                 buildAllBtn.disabled = true;
-                buildAllBtn.innerHTML = '<i class="fas fa-rotate fa-spin"></i> Building All…';
+                buildAllBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Building All…';
                 this.sendMessage('buildAllFlavors', { projectPath, flavors: flavors.map(f => f.name) });
             });
         }
@@ -82,6 +88,19 @@ window.AirFlutterFlavorsModule = class AirFlutterFlavorsModule {
                 input.value = defaultPath;
             }
             const currentPath = input?.value?.trim() || defaultPath;
+            const container = document.getElementById('flavorsListContainer');
+            const emptyState = document.getElementById('flavorsEmptyState');
+            const actionsRow = document.getElementById('flavorsActionsRow');
+            if (emptyState) emptyState.hidden = true;
+            if (actionsRow) actionsRow.hidden = true;
+            if (container) {
+                container.innerHTML = `
+                    <div class="af-loading-container" id="flavorsDetecting">
+                        <span class="af-spinner af-spinner-lg"></span>
+                        <span>Detecting Flutter flavors in Gradle build files…</span>
+                    </div>
+                `;
+            }
             this.sendMessage('detectFlavors', { projectPath: currentPath });
         }
     }

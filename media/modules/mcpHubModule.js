@@ -810,7 +810,7 @@ window.AirFlutterMcpModule = class AirFlutterMcpModule {
         const result = document.getElementById('mcpPrereqResult');
         if (result) {
             result.hidden = false;
-            result.innerHTML = '<p class="mcp-loading">Checking prerequisites…</p>';
+            result.innerHTML = '<p class="mcp-loading"><span class="af-spinner af-spinner-sm"></span> Checking prerequisites across tools…</p>';
         }
         this.sendMessage('mcpCheckPrerequisites', {
             serverIds: Array.from(this.selectedServers)

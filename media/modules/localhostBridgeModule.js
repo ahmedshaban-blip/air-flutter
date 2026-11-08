@@ -6,6 +6,9 @@
 
             document.querySelectorAll('[data-localhost-port]').forEach(button => {
                 button.addEventListener('click', () => {
+                    if (!button.dataset.idleHtml) button.dataset.idleHtml = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                     this.applyLocalhostBridge(Number(button.dataset.localhostPort));
                 });
             });
@@ -18,10 +21,20 @@
                     this.showToast('Enter a whole port number from 1 to 65535.', 'error');
                     return;
                 }
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Linking…';
+                }
                 this.applyLocalhostBridge(port);
             });
 
             document.getElementById('refreshLocalhostBridgeBtn')?.addEventListener('click', () => {
+                const refreshBtn = document.getElementById('refreshLocalhostBridgeBtn');
+                if (refreshBtn) {
+                    refreshBtn.disabled = true;
+                    refreshBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
+                }
                 this.sendMessage('refreshLocalhostBridge', {});
             });
 
@@ -37,6 +50,11 @@
             document.getElementById('removeAllLocalhostBridgesBtn')?.addEventListener('click', () => {
                 const deviceId = this.getLocalhostBridgeDevice();
                 if (deviceId) {
+                    const removeAll = document.getElementById('removeAllLocalhostBridgesBtn');
+                    if (removeAll) {
+                        removeAll.disabled = true;
+                        removeAll.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Unlinking all…';
+                    }
                     this.sendMessage('removeAllLocalhostBridges', { deviceId });
                 }
             });
@@ -44,6 +62,8 @@
             document.getElementById('localhostBridgeRules')?.addEventListener('click', event => {
                 const button = event.target.closest('[data-remove-localhost-port]');
                 if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                     this.sendMessage('removeLocalhostBridge', {
                         deviceId: button.dataset.deviceId,
                         port: Number(button.dataset.removeLocalhostPort)
@@ -125,7 +145,22 @@
             const removeAll = document.getElementById('removeAllLocalhostBridgesBtn');
             if (removeAll) {
                 removeAll.disabled = !selected || !rules.some(rule => rule.deviceId === selected);
+                removeAll.innerHTML = '<i class="fas fa-trash-can"></i> Remove all';
             }
+            const refreshBtn = document.getElementById('refreshLocalhostBridgeBtn');
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i>';
+            }
+            const submitBtn = document.querySelector('#localhostBridgeForm button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Forward';
+            }
+            document.querySelectorAll('[data-localhost-port]').forEach(button => {
+                if (button.dataset.idleHtml) button.innerHTML = button.dataset.idleHtml;
+                button.disabled = false;
+            });
         }
     }
 

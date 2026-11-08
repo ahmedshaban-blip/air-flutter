@@ -40,12 +40,16 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
                     this.showToast('Please enter both Proxy IP and Port', 'error');
                     return;
                 }
+                applyProxyBtn.disabled = true;
+                applyProxyBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Applying…';
                 this.sendMessage('setProxy', { host, port });
             });
         }
 
         if (clearProxyBtn) {
             clearProxyBtn.addEventListener('click', () => {
+                clearProxyBtn.disabled = true;
+                clearProxyBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Clearing…';
                 this.sendMessage('clearProxy', {});
             });
         }
@@ -57,18 +61,24 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
                     this.showToast('Please enter a DNS hostname', 'error');
                     return;
                 }
+                applyDnsBtn.disabled = true;
+                applyDnsBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Applying…';
                 this.sendMessage('setPrivateDns', { host });
             });
         }
 
         if (clearDnsBtn) {
             clearDnsBtn.addEventListener('click', () => {
+                clearDnsBtn.disabled = true;
+                clearDnsBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Clearing…';
                 this.sendMessage('clearPrivateDns', {});
             });
         }
 
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                 this.sendMessage('getNetworkState', {});
             });
         }
@@ -78,11 +88,48 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
         const modal = document.getElementById('proxyModal');
         if (modal) {
             modal.hidden = false;
+            const proxyBadge = document.getElementById('currentProxyBadge');
+            const dnsBadge = document.getElementById('currentDnsBadge');
+            if (proxyBadge) {
+                proxyBadge.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Reading…';
+                proxyBadge.className = 'status-badge';
+            }
+            if (dnsBadge) {
+                dnsBadge.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Reading…';
+                dnsBadge.className = 'status-badge';
+            }
             this.sendMessage('getNetworkState', {});
         }
     }
 
     renderNetworkState(data) {
+        const applyProxyBtn = document.getElementById('applyProxyBtn');
+        const clearProxyBtn = document.getElementById('clearProxyBtn');
+        const applyDnsBtn = document.getElementById('applyDnsBtn');
+        const clearDnsBtn = document.getElementById('clearDnsBtn');
+        const refreshBtn = document.getElementById('refreshNetworkBtn');
+
+        if (applyProxyBtn) {
+            applyProxyBtn.disabled = false;
+            applyProxyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Proxy';
+        }
+        if (clearProxyBtn) {
+            clearProxyBtn.disabled = false;
+            clearProxyBtn.innerHTML = '<i class="fas fa-ban"></i> Clear Proxy';
+        }
+        if (applyDnsBtn) {
+            applyDnsBtn.disabled = false;
+            applyDnsBtn.innerHTML = '<i class="fas fa-check"></i> Apply DNS';
+        }
+        if (clearDnsBtn) {
+            clearDnsBtn.disabled = false;
+            clearDnsBtn.innerHTML = '<i class="fas fa-ban"></i> Clear DNS';
+        }
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i>';
+        }
+
         if (!data) return;
 
         const hostInput = document.getElementById('proxyHostInput');

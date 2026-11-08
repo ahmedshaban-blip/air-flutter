@@ -17,6 +17,8 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
         }
         if (pickBtn) {
             pickBtn.addEventListener('click', () => {
+                pickBtn.disabled = true;
+                pickBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Package…';
                 this.setAppStateStatus('Choose the package to target…', 'busy');
                 this.sendMessage('pickAppPackage', {});
             });
@@ -29,6 +31,17 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
             this.showToast('Pick a target package first.', 'error');
             this.sendMessage('pickAppPackage', {});
             return;
+        }
+
+        const btnMap = {
+            cache: document.getElementById('clearAppCacheBtn'),
+            databases: document.getElementById('resetAppDatabasesBtn'),
+            factory: document.getElementById('factoryResetAppBtn')
+        };
+        const targetBtn = btnMap[operation];
+        if (targetBtn) {
+            targetBtn.disabled = true;
+            targetBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Resetting…';
         }
 
         // The host shows a native modal confirmation. Here we only give instant
@@ -45,6 +58,7 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
     }
 
     renderAppStatePackage(packageId) {
+        this.resetWipeButtons();
         this.appStatePackage = packageId || '';
         const line = document.getElementById('appStatePackage');
         if (!line) {
@@ -73,9 +87,36 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
             return;
         }
         status.hidden = false;
-        status.textContent = message;
+        if (kind === 'busy') {
+            status.innerHTML = `<span class="af-spinner af-spinner-sm"></span> ${this.escapeHtml ? this.escapeHtml(message) : message}`;
+        } else {
+            status.textContent = message;
+        }
         status.classList.toggle('is-error', kind === 'error');
         status.classList.toggle('is-busy', kind === 'busy');
+    }
+
+    resetWipeButtons() {
+        const pickBtn = document.getElementById('pickAppPackageBtn');
+        const cacheBtn = document.getElementById('clearAppCacheBtn');
+        const dbBtn = document.getElementById('resetAppDatabasesBtn');
+        const factoryBtn = document.getElementById('factoryResetAppBtn');
+        if (pickBtn) {
+            pickBtn.disabled = false;
+            pickBtn.innerHTML = '<i class="fas fa-cube"></i> Package';
+        }
+        if (cacheBtn) {
+            cacheBtn.disabled = false;
+            cacheBtn.innerHTML = '<i class="fas fa-broom"></i> Clear Cache Only';
+        }
+        if (dbBtn) {
+            dbBtn.disabled = false;
+            dbBtn.innerHTML = '<i class="fas fa-database"></i> Reset Databases';
+        }
+        if (factoryBtn) {
+            factoryBtn.disabled = false;
+            factoryBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Factory Reset (pm clear)';
+        }
     }
 
     handleAppStateStatus(message) {
@@ -93,6 +134,8 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
             );
             return;
         }
+
+        this.resetWipeButtons();
 
         if (message.error) {
             this.setAppStateStatus(`Reset failed: ${message.error}`, 'error');

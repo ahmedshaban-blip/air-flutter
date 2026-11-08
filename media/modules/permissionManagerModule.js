@@ -106,7 +106,7 @@
         loadPermissionCatalog() {
             const catalog = document.getElementById('permissionCatalog');
             const fileLabel = this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml';
-            if (catalog) catalog.innerHTML = `<p class="empty"><i class="fas fa-spinner fa-spin"></i><span>Reading ${fileLabel}…</span></p>`;
+            if (catalog) catalog.innerHTML = `<div class="af-loading-container"><span class="af-spinner af-spinner-lg"></span><span>Reading ${fileLabel}…</span></div>`;
             this.setPermissionLoading(true);
             this.sendMessage('loadPermissions', { platform: this.currentPlatform });
         }
@@ -237,6 +237,11 @@
 
             if (selectedPermissions.length === 0) return;
 
+            const button = document.getElementById('addPermissionsBtn');
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Updating…';
+            }
             this.setPermissionLoading(true);
             if (this.currentPlatform === 'ios') {
                 const permissionsMap = {};
@@ -272,16 +277,20 @@
             if (button && loading) button.disabled = true;
             const status = document.getElementById('permissionStatus');
             const target = this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml';
-            if (status && loading) status.textContent = `Checking ${target}…`;
+            if (status && loading) status.innerHTML = `<span class="af-spinner af-spinner-sm"></span> Checking ${target}…`;
             if (!loading) this.updatePermissionActionState();
         }
 
         updatePermissionActionState() {
             const selectedCount = document.querySelectorAll('#permissionCatalog input[type="checkbox"]:checked:not(:disabled)').length;
             const button = document.getElementById('addPermissionsBtn');
-            if (button) button.disabled = selectedCount === 0;
-
             const target = this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml';
+            const btnLabel = this.currentPlatform === 'ios' ? 'Add to Info.plist' : 'Add to Manifest';
+            if (button) {
+                button.disabled = selectedCount === 0;
+                button.innerHTML = `<i class="fas fa-plus"></i> <span id="addPermissionsBtnText">${btnLabel}</span>`;
+            }
+
             const status = document.getElementById('permissionStatus');
             if (status) {
                 status.textContent = selectedCount

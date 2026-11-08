@@ -136,7 +136,22 @@ window.AirFlutterCompatAuditModule = class AirFlutterCompatAuditModule {
         const loadingEl = document.getElementById('compatDoctorLoading');
         const contentAudit = document.getElementById('tabContentCompatAudit');
         const contentConfig = document.getElementById('tabContentCompatConfig');
-        if (loadingEl) loadingEl.style.display = loading ? 'block' : 'none';
+        const reScanBtn = document.getElementById('compatReScanBtn');
+        const autoUpgradeBtn = document.getElementById('compatAutoUpgradeBtn');
+
+        if (reScanBtn) {
+            reScanBtn.disabled = Boolean(loading);
+            if (loading) {
+                reScanBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Scanning…';
+            } else {
+                reScanBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Re-Scan Project';
+            }
+        }
+        if (autoUpgradeBtn) {
+            autoUpgradeBtn.disabled = Boolean(loading);
+        }
+
+        if (loadingEl) loadingEl.style.display = loading ? 'flex' : 'none';
         if (loading) {
             if (contentAudit) contentAudit.style.display = 'none';
             if (contentConfig) contentConfig.style.display = 'none';

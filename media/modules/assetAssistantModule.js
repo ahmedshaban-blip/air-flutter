@@ -17,7 +17,7 @@
 
             const generateButton = document.getElementById('generateAssetConstantsBtn');
             if (generateButton) generateButton.addEventListener('click', () => {
-                this.setAssetAssistantLoading(true);
+                this.setAssetAssistantLoading(true, 'constants');
                 this.sendMessage('generateAssetConstants', {});
             });
 
@@ -87,6 +87,8 @@
                 bulkDeleteBtn.addEventListener('click', () => {
                     const paths = Array.from(this.selectedAssetPaths);
                     if (paths.length > 0) {
+                        bulkDeleteBtn.disabled = true;
+                        bulkDeleteBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Deleting…';
                         this.sendMessage('deleteAssetsBatch', { files: paths });
                         this.selectedAssetPaths.clear();
                         this.updateBulkBar();
@@ -149,6 +151,8 @@
                 assetTree.addEventListener('click', e => {
                     const deleteBtn = e.target.closest('button[data-delete-asset]');
                     if (deleteBtn) {
+                        deleteBtn.disabled = true;
+                        deleteBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                         this.sendMessage('deleteUnusedAsset', { file: deleteBtn.dataset.deleteAsset });
                         return;
                     }
@@ -270,7 +274,7 @@
                     const folderSelect = document.getElementById('assetImportFolderSelect');
                     const targetDir = folderSelect ? folderSelect.value : 'assets/images';
                     confirmBtn.disabled = true;
-                    confirmBtn.textContent = 'Importing…';
+                    confirmBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Importing…';
 
                     try {
                         const payloadFiles = [];
@@ -294,7 +298,7 @@
                         console.error('Import failed', err);
                     } finally {
                         confirmBtn.disabled = false;
-                        confirmBtn.textContent = 'Import & Sync';
+                        confirmBtn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Import &amp; Sync';
                     }
                 });
             }
@@ -458,7 +462,12 @@
         async compressSingleAsset(file) {
             if (!file.previewUri) return;
             const status = document.getElementById('assetAssistantStatus');
-            if (status) status.textContent = `Compressing ${file.path} to WebP…`;
+            if (status) status.innerHTML = `<span class="af-spinner af-spinner-sm"></span> Compressing ${this.escapeHtml(file.path)} to WebP…`;
+            const rowBtn = document.querySelector(`button[data-compress-asset="${file.path}"]`);
+            if (rowBtn) {
+                rowBtn.disabled = true;
+                rowBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
+            }
 
             try {
                 const base64 = await this.convertImageToWebP(file.previewUri);
@@ -471,6 +480,10 @@
             } catch (err) {
                 console.error('Optimization error', err);
                 if (status) status.textContent = `Optimization failed: ${err.message || err}`;
+                if (rowBtn) {
+                    rowBtn.disabled = false;
+                    rowBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                }
             }
         }
 
@@ -484,7 +497,7 @@
             const bulkBtn = document.getElementById('bulkCompressBtn');
             if (bulkBtn) {
                 bulkBtn.disabled = true;
-                bulkBtn.textContent = 'Compressing…';
+                bulkBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Converting to WebP…';
             }
 
             for (const file of candidateFiles) {
@@ -572,22 +585,56 @@
         }
 
         scanAssets() {
-            this.setAssetAssistantLoading(true);
+            this.setAssetAssistantLoading(true, 'scan');
             this.sendMessage('scanAssets', {});
         }
 
         scanAndSyncAssets() {
-            this.setAssetAssistantLoading(true);
+            this.setAssetAssistantLoading(true, 'sync');
             this.sendMessage('scanAndSyncAssets', {});
         }
 
-        setAssetAssistantLoading(loading) {
-            ['scanSyncAssetsBtn', 'generateAssetConstantsBtn'].forEach(id => {
-                const button = document.getElementById(id);
-                if (button) button.disabled = Boolean(loading);
-            });
+        setAssetAssistantLoading(loading, actionType = 'scan') {
+            const scanBtn = document.getElementById('scanSyncAssetsBtn');
+            const genBtn = document.getElementById('generateAssetConstantsBtn');
             const status = document.getElementById('assetAssistantStatus');
-            if (status && loading) status.textContent = 'Scanning project assets…';
+            const tree = document.getElementById('assetFileTree');
+
+            if (scanBtn) {
+                if (!scanBtn.dataset.idleHtml) scanBtn.dataset.idleHtml = scanBtn.innerHTML;
+                scanBtn.disabled = Boolean(loading);
+                if (loading && (actionType === 'scan' || actionType === 'sync')) {
+                    scanBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Scanning &amp; Syncing…';
+                } else if (!loading) {
+                    scanBtn.innerHTML = scanBtn.dataset.idleHtml || '<i class="fas fa-arrows-rotate"></i> Scan &amp; Sync Pubspec';
+                }
+            }
+
+            if (genBtn) {
+                if (!genBtn.dataset.idleHtml) genBtn.dataset.idleHtml = genBtn.innerHTML;
+                genBtn.disabled = Boolean(loading);
+                if (loading && actionType === 'constants') {
+                    genBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Generating Constants…';
+                } else if (!loading) {
+                    genBtn.innerHTML = genBtn.dataset.idleHtml || '<i class="fas fa-code"></i> Generate Asset Constants';
+                }
+            }
+
+            if (status && loading) {
+                const msg = actionType === 'constants'
+                    ? 'Generating Dart asset constants…'
+                    : 'Scanning project assets &amp; analyzing resolutions…';
+                status.innerHTML = `<span class="af-spinner af-spinner-sm"></span> ${msg}`;
+            }
+
+            if (loading && tree && (actionType === 'scan' || actionType === 'sync')) {
+                tree.innerHTML = `
+                    <div class="af-loading-container" id="assetTreeLoading">
+                        <span class="af-spinner af-spinner-lg"></span>
+                        <span>Scanning project assets and auditing formats…</span>
+                    </div>
+                `;
+            }
         }
 
         renderAssetAssistantReport(report) {

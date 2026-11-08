@@ -206,7 +206,23 @@
 }
 
 .cmd.is-running {
-    opacity: 0.5;
+    opacity: 0.85;
+    cursor: wait;
+}
+
+.cmd.is-running .cmd-go {
+    display: none;
+}
+
+.cmd.is-running::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--accent);
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: af-spin 650ms linear infinite;
+    justify-self: center;
 }
 
 .cmd-label {
