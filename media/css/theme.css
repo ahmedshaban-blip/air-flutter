@@ -205,6 +205,12 @@ samp {
     height: 34px;
     flex: none;
     color: var(--ink);
+    border-radius: 7px;
+    transition: transform 180ms var(--ease);
+}
+
+.ff-brand:hover .ff-mark {
+    transform: translateY(-1px);
 }
 
 .ff-wordmark {

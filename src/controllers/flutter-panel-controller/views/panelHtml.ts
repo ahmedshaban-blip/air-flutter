@@ -91,10 +91,10 @@ export function getPanelWebviewContent(
         <div class="ff-shell">
             <header class="ff-masthead">
                 <div class="ff-brand">
-                    <svg class="ff-mark" viewBox="0 0 32 32" aria-hidden="true">
-                        <rect x="0.75" y="0.75" width="30.5" height="30.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
-                        <path d="M9 8.5 L17 16 L9 23.5" fill="none" stroke="var(--accent)" stroke-width="2.5"></path>
-                        <path d="M17 8.5 L23 13 L17 17.5" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+                    <svg class="ff-mark" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
+                        <rect x="1" y="1" width="30" height="30" rx="7" fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-width="1.25" stroke-opacity="0.25"></rect>
+                        <path d="M9.5 9.5 L16 16 L9.5 22.5" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <path d="M19 22.5 H23.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
                     </svg>
                     <div>
                         <div class="ff-wordmark">Air Flutter</div>

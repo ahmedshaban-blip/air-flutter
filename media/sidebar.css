@@ -96,6 +96,12 @@ button {
     height: 26px;
     flex: none;
     color: var(--ink);
+    border-radius: 6px;
+    transition: transform 180ms var(--ease);
+}
+
+.sf-masthead:hover .sf-mark {
+    transform: translateY(-1px);
 }
 
 .sf-brand {

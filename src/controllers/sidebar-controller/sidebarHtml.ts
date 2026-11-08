@@ -31,10 +31,10 @@ export function getSidebarWebviewHtml(
         <span id="sidebarOperationLabel">Loading device state…</span>
     </div>
     <header class="sf-masthead">
-        <svg class="sf-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <rect x="0.75" y="0.75" width="30.5" height="30.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
-            <path d="M9 9 L17 16 L9 23" fill="none" stroke="var(--accent)" stroke-width="2.6"></path>
-            <path d="M20 21 H25" fill="none" stroke="currentColor" stroke-width="2"></path>
+        <svg class="sf-mark" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="1" y="1" width="30" height="30" rx="7" fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-width="1.25" stroke-opacity="0.25"></rect>
+            <path d="M9.5 9.5 L16 16 L9.5 22.5" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M19 22.5 H23.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
         </svg>
         <div class="sf-brand">
             <h1>Air Flutter</h1>
