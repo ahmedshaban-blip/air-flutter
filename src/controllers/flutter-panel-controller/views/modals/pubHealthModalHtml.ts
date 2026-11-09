@@ -18,8 +18,34 @@ export function getPubHealthModalHtml(): string {
                         <button class="btn btn-quiet" id="pubBrowseProjectBtn" type="button"><i class="fas fa-folder-open"></i> Browse…</button>
                     </div>
                     <div class="pub-actions-group">
-                        <button class="btn btn-primary" id="pubHealthCheckBtn" type="button"><i class="fas fa-rotate"></i> Check Dependencies</button>
-                        <button class="btn btn-quiet" id="pubHealthUpgradeBtn" type="button"><i class="fas fa-arrow-up"></i> Run flutter pub upgrade</button>
+                        <button class="btn btn-primary" id="pubUpdateSelectedBtn" type="button" disabled><i class="fas fa-arrow-up"></i> Update Selected (<span id="pubSelectedCount">0</span>)</button>
+                        <button class="btn btn-quiet" id="pubHealthCheckBtn" type="button"><i class="fas fa-rotate"></i> Refresh</button>
+                        <button class="btn btn-quiet" id="pubHealthUpgradeBtn" type="button"><i class="fas fa-terminal"></i> Run flutter pub upgrade</button>
+                    </div>
+                </div>
+
+                <!-- Tabs: All, Direct, Dev, Transitive -->
+                <div class="pub-tabs-bar" id="pubTabsBar" hidden>
+                    <button class="pub-tab is-active" data-tab="all" type="button">
+                        <i class="fas fa-layer-group"></i> All <span class="pub-tab-badge" id="pubTabAllCount">0</span>
+                    </button>
+                    <button class="pub-tab" data-tab="direct" type="button">
+                        <i class="fas fa-box"></i> Direct <span class="pub-tab-badge" id="pubTabDirectCount">0</span>
+                    </button>
+                    <button class="pub-tab" data-tab="dev" type="button">
+                        <i class="fas fa-flask"></i> Dev <span class="pub-tab-badge" id="pubTabDevCount">0</span>
+                    </button>
+                    <button class="pub-tab" data-tab="transitive" type="button">
+                        <i class="fas fa-diagram-project"></i> Transitive <span class="pub-tab-badge" id="pubTabTransitiveCount">0</span>
+                    </button>
+                </div>
+
+                <!-- Transitive Context Banner -->
+                <div class="pub-transitive-banner" id="pubTransitiveBanner" hidden>
+                    <i class="fas fa-circle-info"></i>
+                    <div>
+                        <strong>Transitive Dependencies:</strong>
+                        These are sub-dependencies pulled in by your direct packages. They are not defined directly in <code>pubspec.yaml</code>. The parent packages that depend on them are shown below (e.g. <code>via supabase_flutter</code>). Upgrading transitive dependencies via CLI might cause version conflicts.
                     </div>
                 </div>
 
@@ -94,12 +120,14 @@ export function getPubHealthModalHtml(): string {
                         <table class="pub-table">
                             <thead>
                                 <tr>
+                                    <th class="pub-th-check"><input type="checkbox" id="pubSelectAllCheckbox" title="Select all visible upgradable packages"></th>
                                     <th>Package</th>
                                     <th>Kind</th>
                                     <th>Current</th>
                                     <th>Upgradable</th>
                                     <th>Latest</th>
                                     <th>Status</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="pubPackagesTbody"></tbody>
@@ -112,6 +140,26 @@ export function getPubHealthModalHtml(): string {
                     <i class="fas fa-cubes"></i>
                     <h3>Scan Workspace Dependencies</h3>
                     <p>Click "Check Dependencies" to run an automated audit of your pubspec.yaml against pub.dev.</p>
+                </div>
+            </div>
+
+            <!-- In-Modal Confirmation Dialog -->
+            <div class="pub-confirm-overlay" id="pubConfirmModal" hidden>
+                <div class="pub-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="pubConfirmTitle">
+                    <div class="pub-confirm-head">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <h3 id="pubConfirmTitle">Confirm Package Update</h3>
+                    </div>
+                    <div class="pub-confirm-body">
+                        <p id="pubConfirmMessage"></p>
+                        <div class="pub-confirm-list-wrap" id="pubConfirmListWrap">
+                            <ul id="pubConfirmList" class="pub-confirm-list"></ul>
+                        </div>
+                    </div>
+                    <div class="pub-confirm-footer">
+                        <button class="btn btn-quiet" id="pubConfirmCancelBtn" type="button">Cancel</button>
+                        <button class="btn btn-danger" id="pubConfirmProceedBtn" type="button"><i class="fas fa-bolt"></i> Confirm &amp; Proceed</button>
+                    </div>
                 </div>
             </div>
         </div>

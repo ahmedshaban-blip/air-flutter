@@ -75,9 +75,11 @@ const { PubHealthService } = require('../out/domain/pub-health');
   try {
     const res = await mockService.checkHealth(tmpDir);
     assert.strictEqual(res.total, 3);
-    assert.strictEqual(executed.length, 1);
+    assert.strictEqual(executed.length, 2);
     assert.strictEqual(executed[0].exe, 'flutter');
     assert.deepStrictEqual(executed[0].args, ['pub', 'outdated', '--json']);
+    assert.strictEqual(executed[1].exe, 'flutter');
+    assert.deepStrictEqual(executed[1].args, ['pub', 'deps', '--json']);
     assert.strictEqual(executed[0].cwd, tmpDir);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -94,6 +96,82 @@ const { PubHealthService } = require('../out/domain/pub-health');
   assert.ok(diagnostics.title.includes('Line 32'));
   assert.ok(diagnostics.suggestion.includes('assets:'));
   assert.ok(diagnostics.suggestion.includes('flutter:'));
+
+  // Test deps parser and parent package mapping
+  const sampleDepsJson = JSON.stringify({
+    root: 'my_app',
+    packages: [
+      {
+        name: 'my_app',
+        kind: 'root',
+        dependencies: ['supabase_flutter', 'mockito']
+      },
+      {
+        name: 'supabase_flutter',
+        kind: 'direct',
+        dependencies: ['sqflite_common', 'shared_preferences_foundation']
+      },
+      {
+        name: 'mockito',
+        kind: 'dev',
+        dependencies: ['test_api']
+      },
+      {
+        name: 'test_api',
+        kind: 'transitive',
+        dependencies: ['stack_trace']
+      }
+    ]
+  });
+
+  const parentMap = PubHealthService.parsePubDepsJson(sampleDepsJson);
+  assert.ok(parentMap.has('sqflite_common'));
+  assert.deepStrictEqual(parentMap.get('sqflite_common'), ['supabase_flutter']);
+  assert.deepStrictEqual(parentMap.get('test_api'), ['mockito']);
+  assert.deepStrictEqual(parentMap.get('stack_trace'), ['test_api']);
+
+  // Test parsePubOutdatedJson with parentMap
+  const sampleWithTransitive = JSON.stringify({
+    packages: [
+      {
+        package: 'test_api',
+        kind: 'transitive',
+        current: { version: '0.7.12' },
+        upgradable: { version: '0.7.12' },
+        latest: { version: '0.7.15' }
+      }
+    ]
+  });
+  const summaryTransitive = PubHealthService.parsePubOutdatedJson(sampleWithTransitive, parentMap);
+  assert.strictEqual(summaryTransitive.packages[0].name, 'test_api');
+  assert.deepStrictEqual(summaryTransitive.packages[0].parentPackages, ['mockito']);
+
+  // Test updatePackages and upgradeTransitivePackage
+  const updateCmds = [];
+  const testTmp = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'flutter-test-update-'));
+  fs.writeFileSync(pathMod.join(testTmp, 'pubspec.yaml'), 'name: fixture\n');
+
+  try {
+    const updateService = new PubHealthService(async (exe, args, cwd) => {
+      updateCmds.push({ exe, args, cwd });
+      return { stdout: 'Package updated', stderr: '' };
+    });
+
+    await updateService.updatePackages(testTmp, [
+      { name: 'dio', version: '5.9.0', isDev: false },
+      { name: 'flutter_lints', version: '6.0.0', isDev: true }
+    ]);
+
+    assert.strictEqual(updateCmds.length, 2);
+    assert.deepStrictEqual(updateCmds[0].args, ['pub', 'add', 'dio:^5.9.0']);
+    assert.deepStrictEqual(updateCmds[1].args, ['pub', 'add', '--dev', 'flutter_lints:^6.0.0']);
+
+    await updateService.upgradeTransitivePackage(testTmp, 'test_api');
+    assert.strictEqual(updateCmds.length, 3);
+    assert.deepStrictEqual(updateCmds[2].args, ['pub', 'upgrade', 'test_api']);
+  } finally {
+    fs.rmSync(testTmp, { recursive: true, force: true });
+  }
 
   console.log('✅ PubHealthService tests passed!');
 })();

@@ -22,6 +22,7 @@ export interface PubHealthItem {
   upgradableVersion: string;
   latestVersion: string;
   status: 'up_to_date' | 'upgradable' | 'major_update';
+  parentPackages?: string[];
 }
 
 export interface PubHealthSummary {
@@ -101,7 +102,73 @@ export class PubHealthService {
       throw new Error(`flutter pub outdated failed: ${res.errorMessage || res.stderr}`);
     }
 
-    return PubHealthService.parsePubOutdatedJson(res.stdout);
+    let parentMap: Map<string, string[]> | undefined;
+    try {
+      const depsRes = await this.runProcess('flutter', ['pub', 'deps', '--json'], projectPath, 25000);
+      if (depsRes.stdout) {
+        parentMap = PubHealthService.parsePubDepsJson(depsRes.stdout);
+      }
+    } catch {
+      // Non-fatal if deps graph resolution fails
+    }
+
+    return PubHealthService.parsePubOutdatedJson(res.stdout, parentMap);
+  }
+
+  public async updatePackages(
+    projectPath: string,
+    packagesToUpdate: Array<{ name: string; version: string; isDev?: boolean }>
+  ): Promise<{ success: boolean; output: string }> {
+    if (!projectPath || !fs.existsSync(path.join(projectPath, 'pubspec.yaml'))) {
+      throw new Error('Invalid project path: missing pubspec.yaml');
+    }
+    if (!packagesToUpdate || packagesToUpdate.length === 0) {
+      return { success: true, output: 'No packages selected for update.' };
+    }
+
+    const directPkgs = packagesToUpdate.filter(p => !p.isDev);
+    const devPkgs = packagesToUpdate.filter(p => p.isDev);
+    const outputs: string[] = [];
+
+    if (directPkgs.length > 0) {
+      const args = ['pub', 'add', ...directPkgs.map(p => `${p.name}:^${p.version.replace(/^\^/, '')}`)];
+      const res = await this.runProcess('flutter', args, projectPath, 60000);
+      outputs.push(res.stdout || res.stderr || res.errorMessage || '');
+      if (res.errorMessage && !res.stdout) {
+        throw new Error(`Failed to update dependencies: ${res.errorMessage || res.stderr}`);
+      }
+    }
+
+    if (devPkgs.length > 0) {
+      const args = ['pub', 'add', '--dev', ...devPkgs.map(p => `${p.name}:^${p.version.replace(/^\^/, '')}`)];
+      const res = await this.runProcess('flutter', args, projectPath, 60000);
+      outputs.push(res.stdout || res.stderr || res.errorMessage || '');
+      if (res.errorMessage && !res.stdout) {
+        throw new Error(`Failed to update dev_dependencies: ${res.errorMessage || res.stderr}`);
+      }
+    }
+
+    return {
+      success: true,
+      output: outputs.join('\n')
+    };
+  }
+
+  public async upgradeTransitivePackage(
+    projectPath: string,
+    packageName: string
+  ): Promise<{ success: boolean; output: string }> {
+    if (!projectPath || !fs.existsSync(path.join(projectPath, 'pubspec.yaml'))) {
+      throw new Error('Invalid project path: missing pubspec.yaml');
+    }
+    const res = await this.runProcess('flutter', ['pub', 'upgrade', packageName], projectPath, 60000);
+    if (res.errorMessage && !res.stdout) {
+      throw new Error(`Failed to upgrade ${packageName}: ${res.errorMessage || res.stderr}`);
+    }
+    return {
+      success: true,
+      output: res.stdout || res.stderr || ''
+    };
   }
 
   public static extractPubspecSnippet(filePath?: string, errorLine?: number): string | undefined {
@@ -174,7 +241,47 @@ export class PubHealthService {
     return null;
   }
 
-  public static parsePubOutdatedJson(raw: string): PubHealthSummary {
+  public static parsePubDepsJson(raw: string): Map<string, string[]> {
+    const parentMap = new Map<string, string[]>();
+    if (!raw) return parentMap;
+
+    let parsed: { packages?: Array<{ name: string; kind?: string; dependencies?: string[] }> } = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const jsonStart = raw.indexOf('{');
+      const jsonEnd = raw.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+      }
+    }
+
+    const packages = Array.isArray(parsed.packages) ? parsed.packages : [];
+    for (const pkg of packages) {
+      if (!pkg.name || pkg.kind === 'root') continue;
+      const deps = Array.isArray(pkg.dependencies) ? pkg.dependencies : [];
+      for (const dep of deps) {
+        if (!parentMap.has(dep)) {
+          parentMap.set(dep, []);
+        }
+        const parents = parentMap.get(dep)!;
+        if (!parents.includes(pkg.name)) {
+          // Put direct/dev parents first
+          if (pkg.kind === 'direct' || pkg.kind === 'dev') {
+            parents.unshift(pkg.name);
+          } else {
+            parents.push(pkg.name);
+          }
+        }
+      }
+    }
+    return parentMap;
+  }
+
+  public static parsePubOutdatedJson(
+    raw: string,
+    parentMap?: Map<string, string[]> | Record<string, string[]>
+  ): PubHealthSummary {
     let parsed: { packages?: RawPubPackage[] } = {};
     try {
       parsed = JSON.parse(raw);
@@ -212,13 +319,23 @@ export class PubHealthService {
         upToDateCount++;
       }
 
+      let parentPackages: string[] | undefined;
+      if (pkg.kind === 'transitive' && parentMap) {
+        if (parentMap instanceof Map) {
+          parentPackages = parentMap.get(pkg.package);
+        } else {
+          parentPackages = parentMap[pkg.package];
+        }
+      }
+
       packages.push({
         name: pkg.package,
         kind: pkg.kind || 'direct',
         currentVersion: current,
         upgradableVersion: upgradable,
         latestVersion: latest,
-        status
+        status,
+        parentPackages
       });
     }
 

@@ -1,7 +1,9 @@
 .pub-health-modal-card {
-    max-width: 820px;
+    max-width: 860px;
     width: 95%;
     max-height: 85vh;
+    position: relative;
+    overflow: hidden;
 }
 
 .pub-health-modal-body {
@@ -274,4 +276,284 @@
     background: rgba(226, 85, 43, 0.15);
     color: #E2552B;
 }
+
+/* Tabs Bar */
+.pub-tabs-bar {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    margin-top: 4px;
+}
+
+.pub-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pub-tab:hover {
+    color: var(--text);
+    background: var(--panel);
+}
+
+.pub-tab.is-active {
+    color: var(--accent);
+    background: rgba(226, 85, 43, 0.1);
+    border-color: rgba(226, 85, 43, 0.3);
+    font-weight: 600;
+}
+
+.pub-tab-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text);
+}
+
+.pub-tab.is-active .pub-tab-badge {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+/* Transitive Explanatory Banner */
+.pub-transitive-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(49, 130, 206, 0.08);
+    border: 1px solid rgba(49, 130, 206, 0.3);
+    border-left: 3px solid #3182ce;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.4;
+}
+
+.pub-transitive-banner i {
+    color: #3182ce;
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.pub-transitive-banner code {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+/* Table Checkbox & Action Columns */
+.pub-th-check, .pub-td-check {
+    width: 32px;
+    text-align: center;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+}
+
+.pub-pkg-checkbox {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent);
+}
+
+.pub-check-disabled {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+}
+
+.pub-pkg-name {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+}
+
+.pub-parent-tags {
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 11px;
+}
+
+.pub-parent-label {
+    color: var(--muted);
+    font-size: 10px;
+    font-style: italic;
+}
+
+.pub-parent-tag {
+    display: inline-block;
+    padding: 1px 5px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.pub-kind-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.pub-kind-badge.is-direct {
+    background: rgba(56, 161, 105, 0.12);
+    color: #38A169;
+}
+
+.pub-kind-badge.is-dev {
+    background: rgba(128, 90, 213, 0.12);
+    color: #9F7AEA;
+}
+
+.pub-kind-badge.is-transitive {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--muted);
+}
+
+.pub-td-action {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.pub-action-btns {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.pub-no-action {
+    color: var(--muted);
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pub-no-action i {
+    color: #38A169;
+    font-size: 10px;
+}
+
+/* In-Modal Confirmation Overlay */
+.pub-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.pub-confirm-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-top: 3px solid #E2552B;
+    border-radius: 6px;
+    max-width: 500px;
+    width: 100%;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: pubFadeIn 0.15s ease-out;
+}
+
+@keyframes pubFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.pub-confirm-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pub-confirm-head i {
+    font-size: 20px;
+    color: #E2552B;
+}
+
+.pub-confirm-head h3 {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.pub-confirm-body p {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.pub-confirm-list-wrap {
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+
+.pub-confirm-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.pub-confirm-list li {
+    padding: 4px 0;
+    font-family: var(--font-mono);
+}
+
+.pub-confirm-badge.is-danger {
+    display: inline-block;
+    padding: 1px 5px;
+    background: rgba(226, 85, 43, 0.15);
+    color: #E2552B;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+.pub-confirm-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 6px;
+}
+
 

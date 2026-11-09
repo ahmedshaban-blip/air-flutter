@@ -101,6 +101,7 @@
     "package": "vsce package",
     "test:mcp": "tsc -p ./ && tsc -p tsconfig.test-mcp.json && node test-build/test/test-mcp-hub.js && node test/test-mcp-companion.js && node test/test-mcp-dom.js && node test/test-mcp-panel-button.js && node test/test-mcp-loadorder.js",
     "test:workflow": "tsc -p ./ && node test/test-workflow-generator.js && node test/test-workflow-dom.js",
+    "test:pub-health": "tsc -p ./ && node test/test-pub-health.js && node test/test-pub-health-dom.js",
     "test:vsix": "node test/test-mcp-vsix.js && node test/test-mcp-loadorder-vsix.js"
   },
   "dependencies": {
