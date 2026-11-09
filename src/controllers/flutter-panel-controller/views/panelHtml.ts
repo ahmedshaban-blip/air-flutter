@@ -448,27 +448,27 @@ export function getPanelWebviewContent(
                                 <span><span class="cmd-label">Pub Health</span><span class="cmd-run">dependencies &amp; outdated check</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
-                            <button class="cmd" type="button" data-command="buildRunnerTab" onclick="airFlutter.selectTab('build-runner')">
+                            <button class="cmd" type="button" data-command="buildRunnerTab" onclick="window.airFlutter.selectTab('build-runner')">
                                 <i class="cmd-icon fas fa-gears"></i>
                                 <span><span class="cmd-label">Build Runner</span><span class="cmd-run">code-gen cockpit</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
-                            <button class="cmd" type="button" data-command="iconSplashTab" onclick="airFlutter.selectTab('icon-splash')">
+                            <button class="cmd" type="button" data-command="iconSplashTab" onclick="window.airFlutter.selectTab('icon-splash')">
                                 <i class="cmd-icon fas fa-icons"></i>
                                 <span><span class="cmd-label">Icon &amp; Splash</span><span class="cmd-run">adaptive icons &amp; assets</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
-                            <button class="cmd" type="button" data-command="deviceEnvTab" onclick="airFlutter.selectTab('device-env')">
+                            <button class="cmd" type="button" data-command="deviceEnvTab" onclick="window.airFlutter.selectTab('device-env')">
                                 <i class="cmd-icon fas fa-sliders"></i>
                                 <span><span class="cmd-label">Device Sandbox</span><span class="cmd-run">font, night, battery &amp; locale</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
-                            <button class="cmd" type="button" data-command="localizationTab" onclick="airFlutter.selectTab('localization')">
+                            <button class="cmd" type="button" data-command="localizationTab" onclick="window.airFlutter.selectTab('localization')">
                                 <i class="cmd-icon fas fa-language"></i>
                                 <span><span class="cmd-label">Localization</span><span class="cmd-run">ARB matrix &amp; translations</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
-                            <button class="cmd" type="button" data-command="sslDoctorTab" onclick="airFlutter.selectTab('ssl-proxy')">
+                            <button class="cmd" type="button" data-command="sslDoctorTab" onclick="window.airFlutter.selectTab('ssl-proxy')">
                                 <i class="cmd-icon fas fa-shield-virus"></i>
                                 <span><span class="cmd-label">SSL &amp; Proxy</span><span class="cmd-run">network security &amp; overrides</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
@@ -533,19 +533,19 @@ export function getPanelWebviewContent(
                             <button class="rail-item" type="button" onclick="airFlutter.openCompatDoctorModal()">
                                 <i class="fas fa-stethoscope"></i> Compat Doctor
                             </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('build-runner')">
+                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('build-runner')">
                                 <i class="fas fa-gears"></i> Build Runner
                             </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('icon-splash')">
+                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('icon-splash')">
                                 <i class="fas fa-icons"></i> Icon &amp; Splash
                             </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('device-env')">
+                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('device-env')">
                                 <i class="fas fa-sliders"></i> Device Sandbox
                             </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('localization')">
+                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('localization')">
                                 <i class="fas fa-language"></i> Localization
                             </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('ssl-proxy')">
+                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('ssl-proxy')">
                                 <i class="fas fa-shield-virus"></i> SSL &amp; Proxy
                             </button>
                         </div>
@@ -1025,7 +1025,14 @@ ${getPubHealthModalHtml()}
                     const app = window.airFlutterApp;
                     if (app && typeof app.selectPanelTab === 'function') {
                         app.selectPanelTab(tabName);
+                        return;
                     }
+                    if (window.vscode) {
+                        window.vscode.postMessage({ command: 'selectTab', tab: tabName });
+                    }
+                },
+                selectPanelTab: function (tabName) {
+                    this.selectTab(tabName);
                 },
                 closeImportModal: function () {
                     const app = window.airFlutterApp;

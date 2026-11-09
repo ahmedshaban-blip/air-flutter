@@ -342,6 +342,11 @@ export class FlutterPanelController extends ADBBaseController {
                 loading: this.initialLoadPending
               });
               break;
+            case 'selectTab':
+              if (message.tab) {
+                this.currentPanel?.webview.postMessage({ command: 'selectTab', tab: message.tab });
+              }
+              break;
             case 'connectDevice':
               console.log('🔗 FlutterPanelController: Connecting device...')
               await this.handleConnectDevice(message.ip, message.port);

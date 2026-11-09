@@ -645,6 +645,10 @@
             }, 1200);
         }
 
+        selectTab(tabName) {
+            this.selectPanelTab(tabName);
+        }
+
         selectPanelTab(tabName) {
             document.querySelectorAll('[data-panel-tab]').forEach(button => {
                 const selected = button.dataset.panelTab === tabName;
