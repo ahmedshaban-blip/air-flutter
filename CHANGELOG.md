@@ -5,14 +5,71 @@ All notable changes to Air Flutter are documented in this file.
 This project is a fresh, independent release. It shares no publisher, extension id or
 update channel with any other extension.
 
-## [Unreleased]
+## [3.0.0] - 2026-11-09
+
+### Engineering Tools Suite (New Feature Cockpits & Labs)
+
+- **Build Runner Cockpit**:
+  - Code generation control center supporting `build`, `watch`, and cache cleaning (`.dart_tool/build`).
+  - Flag management for `--delete-conflicting-outputs` to prevent generation collisions without full project cleans.
+  - Granular build filters (e.g. `lib/models/**.dart`) to accelerate Riverpod, Freezed, JsonSerializable, Drift, and AutoRoute code generation.
+  - Direct integration with dedicated VS Code terminals and live progress status badge (`IDLE`, `RUNNING`, `ERROR`).
+- **App Icon & Splash Studio**:
+  - Interactive drag-and-drop icon updater (`PNG`/`JPEG`/`WebP`) with real-time adaptive previews (squircle, circle, rounded, and iOS square).
+  - Background color picker with custom hex support and asset path verification.
+  - Automated configuration and generation for `flutter_launcher_icons` and `flutter_native_splash` across Android, iOS, Web, and macOS.
+  - One-click native asset deployment straight into platform source trees.
+- **Device Environment Sandbox**:
+  - Live typography testing with dynamic font scale slider (0.8x to 2.0x) injected directly via ADB.
+  - Immediate system Dark Mode toggle (`ui night yes/no`).
+  - Battery charge simulator (0% to 100% capacity testing with simulated AC/USB disconnects).
+  - Device locale and language switcher for UI internationalization and RTL layout stress testing.
+- **ARB & Localization Studio**:
+  - Multi-language translation matrix editor for Flutter `.arb` files (`app_en.arb`, `app_ar.arb`, etc.).
+  - Searchable key-value translation table with live filtering.
+  - Automated missing translation detection and inline key injection.
+  - Automatic `flutter gen-l10n` triggering and ARB schema validation.
+- **SSL & Proxy Doctor (Network State Testing Lab)**:
+  - Network Security Configuration auditor (`network_security_config.xml`) checking for cleartext traffic and user CA cert support.
+  - Proxy and Private DNS configuration with presets for Charles, Proxyman, Fiddler, and Burp Suite.
+  - Built-in Mock Error Proxy & fault injection supporting artificial latency (3s delay), timeout, 403 Forbidden, 500 Internal Error, and offline isolation.
+- **Storage Inspector**:
+  - On-device real-time viewer and editor for `SharedPreferences` (XML) and `SQLite` (`.db`) databases.
+  - Search, edit, insert, and delete preference keys across string, int, double, boolean, and string-set types.
+  - SQLite table schema inspector, table row viewer, custom SQL query runner, and database download/wipe capabilities.
+- **Flutter Debug Overlays**:
+  - Instant toggling of Flutter rendering overlays on connected apps without hot restart:
+    - Debug Paint (`debugPaintSizeEnabled`)
+    - Performance Overlay (`showPerformanceOverlay`)
+    - Slow Animations / Slow-mo (`timeDilation`)
+    - Repaint Rainbow (`debugRepaintRainbowEnabled`)
+- **Mock GPS Studio**:
+  - Real-time geolocation injection into devices and emulators via ADB.
+  - Preset coordinates for major global tech hubs and customizable latitude/longitude.
+  - Route simulation engine with configurable speed and loop playback.
+- **APK & AAB Size Analyzer**:
+  - Deep binary composition analysis for Android APKs and App Bundles (AAB).
+  - Granular inspection of DEX classes, native shared libraries (`.so` per ABI), assets, resources, and fonts.
+  - Built-in size optimization recommendations for R8/ProGuard and asset compression.
+- **Pub Health & Outdated Checker**:
+  - Project dependency diagnostics leveraging `flutter pub outdated`.
+  - Detection of outdated packages, major breaking version shifts, discontinued libraries, and version solver conflicts.
+  - Batch package update assistance and pubspec syntax validation.
 
 ### Permissions & Security
 
-- **Comprehensive Permission Catalog Data Module**: Added production-grade `PERMISSION_CATALOG` (`PermissionCategory[]`) with 12 structured functional categories covering Android permissions and iOS `Info.plist` usage description keys.
+- **Comprehensive Permission Catalog Data Module**: Production-grade `PERMISSION_CATALOG` (`PermissionCategory[]`) with 12 structured functional categories covering Android permissions and iOS `Info.plist` usage description keys.
 - **Granular Platform & Version Metadata**: Full support for Android Protection Levels (`normal`, `dangerous`, `signature`, `special`), minimum/maximum Android SDK requirements (e.g., `READ_MEDIA_*` on API 33+, `READ_MEDIA_VISUAL_USER_SELECTED` on API 34+), and minimum iOS versions (e.g., iOS 17 calendar and reminders split).
-- **Automated maxSdkVersion Tag Injection**: `AndroidPermissionManager.inject()` now automatically inspects `PERMISSION_CATALOG` to emit `android:maxSdkVersion="..."` attributes (such as `android:maxSdkVersion="29"` for `WRITE_EXTERNAL_STORAGE` and `android:maxSdkVersion="32"` for `READ_EXTERNAL_STORAGE`).
+- **Automated maxSdkVersion Tag Injection**: `AndroidPermissionManager.inject()` automatically inspects `PERMISSION_CATALOG` to emit `android:maxSdkVersion="..."` attributes (such as `android:maxSdkVersion="29"` for `WRITE_EXTERNAL_STORAGE` and `android:maxSdkVersion="32"` for `READ_EXTERNAL_STORAGE`).
 - **ADB Command Support & Protection Guardrails**: Added exact `adbPermissionName` mappings for runtime dangerous permissions (`adb shell pm grant/revoke`), along with Play Store & App Store review warnings and recommended Flutter packages.
+
+### UI & Architecture Improvements
+
+- **Synchronous Bridge Delegation**: Fixed panel tab navigation so `window.airFlutter.selectTab()` resolves reliably without being shadowed by lexical scope, ensuring instant tab switching to all new cockpits.
+- **High-Density Editorial Theme**: Terminal editorial styling consuming IBM Plex typography, refined dark-mode contrast, and standardized micro-spinners.
+- **Flash-of-Unstyled-Content (FOUC) Elimination**: Pre-render head scripts and embedded styles eliminate layout jumping on webview initialization.
+
+
 
 
 ## [1.9.0] - 2026-11-05

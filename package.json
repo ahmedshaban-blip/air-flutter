@@ -1,7 +1,7 @@
 {
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
-  "description": "The complete Flutter & Android engineering suite: compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording for PRs, network proxy & Private DNS, Flutter Flavors, MCP & AI Agent Hub, AI sub-agent scaffolding & GitHub Actions CI/CD workflows.",
+  "description": "The complete Flutter & Android engineering suite: Build Runner cockpit, App Icon & Splash studio, Device Environment sandbox, ARB & Localization studio, SSL & Proxy doctor, Storage Inspector (SharedPreferences & SQLite), Debug Overlays, Mock GPS, APK Size Analyzer, Pub Health, compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording, Flutter Flavors, MCP & AI Agent Hub, and GitHub Actions CI/CD workflows.",
   "version": "3.0.0",
   "publisher": "ahmedshaban",
   "author": {
@@ -87,7 +87,27 @@
     "windsurf",
     "copilot",
     "claude desktop",
-    "codex"
+    "codex",
+    "build runner",
+    "code generation",
+    "app icon",
+    "splash screen",
+    "device sandbox",
+    "font scale",
+    "localization",
+    "arb",
+    "translations",
+    "ssl doctor",
+    "mock error proxy",
+    "storage inspector",
+    "shared preferences",
+    "sqlite",
+    "debug overlays",
+    "debug paint",
+    "mock gps",
+    "apk size analyzer",
+    "pub health",
+    "pub outdated"
   ],
   "main": "./out/main.js",
   "scripts": {
@@ -406,6 +426,56 @@
         "title": "SSL & Proxy Doctor",
         "category": "Air Flutter",
         "icon": "$(shield)"
+      },
+      {
+        "command": "airFlutter.openStorageInspectorModal",
+        "title": "Storage Inspector (SharedPreferences & SQLite)",
+        "category": "Air Flutter",
+        "icon": "$(database)"
+      },
+      {
+        "command": "airFlutter.openDebugOverlaysModal",
+        "title": "Debug Overlays Studio (Paint, Performance & Slow-mo)",
+        "category": "Air Flutter",
+        "icon": "$(layers)"
+      },
+      {
+        "command": "airFlutter.toggleDebugPaint",
+        "title": "Toggle Debug Paint Overlay",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.togglePerformanceOverlay",
+        "title": "Toggle Performance Overlay",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.toggleSlowAnimations",
+        "title": "Toggle Slow Animations (Slow-mo)",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.toggleRepaintRainbow",
+        "title": "Toggle Repaint Rainbow",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.openMockGpsModal",
+        "title": "Mock GPS Studio (Location & Route Injection)",
+        "category": "Air Flutter",
+        "icon": "$(location)"
+      },
+      {
+        "command": "airFlutter.openApkSizeModal",
+        "title": "APK & AAB Size Analyzer",
+        "category": "Air Flutter",
+        "icon": "$(package)"
+      },
+      {
+        "command": "airFlutter.openPubHealthModal",
+        "title": "Pub Health & Dependencies Doctor",
+        "category": "Air Flutter",
+        "icon": "$(pulse)"
       }
     ],
     "menus": {
@@ -484,6 +554,42 @@
         },
         {
           "command": "airFlutter.openSslDoctor",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openStorageInspectorModal",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openDebugOverlaysModal",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.toggleDebugPaint",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.togglePerformanceOverlay",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.toggleSlowAnimations",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.toggleRepaintRainbow",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openMockGpsModal",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openApkSizeModal",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openPubHealthModal",
           "when": "workspaceHasAirFlutter"
         }
       ],
