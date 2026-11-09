@@ -11,19 +11,70 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
         const applyDnsBtn = document.getElementById('applyDnsBtn');
         const clearDnsBtn = document.getElementById('clearDnsBtn');
         const refreshBtn = document.getElementById('refreshNetworkBtn');
-        const toggleOfflineBtn = document.getElementById('toggleOfflineBtn');
+        const toggleDnsOfflineBtn = document.getElementById('toggleDnsOfflineBtn');
+        const toggleHwOfflineBtn = document.getElementById('toggleHardwareOfflineBtn');
+        const restoreOnlineBtn = document.getElementById('restoreOnlineBtn');
         const resetSimBtn = document.getElementById('resetNetworkSimulationBtn');
+        const genOverridesBtn = document.getElementById('generateFlutterOverridesBtn');
+        const copySnippetBtn = document.getElementById('copyFlutterOverridesSnippetBtn');
 
         const closeModal = () => { modal.hidden = true; };
         if (closeBtn) closeBtn.addEventListener('click', closeModal);
         if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-        // Screen State Testing: Offline Toggle
-        if (toggleOfflineBtn) {
-            toggleOfflineBtn.addEventListener('click', () => {
-                toggleOfflineBtn.disabled = true;
-                toggleOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Updating…';
-                this.sendMessage('toggleOfflineMode', {});
+        // Screen State Testing: DNS Drop Offline (Wireless-Safe)
+        if (toggleDnsOfflineBtn) {
+            toggleDnsOfflineBtn.addEventListener('click', () => {
+                toggleDnsOfflineBtn.disabled = true;
+                toggleDnsOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Applying…';
+                this.sendMessage('toggleOfflineMode', { modePreference: 'dns_drop' });
+            });
+        }
+
+        // Screen State Testing: Full Hardware Radio Cut
+        if (toggleHwOfflineBtn) {
+            toggleHwOfflineBtn.addEventListener('click', () => {
+                toggleHwOfflineBtn.disabled = true;
+                toggleHwOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Cutting…';
+                this.sendMessage('toggleOfflineMode', { modePreference: 'hardware' });
+            });
+        }
+
+        // Screen State Testing: Restore Online
+        if (restoreOnlineBtn) {
+            restoreOnlineBtn.addEventListener('click', () => {
+                restoreOnlineBtn.disabled = true;
+                restoreOnlineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Restoring…';
+                this.sendMessage('toggleOfflineMode', { modePreference: 'auto' });
+            });
+        }
+
+        // Generate Flutter Overrides in lib/dev_http_overrides.dart
+        if (genOverridesBtn) {
+            genOverridesBtn.addEventListener('click', () => {
+                this.sendMessage('generateFlutterOverrides', {});
+            });
+        }
+
+        // Copy main() snippet
+        if (copySnippetBtn) {
+            copySnippetBtn.addEventListener('click', () => {
+                const snippet = `// In your lib/main.dart:
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'dev_http_overrides.dart';
+
+void main() {
+  if (kDebugMode) {
+    HttpOverrides.global = DevHttpOverrides();
+  }
+  runApp(const MyApp());
+}`;
+                navigator.clipboard.writeText(snippet).then(() => {
+                  this.showToast('Copied main() hook snippet to clipboard!', 'success');
+                }).catch(() => {
+                  this.showToast('Copied hook snippet!', 'info');
+                });
             });
         }
 
@@ -149,8 +200,9 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
         const clearDnsBtn = document.getElementById('clearDnsBtn');
         const refreshBtn = document.getElementById('refreshNetworkBtn');
         const resetSimBtn = document.getElementById('resetNetworkSimulationBtn');
-        const toggleOfflineBtn = document.getElementById('toggleOfflineBtn');
-        const toggleOfflineBtnText = document.getElementById('toggleOfflineBtnText');
+        const toggleDnsOfflineBtn = document.getElementById('toggleDnsOfflineBtn');
+        const toggleHwOfflineBtn = document.getElementById('toggleHardwareOfflineBtn');
+        const restoreOnlineBtn = document.getElementById('restoreOnlineBtn');
         const offlineStateHint = document.getElementById('offlineStateHint');
 
         if (applyProxyBtn) {
@@ -178,13 +230,27 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
             resetSimBtn.innerHTML = '<i class="fas fa-arrow-rotate-left"></i> Reset to Normal';
         }
 
+        if (toggleDnsOfflineBtn) {
+            toggleDnsOfflineBtn.disabled = false;
+            toggleDnsOfflineBtn.innerHTML = '<i class="fas fa-bolt"></i> Instant DNS Drop (Wireless Safe)';
+        }
+        if (toggleHwOfflineBtn) {
+            toggleHwOfflineBtn.disabled = false;
+            toggleHwOfflineBtn.innerHTML = '<i class="fas fa-wifi"></i> Full Hardware Radio Cut';
+        }
+        if (restoreOnlineBtn) {
+            restoreOnlineBtn.disabled = false;
+            restoreOnlineBtn.innerHTML = '<i class="fas fa-globe"></i> Restore Online';
+        }
+
         if (!data) return;
 
         // 1. Offline Mode State
         const offlineBadge = document.getElementById('stateLabOfflineBadge');
         if (offlineBadge) {
             if (data.isOffline) {
-                offlineBadge.textContent = data.offlineMode === 'isolated' ? 'Offline (Isolated)' : 'Offline (Airplane)';
+                const label = data.offlineMode === 'dns_drop' ? 'Offline (DNS Drop)' : (data.offlineMode === 'hardware' ? 'Offline (Hardware Radio)' : 'Offline (Isolated)');
+                offlineBadge.textContent = label;
                 offlineBadge.className = 'status-badge is-warning';
             } else {
                 offlineBadge.textContent = 'Online';
@@ -192,18 +258,15 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
             }
         }
 
-        if (toggleOfflineBtn) {
-            toggleOfflineBtn.disabled = false;
+        if (restoreOnlineBtn) {
+            restoreOnlineBtn.style.display = data.isOffline ? 'inline-flex' : 'none';
+        }
+
+        if (offlineStateHint) {
             if (data.isOffline) {
-                toggleOfflineBtn.className = 'btn btn-primary';
-                if (toggleOfflineBtnText) toggleOfflineBtnText.textContent = 'Restore Online';
-                toggleOfflineBtn.innerHTML = '<i class="fas fa-wifi"></i> <span id="toggleOfflineBtnText">Restore Online</span>';
-                if (offlineStateHint) offlineStateHint.textContent = `Active: ${data.offlineMode === 'isolated' ? 'Smart Isolated (Wireless Safe)' : 'Airplane Mode'}`;
+                offlineStateHint.innerHTML = `<span style="color: var(--err, #ef4444); font-weight: 600;">⚠️ Device is OFFLINE</span> (${data.offlineMode === 'dns_drop' ? 'Host lookups blocked immediately; Wireless ADB safe' : 'Hardware radios turned off'}).`;
             } else {
-                toggleOfflineBtn.className = 'btn btn-danger';
-                if (toggleOfflineBtnText) toggleOfflineBtnText.textContent = 'Go Offline (Isolated)';
-                toggleOfflineBtn.innerHTML = '<i class="fas fa-plug-circle-xmark"></i> <span id="toggleOfflineBtnText">Go Offline (Isolated)</span>';
-                if (offlineStateHint) offlineStateHint.textContent = 'Currently: Online';
+                offlineStateHint.textContent = 'Currently: Online (Connected)';
             }
         }
 

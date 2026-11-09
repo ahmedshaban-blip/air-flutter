@@ -342,14 +342,19 @@ export class AndroidRuntimePermissionService {
       }
       if (inRuntimeSection && /^[a-zA-Z0-9_\s]+:/.test(trimmed) && !trimmed.includes('permission')) {
         inRuntimeSection = false;
+        continue;
       }
 
-      const match = trimmed.match(/^([a-zA-Z0-9_.]+):\s*granted=(true|false)/i);
-      if (match) {
-        const name = match[1];
-        const granted = match[2].toLowerCase() === 'true';
-        const label = name.split('.').pop() || name;
-        permissions.push({ name, granted, label });
+      if (inRuntimeSection) {
+        const match = trimmed.match(/^([a-zA-Z0-9_.]+):\s*granted=(true|false)/i);
+        if (match) {
+          const name = match[1];
+          const granted = match[2].toLowerCase() === 'true';
+          const label = name.split('.').pop() || name;
+          if (!permissions.some(p => p.name === name)) {
+            permissions.push({ name, granted, label });
+          }
+        }
       }
     }
 
@@ -359,13 +364,13 @@ export class AndroidRuntimePermissionService {
   public async grantPermission(serial: string, packageId: string, permission: string): Promise<boolean> {
     const adb = await this.getADBExecutable();
     const res = await this.runProcess(adb, ['-s', serial, 'shell', 'pm', 'grant', packageId.trim(), permission.trim()], 10000);
-    return !res.errorMessage && !res.stderr.includes('Exception');
+    return !res.errorMessage && !res.stderr.includes('Exception') && !res.stdout.includes('Exception');
   }
 
   public async revokePermission(serial: string, packageId: string, permission: string): Promise<boolean> {
     const adb = await this.getADBExecutable();
     const res = await this.runProcess(adb, ['-s', serial, 'shell', 'pm', 'revoke', packageId.trim(), permission.trim()], 10000);
-    return !res.errorMessage && !res.stderr.includes('Exception');
+    return !res.errorMessage && !res.stderr.includes('Exception') && !res.stdout.includes('Exception');
   }
 
   public async grantAllPermissions(serial: string, packageId: string, permissions: string[]): Promise<boolean[]> {

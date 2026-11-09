@@ -27,6 +27,21 @@ Packages:
   assert.ok(loc);
   assert.strictEqual(loc.granted, false);
 
+  // Test that install permissions (like INTERNET) are NOT parsed as runtime permissions
+  const dumpsysWithInstallPerms = `
+Packages:
+  Package [com.example.app] (4f123a):
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+    User 0:
+      runtime permissions:
+        android.permission.CAMERA: granted=true
+`;
+  const parsedWithInstall = AndroidRuntimePermissionService.parseDumpsysPermissions(dumpsysWithInstallPerms);
+  assert.strictEqual(parsedWithInstall.some(p => p.name === 'android.permission.INTERNET'), false, 'INTERNET install permission should not be treated as runtime permission');
+  assert.strictEqual(parsedWithInstall.length, 1);
+
   // Test command execution
   const calls = [];
   const service = new AndroidRuntimePermissionService(

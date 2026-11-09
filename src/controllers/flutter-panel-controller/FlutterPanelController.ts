@@ -462,7 +462,10 @@ export class FlutterPanelController extends ADBBaseController {
               await this.handleClearPrivateDns();
               break;
             case 'toggleOfflineMode':
-              await this.networkHandler.handleToggleOffline(message.forceHardware);
+              await this.networkHandler.handleToggleOffline(message.modePreference);
+              break;
+            case 'generateFlutterOverrides':
+              await this.networkHandler.handleGenerateFlutterOverrides();
               break;
             case 'setNetworkThrottle':
               await this.networkHandler.handleSetNetworkThrottle(message.preset);

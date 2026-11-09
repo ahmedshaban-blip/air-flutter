@@ -2,14 +2,14 @@ export function getProxyModalHtml(): string {
   return `
         <!-- Network & Screen State Lab Modal -->
         <div class="modal-backdrop" id="proxyModal" hidden>
-            <div class="modal-card modal-card-wide" style="max-width: 680px;">
+            <div class="modal-card modal-card-wide" style="max-width: 700px;">
                 <div class="modal-head">
                     <h2><i class="fas fa-network-wired"></i> Network &amp; Screen State Lab</h2>
                     <button class="modal-close" id="closeProxyModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <!-- Live State Overview Header -->
-                    <div class="modal-field state-lab-status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: var(--card-bg, rgba(255,255,255,0.04)); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); margin-bottom: 16px;">
+                    <div class="modal-field state-lab-status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: var(--card-bg, rgba(255,255,255,0.04)); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); margin-bottom: 14px;">
                         <div>
                             <span style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px;">Internet State:</span>
                             <span id="stateLabOfflineBadge" class="status-badge is-enabled">Online</span>
@@ -33,6 +33,22 @@ export function getProxyModalHtml(): string {
                         </div>
                     </div>
 
+                    <!-- Flutter Dev Proxy Routing Notice -->
+                    <div style="background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; font-size: 11.5px; line-height: 1.5;">
+                        <div style="font-weight: 600; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-circle-info"></i> How Flutter App Proxying Works (Important):
+                        </div>
+                        Flutter's Dart engine (<code>dart:io</code> / <code>Dio</code>) bypasses Android system proxies by default. For <strong>Loading/Latency Testing (3000ms delay)</strong> and <strong>Error Injection (HTTP 500/404)</strong> to intercept Flutter requests:
+                        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-quiet btn-sm" id="generateFlutterOverridesBtn" type="button" style="border-color: #38bdf8; color: #38bdf8;">
+                                <i class="fas fa-file-code"></i> Generate lib/dev_http_overrides.dart
+                            </button>
+                            <button class="btn btn-quiet btn-sm" id="copyFlutterOverridesSnippetBtn" type="button">
+                                <i class="fas fa-copy"></i> Copy main() Hook Snippet
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- 1. Screen State Testing Section -->
                     <div class="state-lab-card" style="border: 1px solid var(--border-color, rgba(255,255,255,0.12)); border-radius: 8px; padding: 14px; margin-bottom: 18px; background: var(--bg-surface, rgba(0,0,0,0.15));">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -49,15 +65,21 @@ export function getProxyModalHtml(): string {
                             <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">
                                 <i class="fas fa-plane-slash"></i> Offline State Simulation
                             </label>
-                            <p style="font-size: 11px; color: var(--muted); margin: 0 0 8px 0;">
-                                🛡️ <strong>Smart Isolated Mode:</strong> Cuts app internet without disconnecting Wireless ADB, scrcpy, or live Flutter run debugging!
+                            <p style="font-size: 11px; color: var(--muted); margin: 0 0 10px 0;">
+                                Choose how to simulate offline mode. Instant DNS Drop fails lookups in 0.1s without hanging or disconnecting wireless ADB!
                             </p>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <button class="btn btn-danger" id="toggleOfflineBtn" type="button">
-                                    <i class="fas fa-plug-circle-xmark"></i> <span id="toggleOfflineBtnText">Go Offline (Isolated)</span>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button class="btn btn-danger" id="toggleDnsOfflineBtn" type="button" title="Drops host lookups immediately (0.1s). Safe for wireless ADB.">
+                                    <i class="fas fa-bolt"></i> <span id="toggleDnsOfflineBtnText">Instant DNS Drop (Wireless Safe)</span>
                                 </button>
-                                <span id="offlineStateHint" style="font-size: 11px; color: var(--muted);">Currently: Online</span>
+                                <button class="btn btn-quiet" id="toggleHardwareOfflineBtn" type="button" title="Disables Wi-Fi & Cellular hardware. Real offline test for connectivity_plus.">
+                                    <i class="fas fa-wifi"></i> <span id="toggleHardwareOfflineBtnText">Full Hardware Radio Cut</span>
+                                </button>
+                                <button class="btn btn-success" id="restoreOnlineBtn" type="button" style="display: none;">
+                                    <i class="fas fa-globe"></i> Restore Online
+                                </button>
                             </div>
+                            <div id="offlineStateHint" style="font-size: 11px; color: var(--muted); margin-top: 6px;">Currently: Online</div>
                         </div>
 
                         <!-- B. Loading State / Network Throttling -->
@@ -66,13 +88,13 @@ export function getProxyModalHtml(): string {
                                 <i class="fas fa-gauge-simple-high"></i> Loading &amp; Shimmer Testing (Throttling / Latency)
                             </label>
                             <p style="font-size: 11px; color: var(--muted); margin: 0 0 8px 0;">
-                                Injects latency or slows connection to test loading spinners, skeleton screens, and timeout guards.
+                                Throttles connection or injects 3-second delay to test loading spinners, shimmers, and skeleton loaders.
                             </p>
                             <div class="preset-pill-group" style="display: flex; flex-wrap: wrap; gap: 6px;">
                                 <button class="preset-pill throttle-btn is-active" type="button" data-preset="normal">⚡ Normal (Full Speed)</button>
+                                <button class="preset-pill throttle-btn" type="button" data-preset="delay3s">⏳ 3000ms Delay (Shimmer Test)</button>
                                 <button class="preset-pill throttle-btn" type="button" data-preset="2g">🐌 Slow 2G (GPRS)</button>
                                 <button class="preset-pill throttle-btn" type="button" data-preset="3g">📶 Regular 3G</button>
-                                <button class="preset-pill throttle-btn" type="button" data-preset="delay3s">⏳ 3000ms Delay (Shimmer Test)</button>
                             </div>
                         </div>
 
@@ -82,10 +104,10 @@ export function getProxyModalHtml(): string {
                                 <i class="fas fa-triangle-exclamation"></i> Error State Injection
                             </label>
                             <p style="font-size: 11px; color: var(--muted); margin: 0 0 8px 0;">
-                                Force API calls to fail immediately with connection errors or server responses.
+                                Force API calls to fail immediately with connection drops or simulated server responses.
                             </p>
                             <div class="preset-pill-group" style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                <button class="preset-pill error-sim-btn" type="button" data-error="connection_refused">💥 Connection Drop (SocketException)</button>
+                                <button class="preset-pill error-sim-btn" type="button" data-error="connection_refused">💥 Connection Drop (Instant SocketException)</button>
                                 <button class="preset-pill error-sim-btn" type="button" data-error="http_500">🚨 HTTP 500 (Internal Error)</button>
                                 <button class="preset-pill error-sim-btn" type="button" data-error="http_404">🔍 HTTP 404 (Not Found)</button>
                                 <button class="preset-pill error-sim-btn" type="button" data-error="http_401">🔒 HTTP 401 (Unauthorized)</button>

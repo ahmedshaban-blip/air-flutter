@@ -4,6 +4,7 @@ import { MockErrorProxyService } from './mockErrorProxy'
 
 export const BLACKHOLE_PROXY_HOST = '127.0.0.1'
 export const BLACKHOLE_PROXY_PORT = '54321'
+export const DNS_OFFLINE_HOST = 'dns.offline.invalid'
 
 export interface NetworkConfigState {
   proxy: string | null
@@ -13,7 +14,7 @@ export interface NetworkConfigState {
   isWireless: boolean
   isEmulator: boolean
   isOffline: boolean
-  offlineMode: 'isolated' | 'hardware' | null
+  offlineMode: 'isolated' | 'dns_drop' | 'hardware' | null
   activeThrottle: string | null
   activeErrorSimulation: string | null
 }
@@ -51,12 +52,21 @@ export class NetworkManager {
 
     const cleanProxy = proxy && proxy.trim() !== 'null' && proxy.trim() !== ':0' ? proxy.trim() : null
     const cleanDnsMode = dnsMode && dnsMode.trim() !== 'null' ? dnsMode.trim() : null
-    const cleanDnsSpec = dnsSpecifier && dnsSpecifier.trim() !== 'null' ? dnsSpecifier.trim() : null
+    const cleanDnsSpec = dnsSpecifier && dnsSpecifier.trim() !== 'null' && dnsSpecifier.trim() !== 'null' ? dnsSpecifier.trim() : null
     const isAirplane = airplaneMode ? airplaneMode.trim() === '1' : false
 
     const isIsolatedOffline = cleanProxy === `${BLACKHOLE_PROXY_HOST}:${BLACKHOLE_PROXY_PORT}`
-    const isOffline = isIsolatedOffline || isAirplane
-    const offlineMode = isIsolatedOffline ? 'isolated' : (isAirplane ? 'hardware' : null)
+    const isDnsOffline = cleanDnsMode === 'hostname' && cleanDnsSpec === DNS_OFFLINE_HOST
+    const isOffline = isIsolatedOffline || isDnsOffline || isAirplane
+
+    let offlineMode: 'isolated' | 'dns_drop' | 'hardware' | null = null
+    if (isDnsOffline) {
+      offlineMode = 'dns_drop'
+    } else if (isIsolatedOffline) {
+      offlineMode = 'isolated'
+    } else if (isAirplane) {
+      offlineMode = 'hardware'
+    }
 
     const mockProxy = MockErrorProxyService.getInstance()
     let activeErrorSimulation: string | null = null
@@ -71,8 +81,10 @@ export class NetworkManager {
       }
     }
 
-    if (cleanProxy === `${BLACKHOLE_PROXY_HOST}:${BLACKHOLE_PROXY_PORT}`) {
+    if (isIsolatedOffline) {
       activeErrorSimulation = 'SocketException (Blackhole)'
+    } else if (isDnsOffline) {
+      activeErrorSimulation = 'Host Lookup Failed (DNS Drop)'
     }
 
     return {
@@ -110,7 +122,9 @@ export class NetworkManager {
 
   public static async clearPrivateDns(adbPath: string, serial: string): Promise<void> {
     await this.runAdbShell(adbPath, serial, ['settings', 'put', 'global', 'private_dns_mode', 'off'])
-    await this.runAdbShell(adbPath, serial, ['settings', 'put', 'global', 'private_dns_specifier', ''])
+    await this.runAdbShell(adbPath, serial, ['settings', 'delete', 'global', 'private_dns_specifier']).catch(async () => {
+      await this.runAdbShell(adbPath, serial, ['settings', 'put', 'global', 'private_dns_specifier', 'null']).catch(() => undefined)
+    })
   }
 
   public static async setWifiState(adbPath: string, serial: string, enabled: boolean): Promise<void> {
@@ -132,37 +146,54 @@ export class NetworkManager {
   }
 
   /**
-   * Smart Isolated Offline Mode:
-   * Sets http_proxy to a local blackhole port so all HTTP/HTTPS traffic fails immediately,
+   * DNS Drop Offline Mode (Instant rejection without hang):
+   * Sets private DNS to an invalid host so all host lookups immediately throw SocketException in 0ms,
    * while keeping ADB transport (port 5555 for Wireless ADB) and scrcpy completely untouched.
    */
-  public static async setIsolatedOffline(adbPath: string, serial: string, offline: boolean): Promise<void> {
+  public static async setDnsOffline(adbPath: string, serial: string, offline: boolean): Promise<void> {
     if (offline) {
-      await this.setHttpProxy(adbPath, serial, BLACKHOLE_PROXY_HOST, BLACKHOLE_PROXY_PORT)
+      // Disable mobile data too, so Android/Samsung does not auto-switch to cellular data
+      await this.setMobileDataState(adbPath, serial, false).catch(() => undefined)
+      await this.setPrivateDns(adbPath, serial, DNS_OFFLINE_HOST)
     } else {
-      await this.clearHttpProxy(adbPath, serial)
+      await this.clearPrivateDns(adbPath, serial)
+      await this.setMobileDataState(adbPath, serial, true).catch(() => undefined)
     }
   }
 
   /**
    * Smart Offline Mode:
-   * Automatically selects Isolated Offline for wireless devices to prevent dropping the ADB debugging link,
-   * while allowing hardware radio cut for USB / emulator devices if requested.
+   * - If forceHardware is true, or device is an Emulator / USB device: cuts Wi-Fi & data hardware (triggers connectivity_plus immediately).
+   * - If device is connected wirelessly and forceHardware is false: uses instant DNS Drop so host lookups fail instantly without hanging or dropping ADB.
    */
   public static async setOfflineMode(
     adbPath: string,
     serial: string,
     offline: boolean,
-    forceHardware: boolean = false
-  ): Promise<{ mode: 'isolated' | 'hardware'; offline: boolean }> {
+    modePreference: 'auto' | 'dns_drop' | 'hardware' = 'auto'
+  ): Promise<{ mode: 'dns_drop' | 'hardware'; offline: boolean }> {
     const isWireless = this.isWirelessDevice(serial)
+    const isEmu = this.isEmulator(serial)
 
-    if (isWireless || !forceHardware) {
-      await this.setIsolatedOffline(adbPath, serial, offline)
-      return { mode: 'isolated', offline }
+    const useHardware = modePreference === 'hardware' || (modePreference === 'auto' && (isEmu || !isWireless))
+
+    if (!offline) {
+      // Restore everything
+      await this.clearPrivateDns(adbPath, serial)
+      await this.clearHttpProxy(adbPath, serial)
+      await this.setWifiState(adbPath, serial, true).catch(() => undefined)
+      await this.setMobileDataState(adbPath, serial, true).catch(() => undefined)
+      await this.setAirplaneMode(adbPath, serial, false).catch(() => undefined)
+      return { mode: useHardware ? 'hardware' : 'dns_drop', offline: false }
+    }
+
+    if (useHardware) {
+      await this.setWifiState(adbPath, serial, false)
+      await this.setMobileDataState(adbPath, serial, false)
+      return { mode: 'hardware', offline: true }
     } else {
-      await this.setAirplaneMode(adbPath, serial, offline)
-      return { mode: 'hardware', offline }
+      await this.setDnsOffline(adbPath, serial, true)
+      return { mode: 'dns_drop', offline: true }
     }
   }
 
@@ -206,7 +237,6 @@ export class NetworkManager {
       return { appliedVia: isEmu ? 'emulator' : 'mock_proxy' }
     }
 
-    // Physical device or delay3s preset: Use Mock Proxy with artificial latency
     const delayMs = preset === 'delay3s' ? 3000 : (preset === '2g' ? 1500 : 600)
     const { port } = await mockProxy.start({ mode: 'delay', delayMs })
     await this.setHttpProxy(adbPath, serial, localIp, String(port))
@@ -230,6 +260,7 @@ export class NetworkManager {
         await mockProxy.stop()
       }
       await this.clearHttpProxy(adbPath, serial)
+      await this.clearPrivateDns(adbPath, serial)
       return
     }
 
@@ -237,7 +268,8 @@ export class NetworkManager {
       if (mockProxy.isRunning()) {
         await mockProxy.stop()
       }
-      await this.setHttpProxy(adbPath, serial, BLACKHOLE_PROXY_HOST, BLACKHOLE_PROXY_PORT)
+      // Instant DNS Drop for immediate SocketException
+      await this.setDnsOffline(adbPath, serial, true)
       return
     }
 

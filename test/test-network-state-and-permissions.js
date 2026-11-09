@@ -105,9 +105,13 @@ async function testDomInteractions() {
           <span id="stateLabErrorBadge"></span>
           <span id="currentProxyBadge"></span>
           <span id="currentDnsBadge"></span>
-          <button id="toggleOfflineBtn"><span id="toggleOfflineBtnText"></span></button>
+          <button id="toggleDnsOfflineBtn"></button>
+          <button id="toggleHardwareOfflineBtn"></button>
+          <button id="restoreOnlineBtn"></button>
           <span id="offlineStateHint"></span>
           <button id="resetNetworkSimulationBtn"></button>
+          <button id="generateFlutterOverridesBtn"></button>
+          <button id="copyFlutterOverridesSnippetBtn"></button>
           <button class="throttle-btn" data-preset="normal"></button>
           <button class="throttle-btn" data-preset="2g"></button>
           <button class="error-sim-btn" data-error="http_500"></button>
@@ -164,23 +168,23 @@ async function testDomInteractions() {
   // Test renderNetworkState in offline mode
   proxyModule.renderNetworkState({
     isOffline: true,
-    offlineMode: 'isolated',
+    offlineMode: 'dns_drop',
     isWireless: true,
     isEmulator: false,
     activeThrottle: '3000ms Delay',
     activeErrorSimulation: 'HTTP 500',
-    proxy: '127.0.0.1:54321',
-    dnsMode: null,
-    dnsSpecifier: null,
+    proxy: null,
+    dnsMode: 'hostname',
+    dnsSpecifier: 'dns.offline.invalid',
     localIp: '192.168.1.15'
   });
 
   const offlineBadge = dom.window.document.getElementById('stateLabOfflineBadge');
-  assert.strictEqual(offlineBadge.textContent, 'Offline (Isolated)');
+  assert.strictEqual(offlineBadge.textContent, 'Offline (DNS Drop)');
   assert.strictEqual(offlineBadge.className, 'status-badge is-warning');
 
-  const btnText = dom.window.document.getElementById('toggleOfflineBtnText');
-  assert.strictEqual(btnText.textContent, 'Restore Online');
+  const restoreBtn = dom.window.document.getElementById('restoreOnlineBtn');
+  assert.strictEqual(restoreBtn.style.display, 'inline-flex');
 
   // Test PermissionManagerModule
   const permModule = new window.AirFlutterPermissionManagerModule();

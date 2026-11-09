@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { NetworkManager } from '../../../domain/network-manager';
+import { SslDoctorService } from '../../../domain/ssl-doctor';
 import { PanelHandlerContext } from './panelCompatHandler';
 
 export interface PanelDeviceContext extends PanelHandlerContext {
@@ -70,7 +71,7 @@ export class PanelNetworkHandler {
     }
   }
 
-  public async handleToggleOffline(forceHardware?: boolean): Promise<void> {
+  public async handleToggleOffline(modePreference?: 'auto' | 'dns_drop' | 'hardware'): Promise<void> {
     const serial = this.ctx.getActiveDeviceSerial();
     if (!serial) {
       this.ctx.showErrorMessage('No online device connected.');
@@ -82,12 +83,12 @@ export class PanelNetworkHandler {
       const currentState = await NetworkManager.getNetworkState(adbPath, serial);
       const targetOffline = !currentState.isOffline;
 
-      const result = await NetworkManager.setOfflineMode(adbPath, serial, targetOffline, forceHardware);
+      const result = await NetworkManager.setOfflineMode(adbPath, serial, targetOffline, modePreference || 'auto');
 
       if (result.offline) {
-        const modeLabel = result.mode === 'isolated'
-          ? 'Smart Isolated (Wireless-safe: ADB link intact)'
-          : 'Hardware Radio Off';
+        const modeLabel = result.mode === 'dns_drop'
+          ? 'Instant Host Drop (Wireless Safe: ADB link 100% intact)'
+          : 'Hardware Radio Cut (Wi-Fi & Data Off)';
         this.ctx.postStatus(`📶 Offline Mode ENABLED (${modeLabel})`, 'warning');
         vscode.window.showInformationMessage(`📶 Offline Mode ENABLED (${modeLabel})`);
       } else {
@@ -100,6 +101,28 @@ export class PanelNetworkHandler {
       const msg = error instanceof Error ? error.message : String(error);
       this.ctx.showErrorMessage(`Failed to toggle offline mode: ${msg}`);
       this.ctx.postStatus(`❌ Network error: ${msg}`, 'error');
+    }
+  }
+
+  public async handleGenerateFlutterOverrides(): Promise<void> {
+    const projectPath = this.ctx.getInitialProjectPath();
+    if (!projectPath) {
+      this.ctx.showErrorMessage('No active Flutter workspace found.');
+      return;
+    }
+
+    try {
+      const sslDoctor = new SslDoctorService();
+      const res = sslDoctor.generateDevHttpOverrides(projectPath);
+      if (res.ok) {
+        this.ctx.showSuccessMessage('Created lib/dev_http_overrides.dart! Add HttpOverrides.global = DevHttpOverrides(); in main() to route all Flutter calls through the lab.');
+        vscode.window.showInformationMessage('✅ Created lib/dev_http_overrides.dart. Add HttpOverrides.global = DevHttpOverrides(); in main().');
+      } else {
+        this.ctx.showErrorMessage(`Failed to create overrides: ${res.message}`);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Error generating overrides: ${msg}`);
     }
   }
 
