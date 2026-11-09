@@ -6,6 +6,7 @@ import { PanelHandlerContext } from './panelCompatHandler';
 export interface PanelDeviceContext extends PanelHandlerContext {
   getActiveDeviceSerial(): string | undefined;
   getADBExecutable(): Promise<string>;
+  notifyOfflineState?(isOffline: boolean): void;
 }
 
 export class PanelNetworkHandler {
@@ -50,6 +51,7 @@ export class PanelNetworkHandler {
         command: 'networkState',
         data: state
       });
+      this.ctx.notifyOfflineState?.(state.isOffline);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.ctx.postStatus(`⚠️ Network state check failed: ${msg}`, 'warning');
@@ -84,6 +86,7 @@ export class PanelNetworkHandler {
       const targetOffline = !currentState.isOffline;
 
       const result = await NetworkManager.setOfflineMode(adbPath, serial, targetOffline, modePreference || 'auto');
+      this.ctx.notifyOfflineState?.(result.offline);
 
       if (result.offline) {
         const modeLabel = result.mode === 'dns_drop'

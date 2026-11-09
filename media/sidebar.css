@@ -793,6 +793,11 @@ section h2 {
     font-weight: 600;
 }
 
+.sf-tool.is-offline-active .sf-tool-note {
+    color: var(--err, #e03131);
+    font-weight: 500;
+}
+
 .sf-tool[disabled] {
     cursor: progress;
     opacity: 0.55;

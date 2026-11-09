@@ -650,10 +650,31 @@ const vscode = acquireVsCodeApi();
             document.getElementById('removeAllBridgesBtn').disabled = !deviceId || !rules.length;
         }
 
+        function renderOfflineState(isOffline) {
+            const offlineBtn = document.getElementById('toolToggleOffline');
+            if (!offlineBtn) return;
+            const nameEl = offlineBtn.querySelector('.sf-tool-name');
+            const noteEl = offlineBtn.querySelector('.sf-tool-note');
+            if (isOffline) {
+                offlineBtn.classList.add('is-offline-active');
+                offlineBtn.title = 'Offline mode active (Click to restore online)';
+                if (nameEl) nameEl.textContent = 'Restore Online';
+                if (noteEl) noteEl.textContent = 'device offline';
+            } else {
+                offlineBtn.classList.remove('is-offline-active');
+                offlineBtn.title = 'Toggle smart isolated offline mode (Wireless-safe)';
+                if (nameEl) nameEl.textContent = 'Offline Mode';
+                if (noteEl) noteEl.textContent = 'safe isolated cut';
+            }
+        }
+
         // --- host messages ---
         window.addEventListener('message', function (event) {
             const message = event.data || {};
             switch (message.command) {
+                case 'offlineState':
+                    renderOfflineState(Boolean(message.isOffline));
+                    break;
                 case 'deviceInfo':
                     renderInfo(message.info);
                     break;

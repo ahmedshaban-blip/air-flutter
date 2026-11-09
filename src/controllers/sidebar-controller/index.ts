@@ -7,6 +7,7 @@ import { DeviceToolsService, DeviceInfoSnapshot } from '../../domain/device-tool
 import { LogcatService, LogcatLine, LogPriority, DEFAULT_LOG_PRIORITY } from '../../domain/logcat'
 import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper'
 import { LocalhostBridge } from '../../domain/localhost-bridge'
+import { NetworkManager } from '../../domain/network-manager'
 import {
   isMirrorAudioRoute,
   isMirrorPerformanceProfile,
@@ -116,6 +117,16 @@ export class SidebarController {
     this.view?.webview.postMessage({ command: 'mirroringState', ...state })
   }
 
+  private lastOfflineState = false
+
+  public updateOfflineState(isOffline: boolean): void {
+    this.lastOfflineState = isOffline
+    this.post({
+      command: 'offlineState',
+      isOffline
+    })
+  }
+
   private resolve(webviewView: vscode.WebviewView) {
     this.view = webviewView
 
@@ -196,6 +207,7 @@ export class SidebarController {
           duration: this.lastRecordingState.duration
         })
         this.updateMirroringState(this.lastMirroringState)
+        this.updateOfflineState(this.lastOfflineState)
         break
       case 'refreshInfo':
         this.lastInfoJson = ''
@@ -576,6 +588,9 @@ export class SidebarController {
             await this.localhostBridge.cleanupDevice(disconnectedSerial)
           }
           this.pushLocalhostBridgeState()
+          if (this.lastOfflineState) {
+            this.updateOfflineState(false)
+          }
         }
         return
       }
@@ -595,11 +610,25 @@ export class SidebarController {
         this.lastInfoJson = json
         this.post({ command: 'deviceInfo', info })
       }
+      void this.checkDeviceOfflineState(serial)
     } catch {
       // Device disappeared mid-read; the next tick will report it as absent.
       this.post({ command: 'deviceInfo', info: null })
     } finally {
       this.infoInFlight = false
+    }
+  }
+
+  private async checkDeviceOfflineState(serial: string): Promise<void> {
+    try {
+      const adb = await this.deviceManager.getADBExecutable()
+      if (!adb) return
+      const netState = await NetworkManager.getNetworkState(adb, serial)
+      if (netState.isOffline !== this.lastOfflineState) {
+        this.updateOfflineState(netState.isOffline)
+      }
+    } catch {
+      // Background check failure ignored
     }
   }
 

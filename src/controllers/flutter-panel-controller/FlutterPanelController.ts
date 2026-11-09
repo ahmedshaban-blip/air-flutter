@@ -79,6 +79,12 @@ export class FlutterPanelController extends ADBBaseController {
   public readonly onRecordingStateChanged = this._onRecordingStateChanged.event;
   private readonly _onMirroringStateChanged = new vscode.EventEmitter<MirroringState>();
   public readonly onMirroringStateChanged = this._onMirroringStateChanged.event;
+  private readonly _onOfflineStateChanged = new vscode.EventEmitter<boolean>();
+  public readonly onOfflineStateChanged = this._onOfflineStateChanged.event;
+
+  public notifyOfflineState(isOffline: boolean): void {
+    this._onOfflineStateChanged.fire(isOffline);
+  }
 
   public isRecording(): boolean {
     return this.screenRecorder.isRecording();
@@ -144,7 +150,8 @@ export class FlutterPanelController extends ADBBaseController {
       showSuccessMessage: msg => this.showSuccessMessage(msg),
       openFlutterPanel: () => this.openFlutterPanel(),
       getActiveDeviceSerial: () => this.getActiveDeviceSerial(),
-      getADBExecutable: () => this.deviceManager.getADBExecutable()
+      getADBExecutable: () => this.deviceManager.getADBExecutable(),
+      notifyOfflineState: isOffline => this.notifyOfflineState(isOffline)
     };
 
     this.compatHandler = new PanelCompatHandler(handlerCtx);

@@ -26,8 +26,13 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
         if (toggleDnsOfflineBtn) {
             toggleDnsOfflineBtn.addEventListener('click', () => {
                 toggleDnsOfflineBtn.disabled = true;
-                toggleDnsOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Applying…';
-                this.sendMessage('toggleOfflineMode', { modePreference: 'dns_drop' });
+                if (this.currentNetworkState && this.currentNetworkState.isOffline) {
+                    toggleDnsOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Restoring…';
+                    this.sendMessage('toggleOfflineMode', { modePreference: 'auto' });
+                } else {
+                    toggleDnsOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Applying…';
+                    this.sendMessage('toggleOfflineMode', { modePreference: 'dns_drop' });
+                }
             });
         }
 
@@ -35,8 +40,13 @@ window.AirFlutterProxyModule = class AirFlutterProxyModule {
         if (toggleHwOfflineBtn) {
             toggleHwOfflineBtn.addEventListener('click', () => {
                 toggleHwOfflineBtn.disabled = true;
-                toggleHwOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Cutting…';
-                this.sendMessage('toggleOfflineMode', { modePreference: 'hardware' });
+                if (this.currentNetworkState && this.currentNetworkState.isOffline) {
+                    toggleHwOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Restoring…';
+                    this.sendMessage('toggleOfflineMode', { modePreference: 'auto' });
+                } else {
+                    toggleHwOfflineBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Cutting…';
+                    this.sendMessage('toggleOfflineMode', { modePreference: 'hardware' });
+                }
             });
         }
 
@@ -244,6 +254,7 @@ void main() {
         }
 
         if (!data) return;
+        this.currentNetworkState = data;
 
         // 1. Offline Mode State
         const offlineBadge = document.getElementById('stateLabOfflineBadge');
@@ -255,6 +266,44 @@ void main() {
             } else {
                 offlineBadge.textContent = 'Online';
                 offlineBadge.className = 'status-badge is-enabled';
+            }
+        }
+
+        if (data.isOffline) {
+            if (data.offlineMode === 'dns_drop') {
+                if (toggleDnsOfflineBtn) {
+                    toggleDnsOfflineBtn.innerHTML = '<i class="fas fa-globe"></i> Restore Online';
+                    toggleDnsOfflineBtn.className = 'btn btn-success';
+                    toggleDnsOfflineBtn.title = 'DNS Drop active: Device is offline. Click to restore online.';
+                }
+                if (toggleHwOfflineBtn) {
+                    toggleHwOfflineBtn.innerHTML = '<i class="fas fa-wifi"></i> Full Hardware Radio Cut';
+                    toggleHwOfflineBtn.className = 'btn btn-quiet';
+                }
+            } else if (data.offlineMode === 'hardware') {
+                if (toggleHwOfflineBtn) {
+                    toggleHwOfflineBtn.innerHTML = '<i class="fas fa-globe"></i> Restore Online';
+                    toggleHwOfflineBtn.className = 'btn btn-success';
+                    toggleHwOfflineBtn.title = 'Hardware cut active: Device is offline. Click to restore online.';
+                }
+                if (toggleDnsOfflineBtn) {
+                    toggleDnsOfflineBtn.innerHTML = '<i class="fas fa-bolt"></i> Instant DNS Drop (Wireless Safe)';
+                    toggleDnsOfflineBtn.className = 'btn btn-quiet';
+                }
+            } else {
+                if (toggleDnsOfflineBtn) {
+                    toggleDnsOfflineBtn.innerHTML = '<i class="fas fa-globe"></i> Restore Online';
+                    toggleDnsOfflineBtn.className = 'btn btn-success';
+                }
+            }
+        } else {
+            if (toggleDnsOfflineBtn) {
+                toggleDnsOfflineBtn.className = 'btn btn-danger';
+                toggleDnsOfflineBtn.title = 'Drops host lookups immediately (0.1s). Safe for wireless ADB.';
+            }
+            if (toggleHwOfflineBtn) {
+                toggleHwOfflineBtn.className = 'btn btn-quiet';
+                toggleHwOfflineBtn.title = 'Disables Wi-Fi & Cellular hardware. Real offline test for connectivity_plus.';
             }
         }
 
@@ -359,14 +408,20 @@ void main() {
         }
 
         // 7. Update quick sidebar offline button state if present
-        const sidebarOfflineBtn = document.getElementById('sidebarToggleOfflineBtn');
+        const sidebarOfflineBtn = document.getElementById('sidebarToggleOfflineBtn') || document.getElementById('toolToggleOffline');
         if (sidebarOfflineBtn) {
+            const nameEl = sidebarOfflineBtn.querySelector('.sf-tool-name');
+            const noteEl = sidebarOfflineBtn.querySelector('.sf-tool-note');
             if (data.isOffline) {
                 sidebarOfflineBtn.classList.add('is-offline-active');
                 sidebarOfflineBtn.title = 'Offline mode active (Click to restore online)';
+                if (nameEl) nameEl.textContent = 'Restore Online';
+                if (noteEl) noteEl.textContent = 'device offline';
             } else {
                 sidebarOfflineBtn.classList.remove('is-offline-active');
-                sidebarOfflineBtn.title = 'Toggle offline mode (Smart Isolated)';
+                sidebarOfflineBtn.title = 'Toggle smart isolated offline mode (Wireless-safe)';
+                if (nameEl) nameEl.textContent = 'Offline Mode';
+                if (noteEl) noteEl.textContent = 'safe isolated cut';
             }
         }
     }

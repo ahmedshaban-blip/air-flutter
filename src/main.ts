@@ -82,6 +82,11 @@ export async function activate(context: vscode.ExtensionContext) {
                 sidebarController.updateMirroringState(state)
             })
         )
+        context.subscriptions.push(
+            flutterPanelController.onOfflineStateChanged(isOffline => {
+                sidebarController.updateOfflineState(isOffline)
+            })
+        )
         console.log('✅ Sidebar Controller initialized')
         
         // 3. Initialize Flutter Commands Controller (handles build and run commands)
