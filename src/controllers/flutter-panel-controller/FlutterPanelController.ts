@@ -613,6 +613,12 @@ export class FlutterPanelController extends ADBBaseController {
                 message.permissionsMap
               );
               break;
+            case 'removePermission':
+              await this.permissionHandler.handleRemovePermission(
+                message.permission,
+                message.platform || 'android'
+              );
+              break;
             case 'clearAppCache':
               await this.handleWipe('cache', message.deviceId, message.packageId);
               break;

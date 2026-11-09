@@ -242,6 +242,31 @@
     white-space: nowrap;
 }
 
+.permission-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.permission-row.is-present .permission-remove-btn {
+    opacity: 1;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.permission-remove-btn {
+    padding: 3px 8px;
+    font-size: 10.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
 .permission-mode-nav {
     display: flex;
     gap: 8px;

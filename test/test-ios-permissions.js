@@ -79,6 +79,22 @@ const {
   assert.strictEqual(noopResult.changed, false);
   assert.strictEqual(noopResult.addedPermissions.length, 0);
 
+  // Removal test
+  const removalResult = await IosPermissionManager.remove(project, ['NSCameraUsageDescription']);
+  assert.strictEqual(removalResult.changed, true, 'Must return changed=true when removing existing permission');
+  assert.deepStrictEqual(removalResult.removedPermissions, ['NSCameraUsageDescription']);
+  assert.strictEqual(removalResult.declaredPermissions.includes('NSCameraUsageDescription'), false);
+
+  const afterRemovalPlist = fs.readFileSync(plistPath, 'utf8');
+  assert.strictEqual(afterRemovalPlist.includes('<key>NSCameraUsageDescription</key>'), false, 'Plist must not contain removed camera key');
+  assert.strictEqual(afterRemovalPlist.includes('We need camera to scan QR codes.'), false, 'Plist must not contain removed camera description');
+  assert(afterRemovalPlist.includes('<key>NSMicrophoneUsageDescription</key>'), 'Plist must retain unremoved microphone key');
+
+  // No-op removal
+  const noopRemoval = await IosPermissionManager.remove(project, ['NSCameraUsageDescription', 'NSFaceIDUsageDescription']);
+  assert.strictEqual(noopRemoval.changed, false, 'Must return changed=false when key not present');
+  assert.strictEqual(noopRemoval.removedPermissions.length, 0);
+
   console.log(`iOS permission tests passed. Fixture: ${project}`);
 })();
 

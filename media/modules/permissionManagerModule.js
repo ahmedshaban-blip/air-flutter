@@ -68,6 +68,17 @@
                         if (name) this.iosDescriptions[name] = e.target.value;
                     }
                 });
+                catalog.addEventListener('click', (e) => {
+                    const removeBtn = e.target.closest('.permission-remove-btn');
+                    if (removeBtn) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const permName = removeBtn.dataset.permission;
+                        if (permName) {
+                            this.removePermission(permName, removeBtn);
+                        }
+                    }
+                });
             }
 
             const androidPlatformBtn = document.getElementById('permPlatformAndroidBtn');
@@ -343,9 +354,23 @@
             if (platform) this.currentPlatform = platform;
             this.updatePlatformUiState();
 
-            this.permissionCatalog = Array.isArray(catalog) ? catalog : [];
+            this.permissionCatalog = Array.isArray(catalog) ? [...catalog] : [];
             this.declaredPermissions = new Set(declaredPermissions || []);
             this.categories = Array.isArray(categories) ? categories : [];
+
+            // Ensure any declared permissions not present in catalog are visible and manageable
+            const catalogNames = new Set(this.permissionCatalog.map(p => p.name));
+            const undeclaredInCatalog = Array.from(this.declaredPermissions).filter(p => !catalogNames.has(p));
+            if (undeclaredInCatalog.length > 0) {
+                const syntheticItems = undeclaredInCatalog.map(name => ({
+                    name,
+                    label: name.split('.').pop() || name,
+                    description: `Declared in ${this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml'}`,
+                    category: 'all',
+                    platform: this.currentPlatform
+                }));
+                this.permissionCatalog = [...syntheticItems, ...this.permissionCatalog];
+            }
 
             this.renderCategoryChips();
             this.filterAndRender();
@@ -450,11 +475,42 @@
                             ${warningHtml}
                             ${packagesHtml}
                         </span>
-                        ${alreadyPresent ? '<span class="permission-badge">Already Present</span>' : ''}
+                        ${alreadyPresent ? `
+                            <div class="permission-actions">
+                                <span class="permission-badge">Already Present</span>
+                                <button type="button" class="btn btn-sm btn-danger permission-remove-btn" data-permission="${safeName}" title="Remove permission from ${isIos ? 'Info.plist' : 'AndroidManifest.xml'}">
+                                    <i class="fas fa-trash-alt"></i> Remove
+                                </button>
+                            </div>
+                        ` : ''}
                     </label>`;
             }).join('');
 
             this.updatePermissionActionState();
+        }
+
+        removePermission(permissionName, buttonElement) {
+            if (!permissionName) return;
+            if (buttonElement) {
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Removing…';
+            }
+            this.setPermissionLoading(true);
+            this.sendMessage('removePermission', {
+                permission: permissionName,
+                platform: this.currentPlatform
+            });
+        }
+
+        handlePermissionsRemoved(message) {
+            this.declaredPermissions = new Set(message.declaredPermissions || []);
+            if (message.declaredDescriptions) {
+                this.iosDescriptions = message.declaredDescriptions;
+            }
+            const target = this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml';
+            this.showToast(message.message || `Permission removed from ${target}.`, 'success');
+            this.filterAndRender();
+            this.setPermissionLoading(false);
         }
 
         addSelectedPermissions() {

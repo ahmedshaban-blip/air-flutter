@@ -105,6 +105,31 @@ const internetRow = Array.from(rows).find(r => r.textContent.includes('android.p
 assert.ok(internetRow, 'Must include INTERNET permission row');
 assert.ok(internetRow.classList.contains('is-present'), 'INTERNET must be marked is-present');
 
+const internetRemoveBtn = internetRow.querySelector('.permission-remove-btn');
+assert.ok(internetRemoveBtn, 'Declared INTERNET row must render a Remove button');
+assert.strictEqual(internetRemoveBtn.dataset.permission, 'android.permission.INTERNET');
+
+// Test Removal click
+internetRemoveBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+const removeMsg = app.messages[app.messages.length - 1];
+assert.strictEqual(removeMsg.cmd, 'removePermission');
+assert.strictEqual(removeMsg.payload.permission, 'android.permission.INTERNET');
+assert.strictEqual(removeMsg.payload.platform, 'android');
+
+// Simulate host replying with permissionsRemoved
+app.handlePermissionsRemoved({
+  command: 'permissionsRemoved',
+  platform: 'android',
+  permission: 'android.permission.INTERNET',
+  message: 'Removed android.permission.INTERNET from AndroidManifest.xml.',
+  declaredPermissions: []
+});
+
+const updatedInternetRow = Array.from(window.document.querySelectorAll('.permission-row')).find(r => r.textContent.includes('android.permission.INTERNET'));
+assert.ok(updatedInternetRow, 'INTERNET row must still exist in catalog');
+assert.strictEqual(updatedInternetRow.classList.contains('is-present'), false, 'INTERNET must no longer be marked is-present');
+assert.strictEqual(updatedInternetRow.querySelector('.permission-remove-btn'), null, 'Un-declared row must not have Remove button');
+
 // Test 2: Search filter
 const searchInput = window.document.getElementById('permissionSearchInput');
 searchInput.value = 'camera';

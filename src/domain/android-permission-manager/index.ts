@@ -52,6 +52,11 @@ export interface AndroidPermissionInjectionResult extends AndroidPermissionState
   changed: boolean;
 }
 
+export interface AndroidPermissionRemovalResult extends AndroidPermissionState {
+  removedPermissions: string[];
+  changed: boolean;
+}
+
 export const ANDROID_PERMISSION_CATALOG: readonly AndroidPermissionDefinition[] = PERMISSION_CATALOG
   .flatMap(category => category.permissions)
   .filter((item): item is PermissionItem & { androidManifestName: string } => typeof item.androidManifestName === 'string')
@@ -90,6 +95,11 @@ export interface IosPermissionState {
 
 export interface IosPermissionInjectionResult extends IosPermissionState {
   addedPermissions: string[];
+  changed: boolean;
+}
+
+export interface IosPermissionRemovalResult extends IosPermissionState {
+  removedPermissions: string[];
   changed: boolean;
 }
 
@@ -184,6 +194,56 @@ export class IosPermissionManager {
     };
   }
 
+  public static async remove(
+    projectPath: string,
+    keysToRemove: readonly string[]
+  ): Promise<IosPermissionRemovalResult> {
+    const plistPath = this.getPlistPath(projectPath);
+    const xml = await fs.promises.readFile(plistPath, 'utf8');
+    const declaredPermissions = this.parseDeclaredPermissions(xml);
+    const declaredDescriptions = this.parseDeclaredDescriptions(xml);
+
+    const keysToDelete = Array.from(new Set(keysToRemove)).filter(key => declaredPermissions.has(key));
+    if (keysToDelete.length === 0) {
+      return {
+        plistPath,
+        declaredPermissions: Array.from(declaredPermissions),
+        declaredDescriptions,
+        removedPermissions: [],
+        changed: false
+      };
+    }
+
+    const updatedXml = this.removePermissionsFromXml(xml, keysToDelete);
+    await fs.promises.writeFile(plistPath, updatedXml, 'utf8');
+
+    keysToDelete.forEach(key => {
+      declaredPermissions.delete(key);
+      delete declaredDescriptions[key];
+    });
+
+    return {
+      plistPath,
+      declaredPermissions: Array.from(declaredPermissions),
+      declaredDescriptions,
+      removedPermissions: keysToDelete,
+      changed: true
+    };
+  }
+
+  public static removePermissionsFromXml(xml: string, keysToRemove: readonly string[]): string {
+    let updated = xml;
+    for (const key of keysToRemove) {
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(
+        `^[ \t]*<key>${escaped}<\\/key>\\s*<string>[^<]*<\\/string>[ \t]*(?:\\r?\\n)?`,
+        'gm'
+      );
+      updated = updated.replace(pattern, '');
+    }
+    return updated;
+  }
+
   private static appendPermissions(xml: string, permissions: Record<string, string>): string {
     const insertionIndex = xml.lastIndexOf('</dict>');
     if (insertionIndex === -1) {
@@ -266,6 +326,50 @@ export class AndroidPermissionManager {
       addedPermissions: newPermissions,
       changed: true
     };
+  }
+
+  public static async remove(
+    projectPath: string,
+    selectedPermissions: readonly string[]
+  ): Promise<AndroidPermissionRemovalResult> {
+    const manifestPath = this.getManifestPath(projectPath);
+    const xml = await fs.promises.readFile(manifestPath, 'utf8');
+    const declaredPermissions = this.parseDeclaredPermissions(xml);
+    const candidates = Array.from(new Set(selectedPermissions));
+    const permissionsToDelete = candidates.filter(permission => declaredPermissions.has(permission));
+
+    if (permissionsToDelete.length === 0) {
+      return {
+        manifestPath,
+        declaredPermissions: Array.from(declaredPermissions),
+        removedPermissions: [],
+        changed: false
+      };
+    }
+
+    const updatedXml = this.removePermissionsFromXml(xml, permissionsToDelete);
+    await fs.promises.writeFile(manifestPath, updatedXml, 'utf8');
+    permissionsToDelete.forEach(permission => declaredPermissions.delete(permission));
+
+    return {
+      manifestPath,
+      declaredPermissions: Array.from(declaredPermissions),
+      removedPermissions: permissionsToDelete,
+      changed: true
+    };
+  }
+
+  public static removePermissionsFromXml(xml: string, permissionsToRemove: readonly string[]): string {
+    let updated = xml;
+    for (const permission of permissionsToRemove) {
+      const escaped = permission.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(
+        `^[ \t]*<uses-permission\\b[^>]*\\bandroid:name=["']${escaped}["'][^>]*(?:\\/>|>.*?<\\/uses-permission>)[ \t]*(?:\\r?\\n)?`,
+        'gm'
+      );
+      updated = updated.replace(pattern, '');
+    }
+    return updated;
   }
 
   private static appendPermissions(xml: string, permissions: readonly string[]): string {

@@ -267,6 +267,65 @@ export class PanelPermissionHandler {
     }
   }
 
+  public async handleRemovePermission(
+    permission: string,
+    platform: 'android' | 'ios' = 'android'
+  ): Promise<void> {
+    try {
+      if (platform === 'ios') {
+        const projectPath = this.getIosProjectPath();
+        if (!projectPath) {
+          return this.postUnavailable('Open a Flutter project with an iOS platform to manage permissions.');
+        }
+
+        const removal = await IosPermissionManager.remove(projectPath, [permission]);
+        if (!removal.changed) {
+          const message = `Permission ${permission} not found in Info.plist.`;
+          this.ctx.postStatus(message, 'info');
+          vscode.window.showInformationMessage(message);
+          return;
+        }
+
+        const message = `Removed ${permission} from Info.plist.`;
+        this.ctx.postStatus(message, 'success');
+        this.ctx.showSuccessMessage(message);
+        this.ctx.getPanel()?.webview.postMessage({
+          command: 'permissionsRemoved',
+          platform: 'ios',
+          permission,
+          message,
+          declaredPermissions: removal.declaredPermissions,
+          declaredDescriptions: removal.declaredDescriptions
+        });
+        return;
+      }
+
+      const projectPath = this.getAndroidProjectPath();
+      if (!projectPath) return this.postUnavailable();
+
+      const removal = await AndroidPermissionManager.remove(projectPath, [permission]);
+      if (!removal.changed) {
+        const message = `Permission ${permission} not found in AndroidManifest.xml.`;
+        this.ctx.postStatus(message, 'info');
+        vscode.window.showInformationMessage(message);
+        return;
+      }
+
+      const message = `Removed ${permission} from AndroidManifest.xml.`;
+      this.ctx.postStatus(message, 'success');
+      this.ctx.showSuccessMessage(message);
+      this.ctx.getPanel()?.webview.postMessage({
+        command: 'permissionsRemoved',
+        platform: 'android',
+        permission,
+        message,
+        declaredPermissions: removal.declaredPermissions
+      });
+    } catch (error) {
+      this.reportError(`Unable to remove ${platform === 'ios' ? 'iOS' : 'Android'} permission`, error);
+    }
+  }
+
   private getAndroidProjectPath(): string | undefined {
     const projectPath = this.ctx.getInitialProjectPath() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!projectPath || !fs.existsSync(path.join(projectPath, 'pubspec.yaml'))) return undefined;

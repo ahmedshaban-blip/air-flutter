@@ -627,6 +627,9 @@ class AirFlutterWebview {
                 case 'permissionsAdded':
                     this.handlePermissionsAdded(message);
                     break;
+                case 'permissionsRemoved':
+                    this.handlePermissionsRemoved(message);
+                    break;
                 case 'permissionsUnchanged':
                     this.handlePermissionsUnchanged(message);
                     break;

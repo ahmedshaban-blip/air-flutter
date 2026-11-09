@@ -109,6 +109,22 @@ const {
   assert.strictEqual(fs.readFileSync(manifestPath, 'utf8'), afterFirstWrite);
   assert.strictEqual(fs.statSync(manifestPath).mtimeMs, modifiedTime);
 
+  // 5. Test AndroidPermissionManager File Removal
+  const removal = await AndroidPermissionManager.remove(project, ['android.permission.CAMERA']);
+  assert.strictEqual(removal.changed, true, 'Removal of declared CAMERA permission must return changed=true');
+  assert.deepStrictEqual(removal.removedPermissions, ['android.permission.CAMERA']);
+  assert.strictEqual(removal.declaredPermissions.includes('android.permission.CAMERA'), false);
+
+  const afterRemovalXml = fs.readFileSync(manifestPath, 'utf8');
+  assert.strictEqual(afterRemovalXml.includes('android.permission.CAMERA'), false, 'Manifest must not contain CAMERA');
+  assert.strictEqual(afterRemovalXml.includes('android.permission.INTERNET'), true, 'Manifest must still contain INTERNET');
+  assert.strictEqual(afterRemovalXml.includes('android.permission.WRITE_EXTERNAL_STORAGE'), true, 'Manifest must still contain WRITE_EXTERNAL_STORAGE');
+
+  // No-op removal
+  const noopRemoval = await AndroidPermissionManager.remove(project, ['android.permission.CAMERA', 'android.permission.NON_EXISTENT']);
+  assert.strictEqual(noopRemoval.changed, false, 'Removing non-existent permissions must return changed=false');
+  assert.strictEqual(noopRemoval.removedPermissions.length, 0);
+
   console.log(`Android permission tests passed. Fixture: ${project}`);
 })().catch(error => {
   console.error(error);
