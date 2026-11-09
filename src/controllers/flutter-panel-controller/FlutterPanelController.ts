@@ -1517,9 +1517,32 @@ export class FlutterPanelController extends ADBBaseController {
           return folder.uri.fsPath;
         }
       }
+      for (const folder of workspaceFolders) {
+        const nested = this.findNestedFlutterProject(folder.uri.fsPath, 3);
+        if (nested) {
+          return nested;
+        }
+      }
       return workspaceFolders[0].uri.fsPath;
     }
     return '';
+  }
+
+  private findNestedFlutterProject(dir: string, depth = 3): string | null {
+    if (depth < 0 || !fs.existsSync(dir)) return null;
+    if (fs.existsSync(path.join(dir, 'pubspec.yaml'))) return dir;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const e of entries) {
+        if (e.isDirectory() && !['.git', 'node_modules', 'build', '.dart_tool', '.vscode', 'ios', 'android', 'windows', 'linux', 'macos', 'web'].includes(e.name)) {
+          const sub = this.findNestedFlutterProject(path.join(dir, e.name), depth - 1);
+          if (sub) return sub;
+        }
+      }
+    } catch {
+      return null;
+    }
+    return null;
   }
 
   // --- Workflow Handler Delegations ---

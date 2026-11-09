@@ -19,10 +19,23 @@ export function getSidebarWebviewHtml(
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com; font-src ${webview.cspSource} https://fonts.gstatic.com; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-inline';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Anti-FOUC critical styling: match editor theme before external stylesheets resolve */
+        html {
+            background: var(--vscode-sideBar-background, #0F110E);
+            color: var(--vscode-sideBar-foreground, #E9E5D8);
+        }
+        body {
+            background: var(--paper, var(--vscode-sideBar-background, #0F110E));
+            color: var(--ink, var(--vscode-sideBar-foreground, #E9E5D8));
+            font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+    </style>
+    <link href="${styleUri}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="${styleUri}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
     <title>Air Flutter</title>
 </head>
 <body>

@@ -51,6 +51,19 @@ const { getSidebarWebviewHtml } = require('../out/controllers/sidebar-controller
   assert.ok(window.document.getElementById('storageRefreshFilesBtn'));
   assert.ok(window.document.getElementById('storageEditPackageBtn'));
 
+  // Test opening without argument sends host request
+  messages.length = 0;
+  window.document.getElementById('storagePackageInput').value = '';
+  storageMod.openStorageInspectorModal();
+  assert.strictEqual(window.document.getElementById('storageInspectorModal').hidden, false);
+  assert.strictEqual(messages.some(m => m.cmd === 'openStorageInspectorModal'), true);
+
+  // Test fallback to appStatePackage when available
+  storageMod.appStatePackage = 'com.truckworld.store';
+  storageMod.openStorageInspectorModal();
+  assert.strictEqual(window.document.getElementById('storagePackageInput').value, 'com.truckworld.store');
+  assert.strictEqual(window.document.getElementById('storagePkgBadge').hidden, false);
+
   // Test auto-detected package ID and manual pencil unlock
   storageMod.openStorageInspectorModal({ packageId: 'com.auto.detected', isAutoDetected: true });
   assert.strictEqual(window.document.getElementById('storagePackageInput').value, 'com.auto.detected');
@@ -141,6 +154,13 @@ const { getSidebarWebviewHtml } = require('../out/controllers/sidebar-controller
 
   assert.ok(window.document.getElementById('apkSizeModal'));
   assert.ok(window.document.querySelector('.apk-selector-hint'));
+
+  // Test opening without argument sends host request
+  messages.length = 0;
+  apkMod.openApkSizeModal();
+  assert.strictEqual(window.document.getElementById('apkSizeModal').hidden, false);
+  assert.strictEqual(messages.some(m => m.cmd === 'openApkSizeModal'), true);
+  assert.strictEqual(window.document.getElementById('apkDetectedSelect').options[0].textContent, 'Searching for built packages…');
 
   // Test empty package list fallback
   apkMod.openApkSizeModal({ defaultApks: [] });

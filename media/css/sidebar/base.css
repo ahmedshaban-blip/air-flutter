@@ -44,6 +44,11 @@ body.vscode-high-contrast {
     box-sizing: border-box;
 }
 
+html {
+    background: var(--paper);
+    color: var(--ink);
+}
+
 body {
     margin: 0;
     padding: 18px 16px 16px;

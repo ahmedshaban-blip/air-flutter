@@ -42,9 +42,14 @@ export class PanelStorageInspectorHandler {
       }
     });
 
-    if (serial && effectivePackageId) {
-      await this.listFiles(serial, effectivePackageId, 'auto', []);
+    const targetSerial = this.resolveSerial(serial);
+    if (targetSerial && effectivePackageId) {
+      await this.listFiles(targetSerial, effectivePackageId, 'auto', []);
     }
+  }
+
+  private resolveSerial(serial?: string): string {
+    return (serial && serial.trim().length > 0) ? serial.trim() : (this.ctx.getActiveDeviceSerial() || '');
   }
 
   public async listFiles(
@@ -56,6 +61,16 @@ export class PanelStorageInspectorHandler {
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
+    const targetSerial = this.resolveSerial(serial);
+    if (!targetSerial) {
+      panel.webview.postMessage({
+        command: 'storageInspectorState',
+        status: 'error',
+        error: 'No active device selected. Please connect or select an Android device.'
+      });
+      return;
+    }
+
     try {
       panel.webview.postMessage({
         command: 'storageInspectorState',
@@ -63,7 +78,7 @@ export class PanelStorageInspectorHandler {
         message: 'Reading storage directory via run-as…'
       });
 
-      const result = await this.service.listStorageFiles(serial, packageId, mode, selectedPresets);
+      const result = await this.service.listStorageFiles(targetSerial, packageId, mode, selectedPresets);
 
       panel.webview.postMessage({
         command: 'storageInspectorState',
@@ -84,13 +99,23 @@ export class PanelStorageInspectorHandler {
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
+    const targetSerial = this.resolveSerial(serial);
+    if (!targetSerial) {
+      panel.webview.postMessage({
+        command: 'storageInspectorDetailError',
+        fileName,
+        error: 'No active device selected.'
+      });
+      return;
+    }
+
     try {
       panel.webview.postMessage({
         command: 'storageInspectorDetailLoading',
         fileName
       });
 
-      const items = await this.service.readSharedPreferences(serial, packageId, fileName);
+      const items = await this.service.readSharedPreferences(targetSerial, packageId, fileName);
 
       panel.webview.postMessage({
         command: 'storageInspectorSharedPrefsLoaded',
@@ -116,10 +141,16 @@ export class PanelStorageInspectorHandler {
     type: 'string' | 'int' | 'long' | 'float' | 'boolean'
   ): Promise<void> {
     const panel = this.ctx.getPanel();
+    const targetSerial = this.resolveSerial(serial);
+    if (!targetSerial) {
+      this.ctx.showErrorMessage('No active device selected.');
+      return;
+    }
+
     try {
-      await this.service.setSharedPreference(serial, packageId, fileName, key, value, type);
+      await this.service.setSharedPreference(targetSerial, packageId, fileName, key, value, type);
       this.ctx.showSuccessMessage(`Saved "${key}" in ${fileName}`);
-      await this.readSharedPreferences(serial, packageId, fileName);
+      await this.readSharedPreferences(targetSerial, packageId, fileName);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.ctx.showErrorMessage(`Failed to save preference: ${msg}`);
@@ -138,10 +169,16 @@ export class PanelStorageInspectorHandler {
     key: string
   ): Promise<void> {
     const panel = this.ctx.getPanel();
+    const targetSerial = this.resolveSerial(serial);
+    if (!targetSerial) {
+      this.ctx.showErrorMessage('No active device selected.');
+      return;
+    }
+
     try {
-      await this.service.deleteSharedPreference(serial, packageId, fileName, key);
+      await this.service.deleteSharedPreference(targetSerial, packageId, fileName, key);
       this.ctx.showSuccessMessage(`Deleted "${key}" from ${fileName}`);
-      await this.readSharedPreferences(serial, packageId, fileName);
+      await this.readSharedPreferences(targetSerial, packageId, fileName);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.ctx.showErrorMessage(`Failed to delete preference: ${msg}`);
@@ -157,13 +194,23 @@ export class PanelStorageInspectorHandler {
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
+    const targetSerial = this.resolveSerial(serial);
+    if (!targetSerial) {
+      panel.webview.postMessage({
+        command: 'storageInspectorDetailError',
+        dbName,
+        error: 'No active device selected.'
+      });
+      return;
+    }
+
     try {
       panel.webview.postMessage({
         command: 'storageInspectorDetailLoading',
         dbName
       });
 
-      const tables = await this.service.listSqliteTables(serial, packageId, dbName);
+      const tables = await this.service.listSqliteTables(targetSerial, packageId, dbName);
 
       panel.webview.postMessage({
         command: 'storageInspectorTablesLoaded',
@@ -189,13 +236,23 @@ export class PanelStorageInspectorHandler {
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
+    const targetSerial = this.resolveSerial(serial);
+    if (!targetSerial) {
+      panel.webview.postMessage({
+        command: 'storageInspectorDetailError',
+        dbName,
+        error: 'No active device selected.'
+      });
+      return;
+    }
+
     try {
       panel.webview.postMessage({
         command: 'storageInspectorDetailLoading',
         dbName
       });
 
-      const queryResult = await this.service.querySqliteTable(serial, packageId, dbName, query);
+      const queryResult = await this.service.querySqliteTable(targetSerial, packageId, dbName, query);
 
       panel.webview.postMessage({
         command: 'storageInspectorQueryLoaded',

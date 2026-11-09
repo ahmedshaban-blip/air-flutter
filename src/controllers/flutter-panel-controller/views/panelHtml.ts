@@ -85,10 +85,18 @@ export function getPanelWebviewContent(
                 } catch (e) {}
             })();
         </script>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+        <style>
+            /* Anti-FOUC critical styling: match editor theme before external stylesheets resolve */
+            html {
+                background: var(--vscode-editor-background, #0F110E);
+                color: var(--vscode-editor-foreground, #E9E5D8);
+            }
+            body {
+                background: var(--paper, var(--vscode-editor-background, #0F110E));
+                color: var(--ink, var(--vscode-editor-foreground, #E9E5D8));
+                font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            }
+        </style>
         <link href="${themeUri}" rel="stylesheet">
         <link href="${componentsUri}" rel="stylesheet">
         <link href="${modalsUri}" rel="stylesheet">
@@ -108,6 +116,14 @@ export function getPanelWebviewContent(
         <link href="${apkSizeCssUri}" rel="stylesheet">
         <link href="${pubHealthCssUri}" rel="stylesheet">
         <link href="${airFlutterCssUri}" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+        <noscript>
+            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+        </noscript>
     </head>
     <body>
         <div class="ff-shell">

@@ -19,6 +19,13 @@ window.AirFlutterApkSizeModule = class AirFlutterApkSizeModule {
         document.getElementById('apkBrowseFileBtn')?.addEventListener('click', () => {
             this.sendMessage('pickAndAnalyzeApk', {});
         });
+
+        document.getElementById('apkDetectedSelect')?.addEventListener('change', (e) => {
+            const path = e.target.value;
+            if (path) {
+                this.sendMessage('analyzeApkSize', { apkPath: path });
+            }
+        });
     }
 
     openApkSizeModal(data) {
@@ -27,9 +34,19 @@ window.AirFlutterApkSizeModule = class AirFlutterApkSizeModule {
         modal.hidden = false;
 
         const select = document.getElementById('apkDetectedSelect');
+
+        // When opened directly without data (e.g. via UI bridge trigger), query the extension host
+        if (!data || !Array.isArray(data.defaultApks)) {
+            if (select) {
+                select.innerHTML = '<option value="" disabled selected>Searching for built packages…</option>';
+            }
+            this.sendMessage('openApkSizeModal', {});
+            return;
+        }
+
         if (select) {
             select.innerHTML = '';
-            const apks = Array.isArray(data?.defaultApks) ? data.defaultApks : [];
+            const apks = data.defaultApks;
             if (apks.length === 0) {
                 const emptyOpt = document.createElement('option');
                 emptyOpt.value = '';
@@ -46,7 +63,9 @@ window.AirFlutterApkSizeModule = class AirFlutterApkSizeModule {
                 apks.forEach(apk => {
                     const opt = document.createElement('option');
                     opt.value = apk;
-                    opt.textContent = apk.split(/[/\\]/).pop();
+                    const norm = apk.replace(/\\/g, '/');
+                    const match = norm.match(/(?:flutter-apk|apk\/[^/]+|bundle\/[^/]+)\/[^/]+$/i);
+                    opt.textContent = match ? match[0] : (norm.split('/').pop() || apk);
                     select.appendChild(opt);
                 });
                 select.value = apks[0];

@@ -13,7 +13,19 @@ export class PanelApkSizeHandler {
     if (!panel) return;
 
     const projectPath = this.ctx.getInitialProjectPath();
-    const defaultApks = projectPath ? ApkSizeAnalyzerService.findDefaultApks(projectPath) : [];
+    let defaultApks = projectPath ? ApkSizeAnalyzerService.findDefaultApks(projectPath) : [];
+
+    if (defaultApks.length === 0 && vscode.workspace.workspaceFolders) {
+      for (const folder of vscode.workspace.workspaceFolders) {
+        if (folder.uri.fsPath !== projectPath) {
+          const found = ApkSizeAnalyzerService.findDefaultApks(folder.uri.fsPath);
+          if (found.length > 0) {
+            defaultApks = found;
+            break;
+          }
+        }
+      }
+    }
 
     panel.webview.postMessage({
       command: 'openApkSizeModal',

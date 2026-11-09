@@ -105,8 +105,13 @@ window.AirFlutterStorageInspectorModule = class AirFlutterStorageInspectorModule
         if (!modal) return;
         modal.hidden = false;
 
-        const packageId = typeof dataOrPkg === 'object' ? dataOrPkg?.packageId : dataOrPkg;
-        const isAuto = typeof dataOrPkg === 'object' ? Boolean(dataOrPkg?.isAutoDetected) : false;
+        let packageId = typeof dataOrPkg === 'object' ? dataOrPkg?.packageId : dataOrPkg;
+        let isAuto = typeof dataOrPkg === 'object' ? Boolean(dataOrPkg?.isAutoDetected) : false;
+
+        if (!packageId && this.appStatePackage) {
+            packageId = this.appStatePackage;
+            isAuto = true;
+        }
 
         const pkgInput = document.getElementById('storagePackageInput');
         const badge = document.getElementById('storagePkgBadge');
@@ -124,6 +129,10 @@ window.AirFlutterStorageInspectorModule = class AirFlutterStorageInspectorModule
         } else if (pkgInput) {
             pkgInput.readOnly = false;
             if (badge) badge.hidden = true;
+        }
+
+        if (typeof dataOrPkg !== 'object' || !dataOrPkg?.packageId) {
+            this.sendMessage('openStorageInspectorModal', { packageId: packageId || '' });
         }
     }
 

@@ -138,40 +138,72 @@ export class ApkSizeAnalyzerService {
   }
 
   public static findDefaultApks(projectPath: string): string[] {
-    const outputsDir = path.join(projectPath, 'build', 'app', 'outputs');
     const discovered = new Set<string>();
 
-    const standardCandidates = [
-      path.join(outputsDir, 'flutter-apk', 'app-release.apk'),
-      path.join(outputsDir, 'flutter-apk', 'app-debug.apk'),
-      path.join(outputsDir, 'apk', 'release', 'app-release.apk'),
-      path.join(outputsDir, 'apk', 'debug', 'app-debug.apk'),
-      path.join(outputsDir, 'bundle', 'release', 'app-release.aab')
-    ];
-    for (const c of standardCandidates) {
-      if (fs.existsSync(c)) {
-        discovered.add(c);
+    const scanOutputsDir = (outputsDir: string) => {
+      const standardCandidates = [
+        path.join(outputsDir, 'flutter-apk', 'app-release.apk'),
+        path.join(outputsDir, 'flutter-apk', 'app-debug.apk'),
+        path.join(outputsDir, 'apk', 'release', 'app-release.apk'),
+        path.join(outputsDir, 'apk', 'debug', 'app-debug.apk'),
+        path.join(outputsDir, 'bundle', 'release', 'app-release.aab')
+      ];
+      for (const c of standardCandidates) {
+        if (fs.existsSync(c)) {
+          discovered.add(c);
+        }
       }
+
+      if (fs.existsSync(outputsDir)) {
+        const scanDir = (dir: string, depth = 0) => {
+          if (depth > 4) return;
+          try {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              const fullPath = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                scanDir(fullPath, depth + 1);
+              } else if (entry.isFile() && (entry.name.endsWith('.apk') || entry.name.endsWith('.aab'))) {
+                discovered.add(fullPath);
+              }
+            }
+          } catch {
+            // ignore directory reading errors
+          }
+        };
+        scanDir(outputsDir);
+      }
+    };
+
+    const directOutputs = path.join(projectPath, 'build', 'app', 'outputs');
+    if (fs.existsSync(directOutputs)) {
+      scanOutputsDir(directOutputs);
     }
 
-    if (fs.existsSync(outputsDir)) {
-      const scanDir = (dir: string, depth = 0) => {
-        if (depth > 4) return;
+    // Search nested directories (e.g. monorepo / subproject structures) for build/app/outputs
+    if (fs.existsSync(projectPath)) {
+      const searchNestedOutputs = (dir: string, depth = 0) => {
+        if (depth > 3) return;
         try {
           const entries = fs.readdirSync(dir, { withFileTypes: true });
           for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            if (['.git', 'node_modules', '.dart_tool', '.vscode', 'ios', 'windows', 'linux', 'macos', 'web'].includes(entry.name)) {
+              continue;
+            }
             const fullPath = path.join(dir, entry.name);
-            if (entry.isDirectory()) {
-              scanDir(fullPath, depth + 1);
-            } else if (entry.isFile() && (entry.name.endsWith('.apk') || entry.name.endsWith('.aab'))) {
-              discovered.add(fullPath);
+            const candidate = path.join(fullPath, 'build', 'app', 'outputs');
+            if (fs.existsSync(candidate)) {
+              scanOutputsDir(candidate);
+            } else {
+              searchNestedOutputs(fullPath, depth + 1);
             }
           }
         } catch {
-          // ignore directory reading errors
+          // ignore directory traversal errors
         }
       };
-      scanDir(outputsDir);
+      searchNestedOutputs(projectPath);
     }
 
     return Array.from(discovered).sort((a, b) => {

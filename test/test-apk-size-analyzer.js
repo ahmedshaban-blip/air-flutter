@@ -62,6 +62,11 @@ const { ApkSizeAnalyzerService } = require('../out/domain/apk-size-analyzer');
       const found = ApkSizeAnalyzerService.findDefaultApks(mockProjectDir);
       assert.strictEqual(found.length, 1);
       assert.strictEqual(found[0], dummyApk);
+
+      // Test monorepo / parent folder discovery
+      const parentDir = path.dirname(mockProjectDir);
+      const nestedFound = ApkSizeAnalyzerService.findDefaultApks(parentDir);
+      assert.ok(nestedFound.includes(dummyApk), 'Expected nested discovery to find dummyApk');
     } finally {
       fs.rmSync(mockProjectDir, { recursive: true, force: true });
     }
