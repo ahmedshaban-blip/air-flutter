@@ -69,6 +69,23 @@ export class MockGpsService {
     }
   }
 
+  public async getConnectedDeviceSerial(): Promise<string | undefined> {
+    try {
+      const adb = await this.getADBExecutable();
+      const res = await this.runProcess(adb, ['devices'], 5000);
+      const lines = (res.stdout || '').split(/\r?\n/);
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2 && parts[1] === 'device') {
+          return parts[0];
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return undefined;
+  }
+
   public async setLocation(
     serial: string,
     lat: number,
@@ -95,7 +112,25 @@ export class MockGpsService {
         message: `Emulator location updated to (${lat}, ${lon})`
       };
     } else {
-      // Physical device: broadcast intent for mock location apps + set location enabled
+      // Physical device:
+      // 1. Grant shell permission to inject mock locations
+      await this.runProcess(adb, ['-s', serial, 'shell', 'appops', 'set', 'com.android.shell', 'android:mock_location', 'allow'], 5000);
+      // 2. Ensure master location is enabled
+      await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'set-location-enabled', 'true'], 5000);
+
+      // 3. Register test providers and inject coordinates for both gps and fused
+      const providers = ['gps', 'fused'];
+      for (const provider of providers) {
+        await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'providers', 'add-test-provider', provider], 5000);
+        await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'providers', 'set-test-provider-enabled', provider, 'true'], 5000);
+        await this.runProcess(adb, [
+          '-s', serial, 'shell', 'cmd', 'location', 'providers', 'set-test-provider-location', provider,
+          '--location', `${lat.toFixed(6)},${lon.toFixed(6)}`,
+          '--accuracy', '5.0'
+        ], 5000);
+      }
+
+      // 4. Complementary broadcast intent for mock location apps
       const broadcastArgs = [
         '-s', serial, 'shell', 'am', 'broadcast',
         '-a', 'com.airflutter.MOCK_LOCATION',
@@ -103,8 +138,7 @@ export class MockGpsService {
         '--ef', 'lon', lon.toFixed(6),
         '--ef', 'alt', altitude.toFixed(1)
       ];
-      await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'set-location-enabled', 'true'], 5000);
-      const res = await this.runProcess(adb, broadcastArgs, 10000);
+      await this.runProcess(adb, broadcastArgs, 5000);
 
       return {
         ok: true,
@@ -112,7 +146,7 @@ export class MockGpsService {
         longitude: lon,
         altitude,
         mode: 'broadcast',
-        message: `Device location broadcast dispatched: (${lat}, ${lon})`
+        message: `Device mock GPS injected: (${lat}, ${lon})`
       };
     }
   }
@@ -132,10 +166,14 @@ export class MockGpsService {
         message: 'Emulator mock GPS reset to default coordinates (0, 0).'
       };
     } else {
+      // Physical device: remove test providers
+      for (const provider of ['gps', 'fused']) {
+        await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'providers', 'remove-test-provider', provider], 5000);
+      }
       await this.runProcess(adb, [
         '-s', serial, 'shell', 'am', 'broadcast',
         '-a', 'com.airflutter.MOCK_LOCATION_RESET'
-      ], 10000);
+      ], 5000);
       await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'set-location-enabled', 'true'], 5000);
 
       return {

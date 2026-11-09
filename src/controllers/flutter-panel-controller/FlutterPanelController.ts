@@ -632,10 +632,15 @@ export class FlutterPanelController extends ADBBaseController {
               await this.mockGpsHandler.openModal();
               break;
             case 'setMockGpsLocation':
-              await this.mockGpsHandler.setLocation(Number(message.lat), Number(message.lon), Number(message.altitude || 0));
+              await this.mockGpsHandler.setLocation(
+                Number(message.lat),
+                Number(message.lon),
+                Number(message.altitude || 0),
+                message.serial
+              );
               break;
             case 'resetMockGps':
-              await this.mockGpsHandler.resetLocation();
+              await this.mockGpsHandler.resetLocation(message.serial);
               break;
             case 'openApkSizeModal':
               await this.apkSizeHandler.openModal();

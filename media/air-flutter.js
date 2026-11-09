@@ -675,7 +675,7 @@ class AirFlutterWebview {
                     this.handleDebugOverlaysState?.(message.state);
                     break;
                 case 'openMockGpsModal':
-                    this.openMockGpsModal?.();
+                    this.openMockGpsModal?.(message.data);
                     break;
                 case 'mockGpsState':
                     this.handleMockGpsState?.(message);

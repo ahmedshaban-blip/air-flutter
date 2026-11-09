@@ -13,10 +13,28 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
                 const lon = btn.getAttribute('data-lon');
                 const latInput = document.getElementById('gpsLatInput');
                 const lonInput = document.getElementById('gpsLonInput');
+                const altInput = document.getElementById('gpsAltInput');
                 if (latInput) latInput.value = lat;
                 if (lonInput) lonInput.value = lon;
+                if (altInput) altInput.value = '0';
+
+                this.isPresetSelected = true;
+                modal.querySelectorAll('.gps-preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const prompt = document.getElementById('gpsSaveLocationPrompt');
+                if (prompt) prompt.hidden = true;
             });
         });
+
+        // Clear preset highlight and flag when inputs are manually changed
+        const onInputChanged = () => {
+            this.isPresetSelected = false;
+            modal.querySelectorAll('.gps-preset-btn').forEach(b => b.classList.remove('active'));
+        };
+        document.getElementById('gpsLatInput')?.addEventListener('input', onInputChanged);
+        document.getElementById('gpsLonInput')?.addEventListener('input', onInputChanged);
+        document.getElementById('gpsAltInput')?.addEventListener('input', onInputChanged);
 
         // Set location button
         document.getElementById('gpsSetLocationBtn')?.addEventListener('click', () => {
@@ -30,10 +48,13 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
             }
 
             this.lastAppliedGps = { lat, lon, alt };
+            this.lastAppliedWasPreset = this.isPresetLocation(lat, lon);
+
             this.sendMessage('setMockGpsLocation', {
                 lat,
                 lon,
-                altitude: alt
+                altitude: alt,
+                serial: this.currentGpsSerial
             });
         });
 
@@ -46,13 +67,20 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
             if (lonInput) lonInput.value = '';
             if (altInput) altInput.value = '0';
 
+            modal.querySelectorAll('.gps-preset-btn').forEach(b => b.classList.remove('active'));
+            this.isPresetSelected = false;
+            this.lastAppliedGps = null;
+            this.lastAppliedWasPreset = false;
+
             const prompt = document.getElementById('gpsSaveLocationPrompt');
             if (prompt) prompt.hidden = true;
 
             const card = document.getElementById('gpsStatusCard');
             if (card) card.hidden = true;
 
-            this.sendMessage('resetMockGps', {});
+            this.sendMessage('resetMockGps', {
+                serial: this.currentGpsSerial
+            });
             this.showToast('Mock GPS reset to default.', 'info');
         });
 
@@ -89,10 +117,36 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
         this.renderCustomGpsPresets();
     }
 
-    openMockGpsModal() {
+    isPresetLocation(lat, lon) {
+        if (this.isPresetSelected) return true;
+        const presetBtns = document.querySelectorAll('#mockGpsModal .gps-preset-btn');
+        for (const btn of presetBtns) {
+            const bLat = parseFloat(btn.getAttribute('data-lat'));
+            const bLon = parseFloat(btn.getAttribute('data-lon'));
+            if (!isNaN(bLat) && !isNaN(bLon) && Math.abs(bLat - lat) < 0.0001 && Math.abs(bLon - lon) < 0.0001) {
+                return true;
+            }
+        }
+        const saved = this.getSavedGpsPresets();
+        for (const p of saved) {
+            if (Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lon - lon) < 0.0001) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    openMockGpsModal(data) {
         const modal = document.getElementById('mockGpsModal');
         if (!modal) return;
         modal.hidden = false;
+        if (data && data.serial) {
+            this.currentGpsSerial = data.serial;
+            const subtitle = document.getElementById('gpsModalSubtitle');
+            if (subtitle) {
+                subtitle.textContent = `Inject mock GPS coordinates into connected device (${data.serial}).`;
+            }
+        }
         this.renderCustomGpsPresets();
     }
 
@@ -168,6 +222,13 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
                 if (latInput) latInput.value = p.lat;
                 if (lonInput) lonInput.value = p.lon;
                 if (altInput) altInput.value = p.altitude || 0;
+
+                this.isPresetSelected = true;
+                const modal = document.getElementById('mockGpsModal');
+                modal?.querySelectorAll('.gps-preset-btn').forEach(b => b.classList.remove('active'));
+
+                const prompt = document.getElementById('gpsSaveLocationPrompt');
+                if (prompt) prompt.hidden = true;
             });
 
             const delBtn = document.createElement('button');
@@ -190,6 +251,7 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
         const card = document.getElementById('gpsStatusCard');
         const text = document.getElementById('gpsStatusText');
         const icon = document.getElementById('gpsStatusIcon');
+        const prompt = document.getElementById('gpsSaveLocationPrompt');
         if (!card || !text || !icon) return;
 
         card.hidden = false;
@@ -197,17 +259,19 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
             card.className = 'gps-status-card is-loading';
             icon.className = 'fas fa-spinner fa-spin';
             text.textContent = data.message || 'Applying GPS location…';
+            if (prompt) prompt.hidden = true;
         } else if (data.status === 'success') {
             card.className = 'gps-status-card is-success';
             icon.className = 'fas fa-circle-check';
             text.textContent = data.result?.message || 'Location updated successfully!';
 
-            // Prompt user if they want to save this location
-            if (this.lastAppliedGps) {
-                const prompt = document.getElementById('gpsSaveLocationPrompt');
-                const nameInput = document.getElementById('gpsCustomLocationName');
+            // Do not prompt to save if resetting, or if applied location was already a preset
+            if (data.isReset || !this.lastAppliedGps || this.lastAppliedWasPreset) {
+                if (prompt) prompt.hidden = true;
+            } else {
                 if (prompt) {
                     prompt.hidden = false;
+                    const nameInput = document.getElementById('gpsCustomLocationName');
                     if (nameInput) {
                         nameInput.value = '';
                         nameInput.focus?.();
@@ -218,6 +282,7 @@ window.AirFlutterMockGpsModule = class AirFlutterMockGpsModule {
             card.className = 'gps-status-card is-error';
             icon.className = 'fas fa-circle-xmark';
             text.textContent = data.error || 'Failed to update location.';
+            if (prompt) prompt.hidden = true;
         }
     }
 };

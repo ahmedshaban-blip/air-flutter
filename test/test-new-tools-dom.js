@@ -124,28 +124,44 @@ const { getSidebarWebviewHtml } = require('../out/controllers/sidebar-controller
   cairoBtn.click();
   assert.strictEqual(window.document.getElementById('gpsLatInput').value, '30.0444');
   assert.strictEqual(window.document.getElementById('gpsLonInput').value, '31.2357');
+  assert.strictEqual(cairoBtn.classList.contains('active'), true);
 
   window.document.getElementById('gpsSetLocationBtn').click();
   assert.strictEqual(messages.at(-1).cmd, 'setMockGpsLocation');
   assert.strictEqual(messages.at(-1).payload.lat, 30.0444);
 
-  // Test location save prompt on success
-  gpsMod.handleMockGpsState({ status: 'success', result: { message: 'Location set' } });
+  // Preset location should NOT prompt to save
   const savePrompt = window.document.getElementById('gpsSaveLocationPrompt');
   assert.ok(savePrompt);
-  assert.strictEqual(savePrompt.hidden, false);
+  gpsMod.handleMockGpsState({ status: 'success', result: { message: 'Location set' } });
+  assert.strictEqual(savePrompt.hidden, true, 'Quick City Preset should not show save prompt');
+
+  // Custom coordinates SHOULD show save prompt
+  window.document.getElementById('gpsLatInput').value = '12.3456';
+  window.document.getElementById('gpsLatInput').dispatchEvent(new window.Event('input'));
+  window.document.getElementById('gpsLonInput').value = '67.8901';
+  window.document.getElementById('gpsLonInput').dispatchEvent(new window.Event('input'));
+  assert.strictEqual(cairoBtn.classList.contains('active'), false);
+
+  window.document.getElementById('gpsSetLocationBtn').click();
+  gpsMod.handleMockGpsState({ status: 'success', result: { message: 'Custom location set' } });
+  assert.strictEqual(savePrompt.hidden, false, 'Custom location should prompt to save');
 
   window.document.getElementById('gpsCustomLocationName').value = 'Office Test';
   window.document.getElementById('gpsConfirmSaveBtn').click();
   assert.strictEqual(savePrompt.hidden, true);
   assert.ok(window.document.getElementById('gpsCustomPresetsGrid').children.length > 0);
 
-  // Test reset button
+  // Test reset button: save prompt must remain hidden
   const resetBtn = window.document.getElementById('gpsResetBtn');
   assert.ok(resetBtn);
   resetBtn.click();
   assert.strictEqual(messages.at(-1).cmd, 'resetMockGps');
   assert.strictEqual(window.document.getElementById('gpsLatInput').value, '');
+  assert.strictEqual(savePrompt.hidden, true);
+
+  gpsMod.handleMockGpsState({ status: 'success', isReset: true, result: { message: 'Reset done' } });
+  assert.strictEqual(savePrompt.hidden, true, 'Resetting should not show save prompt');
 
   // --- APK Size Module ---
   const apkMod = new window.AirFlutterApkSizeModule();

@@ -32,6 +32,13 @@
 .gps-preset-btn {
     font-size: 12px;
     padding: 6px 10px;
+    transition: all 0.15s ease;
+}
+
+.gps-preset-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(226, 85, 43, 0.12);
 }
 
 .gps-form-grid {

@@ -5,7 +5,7 @@ export function getMockGpsModalHtml(): string {
             <div class="modal-head">
                 <div>
                     <h2 id="gpsModalTitle"><i class="fas fa-location-dot"></i> Mock GPS &amp; Location Studio</h2>
-                    <p>Inject mock GPS coordinates into connected phone or emulator.</p>
+                    <p id="gpsModalSubtitle">Inject mock GPS coordinates into connected phone or emulator.</p>
                 </div>
                 <button class="modal-close" id="closeMockGpsModalBtn" type="button" aria-label="Close">&times;</button>
             </div>

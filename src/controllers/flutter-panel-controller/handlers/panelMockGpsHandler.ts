@@ -12,12 +12,23 @@ export class PanelMockGpsHandler {
     this.service = new MockGpsService(() => this.ctx.getADBExecutable());
   }
 
+  private async resolveSerial(serial?: string): Promise<string | undefined> {
+    if (serial && serial.trim().length > 0) {
+      return serial.trim();
+    }
+    const ctxSerial = this.ctx.getActiveDeviceSerial();
+    if (ctxSerial && ctxSerial.trim().length > 0) {
+      return ctxSerial.trim();
+    }
+    return await this.service.getConnectedDeviceSerial();
+  }
+
   public async openModal(): Promise<void> {
     await this.ctx.openFlutterPanel();
     const panel = this.ctx.getPanel();
     if (!panel) return;
 
-    const serial = this.ctx.getActiveDeviceSerial();
+    const serial = await this.resolveSerial();
     panel.webview.postMessage({
       command: 'openMockGpsModal',
       data: {
@@ -27,9 +38,9 @@ export class PanelMockGpsHandler {
     });
   }
 
-  public async setLocation(lat: number, lon: number, altitude = 0): Promise<void> {
+  public async setLocation(lat: number, lon: number, altitude = 0, targetSerial?: string): Promise<void> {
     const panel = this.ctx.getPanel();
-    const serial = this.ctx.getActiveDeviceSerial();
+    const serial = await this.resolveSerial(targetSerial);
     if (!serial) {
       this.ctx.showErrorMessage('No active device connected to set GPS location.');
       panel?.webview.postMessage({
@@ -68,13 +79,14 @@ export class PanelMockGpsHandler {
     }
   }
 
-  public async resetLocation(): Promise<void> {
+  public async resetLocation(targetSerial?: string): Promise<void> {
     const panel = this.ctx.getPanel();
-    const serial = this.ctx.getActiveDeviceSerial();
+    const serial = await this.resolveSerial(targetSerial);
     if (!serial) {
       panel?.webview.postMessage({
         command: 'mockGpsState',
         status: 'success',
+        isReset: true,
         result: {
           ok: true,
           message: 'Coordinates reset to default.'
@@ -97,6 +109,7 @@ export class PanelMockGpsHandler {
       panel?.webview.postMessage({
         command: 'mockGpsState',
         status: 'success',
+        isReset: true,
         result: res
       });
     } catch (error) {
