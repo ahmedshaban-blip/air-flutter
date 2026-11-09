@@ -80,6 +80,8 @@ body {
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 h1, h2, h3, h4, h5, h6, p {
@@ -170,6 +172,9 @@ samp {
     max-width: 1440px;
     margin: 0 auto;
     padding: 0 28px 40px;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transition: opacity 0.12s ease-in;
 }
 
 .ff-masthead {

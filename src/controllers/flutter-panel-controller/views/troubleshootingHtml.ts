@@ -22,6 +22,13 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
                         document.documentElement.classList.add('dark-mode');
                     }
                 } catch (e) {}
+                setTimeout(function () {
+                    var shell = document.querySelector('.ff-shell');
+                    if (shell) {
+                        shell.style.visibility = 'visible';
+                        shell.style.opacity = '1';
+                    }
+                }, 800);
             })();
         </script>
         <style>
@@ -35,7 +42,12 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
                 color: var(--ink, var(--vscode-editor-foreground, #E9E5D8));
                 font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
             }
+            .ff-shell {
+                visibility: hidden;
+                opacity: 0;
+            }
         </style>
+        <link rel="preload" as="style" href="${themeUri}">
         <link href="${themeUri}" rel="stylesheet">
         <link href="${componentsUri}" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" media="print" onload="this.media='all'">

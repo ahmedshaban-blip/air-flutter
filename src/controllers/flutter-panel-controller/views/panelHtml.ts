@@ -83,10 +83,18 @@ export function getPanelWebviewContent(
                         document.documentElement.classList.add('dark-mode');
                     }
                 } catch (e) {}
+                // Anti-FOUC fallback: reveal shell if stylesheet evaluation is unexpectedly delayed
+                setTimeout(function () {
+                    var shell = document.querySelector('.ff-shell');
+                    if (shell) {
+                        shell.style.visibility = 'visible';
+                        shell.style.opacity = '1';
+                    }
+                }, 800);
             })();
         </script>
         <style>
-            /* Anti-FOUC critical styling: match editor theme before external stylesheets resolve */
+            /* Anti-FOUC critical styling: match editor theme and conceal unstyled shell */
             html {
                 background: var(--vscode-editor-background, #0F110E);
                 color: var(--vscode-editor-foreground, #E9E5D8);
@@ -96,7 +104,12 @@ export function getPanelWebviewContent(
                 color: var(--ink, var(--vscode-editor-foreground, #E9E5D8));
                 font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
             }
+            .ff-shell {
+                visibility: hidden;
+                opacity: 0;
+            }
         </style>
+        <link rel="preload" as="style" href="${themeUri}">
         <link href="${themeUri}" rel="stylesheet">
         <link href="${componentsUri}" rel="stylesheet">
         <link href="${modalsUri}" rel="stylesheet">
