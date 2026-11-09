@@ -26,7 +26,18 @@ export class PanelNetworkHandler {
     if (!serial) {
       this.ctx.getPanel()?.webview.postMessage({
         command: 'networkState',
-        data: { proxy: null, dnsMode: null, dnsSpecifier: null, localIp }
+        data: {
+          proxy: null,
+          dnsMode: null,
+          dnsSpecifier: null,
+          localIp,
+          isWireless: false,
+          isEmulator: false,
+          isOffline: false,
+          offlineMode: null,
+          activeThrottle: null,
+          activeErrorSimulation: null
+        }
       });
       return;
     }
@@ -43,8 +54,134 @@ export class PanelNetworkHandler {
       this.ctx.postStatus(`⚠️ Network state check failed: ${msg}`, 'warning');
       this.ctx.getPanel()?.webview.postMessage({
         command: 'networkState',
-        data: { proxy: null, dnsMode: null, dnsSpecifier: null, localIp }
+        data: {
+          proxy: null,
+          dnsMode: null,
+          dnsSpecifier: null,
+          localIp,
+          isWireless: NetworkManager.isWirelessDevice(serial),
+          isEmulator: NetworkManager.isEmulator(serial),
+          isOffline: false,
+          offlineMode: null,
+          activeThrottle: null,
+          activeErrorSimulation: null
+        }
       });
+    }
+  }
+
+  public async handleToggleOffline(forceHardware?: boolean): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) {
+      this.ctx.showErrorMessage('No online device connected.');
+      return;
+    }
+
+    try {
+      const adbPath = await this.ctx.getADBExecutable();
+      const currentState = await NetworkManager.getNetworkState(adbPath, serial);
+      const targetOffline = !currentState.isOffline;
+
+      const result = await NetworkManager.setOfflineMode(adbPath, serial, targetOffline, forceHardware);
+
+      if (result.offline) {
+        const modeLabel = result.mode === 'isolated'
+          ? 'Smart Isolated (Wireless-safe: ADB link intact)'
+          : 'Hardware Radio Off';
+        this.ctx.postStatus(`📶 Offline Mode ENABLED (${modeLabel})`, 'warning');
+        vscode.window.showInformationMessage(`📶 Offline Mode ENABLED (${modeLabel})`);
+      } else {
+        this.ctx.postStatus('🌐 Online Mode RESTORED', 'success');
+        vscode.window.showInformationMessage('🌐 Online Mode RESTORED');
+      }
+
+      await this.handleGetNetworkState();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Failed to toggle offline mode: ${msg}`);
+      this.ctx.postStatus(`❌ Network error: ${msg}`, 'error');
+    }
+  }
+
+  public async handleSetNetworkThrottle(preset: 'normal' | '2g' | '3g' | 'delay3s'): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) {
+      this.ctx.showErrorMessage('No online device connected.');
+      return;
+    }
+
+    try {
+      const adbPath = await this.ctx.getADBExecutable();
+      const res = await NetworkManager.setNetworkThrottle(adbPath, serial, preset);
+
+      if (preset === 'normal') {
+        this.ctx.postStatus('⚡ Network speed restored to NORMAL', 'success');
+        vscode.window.showInformationMessage('⚡ Network speed restored to normal.');
+      } else {
+        const label = preset === 'delay3s' ? '3000ms Latency' : preset.toUpperCase();
+        const viaLabel = res.appliedVia === 'emulator' ? 'Emulator network engine' : 'Local Mock Proxy';
+        this.ctx.postStatus(`⏳ Network throttled to ${label} via ${viaLabel}`, 'warning');
+        vscode.window.showInformationMessage(`⏳ Network throttled to ${label} (${viaLabel})`);
+      }
+
+      await this.handleGetNetworkState();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Failed to throttle network: ${msg}`);
+      this.ctx.postStatus(`❌ Throttle error: ${msg}`, 'error');
+    }
+  }
+
+  public async handleSimulateError(
+    errorType: 'none' | 'connection_refused' | 'http_500' | 'http_404' | 'http_401'
+  ): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) {
+      this.ctx.showErrorMessage('No online device connected.');
+      return;
+    }
+
+    try {
+      const adbPath = await this.ctx.getADBExecutable();
+      await NetworkManager.simulateErrorState(adbPath, serial, errorType);
+
+      if (errorType === 'none') {
+        this.ctx.postStatus('✅ Network error simulation CLEARED', 'success');
+        vscode.window.showInformationMessage('✅ Network error simulation cleared.');
+      } else if (errorType === 'connection_refused') {
+        this.ctx.postStatus('💥 Simulating Connection Drop (Immediate SocketException)', 'warning');
+        vscode.window.showInformationMessage('💥 Connection Drop simulated (Immediate failure).');
+      } else {
+        const code = errorType.replace('http_', 'HTTP ');
+        this.ctx.postStatus(`🚨 Simulating ${code} Server Error`, 'warning');
+        vscode.window.showInformationMessage(`🚨 Simulating ${code} Server Error on all endpoints.`);
+      }
+
+      await this.handleGetNetworkState();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Failed to simulate error state: ${msg}`);
+      this.ctx.postStatus(`❌ Error simulation failed: ${msg}`, 'error');
+    }
+  }
+
+  public async handleResetNetworkSimulation(): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial) return;
+
+    try {
+      const adbPath = await this.ctx.getADBExecutable();
+      await NetworkManager.clearHttpProxy(adbPath, serial);
+      await NetworkManager.setOfflineMode(adbPath, serial, false);
+      await NetworkManager.setNetworkThrottle(adbPath, serial, 'normal');
+      await NetworkManager.simulateErrorState(adbPath, serial, 'none');
+
+      this.ctx.postStatus('🔄 All network overrides & simulations reset to normal', 'success');
+      vscode.window.showInformationMessage('🔄 All network overrides & simulations reset to normal.');
+      await this.handleGetNetworkState();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Failed to reset network simulation: ${msg}`);
     }
   }
 
@@ -136,4 +273,3 @@ export class PanelNetworkHandler {
     }
   }
 }
-

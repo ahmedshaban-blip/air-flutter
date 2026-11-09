@@ -242,8 +242,60 @@
     white-space: nowrap;
 }
 
+.permission-mode-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 8px;
+}
+
+.permission-mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.permission-mode-tab:hover {
+    color: var(--fg);
+    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+}
+
+.permission-mode-tab.is-active {
+    background: var(--surface, #ffffff);
+    color: var(--fg);
+    font-weight: 600;
+    border-color: var(--rule);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.permission-runtime-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.65fr) minmax(380px, 1.35fr);
+    gap: 28px;
+}
+
+.runtime-perm-card {
+    transition: background 0.15s ease;
+}
+
+.runtime-perm-card:hover {
+    background: var(--surface-2, rgba(255, 255, 255, 0.06));
+}
+
 @media (max-width: 760px) {
-    .permission-manager-layout {
+    .permission-manager-layout,
+    .permission-runtime-layout {
         grid-template-columns: 1fr;
     }
 }

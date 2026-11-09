@@ -64,6 +64,11 @@ class AirFlutterWebview {
             this.initMockGps?.();
             this.initApkSize?.();
             this.initPubHealth?.();
+            this.initBuildRunner?.();
+            this.initIconSplash?.();
+            this.initDeviceEnvironment?.();
+            this.initLocalization?.();
+            this.initSslDoctor?.();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -469,6 +474,9 @@ class AirFlutterWebview {
                 case 'showToast':
                     this.showToast(message.message, message.type);
                     break;
+                case 'selectTab':
+                    this.selectPanelTab(message.tab);
+                    break;
                 case 'operationLoading':
                     this.setOperationLoading(message);
                     break;
@@ -637,6 +645,9 @@ class AirFlutterWebview {
                     if (unavailablePermissionCatalog) unavailablePermissionCatalog.innerHTML = '<p class="empty"><i class="fas fa-shield-halved"></i><span>No Android Flutter project open</span></p>';
                     if (addPermissions) addPermissions.disabled = true;
                     break;
+                case 'runtimePermissionsState':
+                    this.renderRuntimePermissionsState(message);
+                    break;
                 case 'appStateStatus':
                     this.handleAppStateStatus(message);
                     break;
@@ -703,6 +714,24 @@ class AirFlutterWebview {
                     break;
                 case 'localhostBridgeState':
                     this.renderLocalhostBridgeState(message.devices || [], message.rules || []);
+                    break;
+                case 'buildRunnerLog':
+                    this.handleBuildRunnerLog?.(message.chunk, message.isError);
+                    break;
+                case 'buildRunnerStatus':
+                    this.handleBuildRunnerStatus?.(message.status);
+                    break;
+                case 'deviceEnvironmentState':
+                    this.handleDeviceEnvironmentState?.(message.data, message.error);
+                    break;
+                case 'localizationMatrix':
+                    this.handleLocalizationMatrix?.(message.data, message.error);
+                    break;
+                case 'localizationAiPrompt':
+                    this.handleLocalizationAiPrompt?.(message.prompt, message.targetLocale);
+                    break;
+                case 'sslDoctorStatus':
+                    this.handleSslDoctorStatus?.(message.data, message.error);
                     break;
                 default:
                     console.warn('⚠️ Unknown message command:', message.command);
@@ -879,6 +908,11 @@ mixinModule(AirFlutterWebview, window.AirFlutterDebugOverlaysModule);
 mixinModule(AirFlutterWebview, window.AirFlutterMockGpsModule);
 mixinModule(AirFlutterWebview, window.AirFlutterApkSizeModule);
 mixinModule(AirFlutterWebview, window.AirFlutterPubHealthModule);
+mixinModule(AirFlutterWebview, window.AirFlutterBuildRunnerModule);
+mixinModule(AirFlutterWebview, window.AirFlutterIconSplashModule);
+mixinModule(AirFlutterWebview, window.AirFlutterDeviceEnvironmentModule);
+mixinModule(AirFlutterWebview, window.AirFlutterLocalizationModule);
+mixinModule(AirFlutterWebview, window.AirFlutterSslDoctorModule);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();

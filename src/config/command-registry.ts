@@ -198,9 +198,21 @@ export const FLUTTER_FLY_COMMANDS: AirFlutterCommand[] = [
   },
   {
     id: 'airFlutter.openProxyModal',
-    title: '🌐 Network Proxy & Private DNS Inspector',
+    title: '🌐 Network & Screen State Lab',
     category: 'Air Flutter',
-    description: 'Configure HTTP Proxy and Private DNS for network traffic inspection'
+    description: 'Configure HTTP Proxy, Private DNS, Offline mode, Network Throttling, and Error states'
+  },
+  {
+    id: 'airFlutter.toggleOfflineMode',
+    title: '📶 Toggle Device Offline Mode (Isolated & Safe)',
+    category: 'Air Flutter',
+    description: 'Toggle smart offline state without severing wireless ADB debugging connection'
+  },
+  {
+    id: 'airFlutter.toggleSlowNetwork',
+    title: '⏳ Toggle Slow Network (3s Latency)',
+    category: 'Air Flutter',
+    description: 'Inject artificial latency to test shimmer loading states'
   },
   {
     id: 'airFlutter.toggleScreenRecording',

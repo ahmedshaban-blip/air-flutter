@@ -298,9 +298,17 @@ export function getSidebarWebviewHtml(
                 <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
-            <button class="sf-tool" type="button" id="toolProxy" data-tool="proxy" title="Configure HTTP Proxy and Private DNS for network traffic inspection">
-                <span class="sf-tool-name">Proxy / DNS</span>
-                <span class="sf-tool-note">network inspector</span>
+            <button class="sf-tool" type="button" id="toolToggleOffline" data-tool="toggleOffline" title="Toggle smart isolated offline mode (Wireless-safe)">
+                <span class="sf-tool-name">Offline Mode</span>
+                <span class="sf-tool-note">safe isolated cut</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolSlowNetwork" data-tool="toggleSlowNetwork" title="Toggle 3000ms delay to test loading &amp; shimmer states">
+                <span class="sf-tool-name">Slow Network</span>
+                <span class="sf-tool-note">3s latency (shimmer)</span>
+            </button>
+            <button class="sf-tool" type="button" id="toolProxy" data-tool="proxy" title="Open Network &amp; Screen State Lab (Offline, Throttling, Errors, Proxy, DNS)">
+                <span class="sf-tool-name">State &amp; Net Lab</span>
+                <span class="sf-tool-note">offline, slow &amp; errors</span>
             </button>
             <button class="sf-tool" type="button" id="toolPushTester" data-tool="pushTester" title="Test push notification payloads and FCM broadcasts">
                 <span class="sf-tool-name">Push Tester</span>

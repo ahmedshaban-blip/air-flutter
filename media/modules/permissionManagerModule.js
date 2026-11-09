@@ -1,6 +1,7 @@
 (function () {
     class PermissionManagerModule {
         initPermissionManager() {
+            this.currentMode = 'manifest'; // 'manifest' | 'runtime'
             this.currentPlatform = 'android';
             this.selectedCategory = 'all';
             this.searchQuery = '';
@@ -9,8 +10,50 @@
             this.categories = [];
             this.iosDescriptions = {};
 
+            // Runtime Permissions State
+            this.runtimePermissions = [];
+            this.runtimeSearchQuery = '';
+            this.runtimePackageId = '';
+
             const addButton = document.getElementById('addPermissionsBtn');
             if (addButton) addButton.addEventListener('click', () => this.addSelectedPermissions());
+
+            // Mode Tabs (Manifest vs Runtime)
+            const modeManifestTab = document.getElementById('permModeManifestTab');
+            const modeRuntimeTab = document.getElementById('permModeRuntimeTab');
+            if (modeManifestTab) {
+                modeManifestTab.addEventListener('click', () => this.switchPermissionMode('manifest'));
+            }
+            if (modeRuntimeTab) {
+                modeRuntimeTab.addEventListener('click', () => this.switchPermissionMode('runtime'));
+            }
+
+            // Runtime controls
+            const refreshRuntimeBtn = document.getElementById('refreshRuntimePermsBtn');
+            if (refreshRuntimeBtn) {
+                refreshRuntimeBtn.addEventListener('click', () => {
+                    const pkg = document.getElementById('runtimePackageIdInput')?.value?.trim();
+                    this.loadRuntimePermissions(pkg);
+                });
+            }
+
+            const grantAllBtn = document.getElementById('grantAllRuntimePermsBtn');
+            if (grantAllBtn) {
+                grantAllBtn.addEventListener('click', () => this.grantAllRuntimePermissions());
+            }
+
+            const revokeAllBtn = document.getElementById('revokeAllRuntimePermsBtn');
+            if (revokeAllBtn) {
+                revokeAllBtn.addEventListener('click', () => this.revokeAllRuntimePermissions());
+            }
+
+            const runtimeSearch = document.getElementById('runtimePermSearchInput');
+            if (runtimeSearch) {
+                runtimeSearch.addEventListener('input', (e) => {
+                    this.runtimeSearchQuery = (e.target.value || '').toLowerCase().trim();
+                    this.filterAndRenderRuntimePermissions();
+                });
+            }
 
             const catalog = document.getElementById('permissionCatalog');
             if (catalog) {
@@ -59,6 +102,191 @@
                     }
                 });
             }
+        }
+
+        switchPermissionMode(mode) {
+            this.currentMode = mode;
+            const isManifest = mode === 'manifest';
+
+            const manifestTab = document.getElementById('permModeManifestTab');
+            const runtimeTab = document.getElementById('permModeRuntimeTab');
+            const manifestView = document.getElementById('permissionManifestView');
+            const runtimeView = document.getElementById('permissionRuntimeView');
+
+            if (manifestTab) {
+                manifestTab.classList.toggle('is-active', isManifest);
+                manifestTab.setAttribute('aria-selected', String(isManifest));
+            }
+            if (runtimeTab) {
+                runtimeTab.classList.toggle('is-active', !isManifest);
+                runtimeTab.setAttribute('aria-selected', String(!isManifest));
+            }
+
+            if (manifestView) manifestView.hidden = !isManifest;
+            if (runtimeView) runtimeView.hidden = isManifest;
+
+            if (!isManifest && (!this.runtimePermissions || this.runtimePermissions.length === 0)) {
+                const pkg = document.getElementById('runtimePackageIdInput')?.value?.trim();
+                this.loadRuntimePermissions(pkg);
+            }
+        }
+
+        loadRuntimePermissions(packageId) {
+            const list = document.getElementById('runtimePermissionsList');
+            const statusText = document.getElementById('runtimePermissionsStatusText');
+            const refreshBtn = document.getElementById('refreshRuntimePermsBtn');
+
+            if (list) {
+                list.innerHTML = '<div class="af-loading-container" style="padding: 20px;"><span class="af-spinner af-spinner-lg"></span><span>Querying app runtime permissions…</span></div>';
+            }
+            if (statusText) statusText.textContent = 'Querying runtime permissions via ADB…';
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
+            }
+
+            this.sendMessage('loadRuntimePermissions', { packageId: packageId || '' });
+        }
+
+        renderRuntimePermissionsState(message) {
+            const refreshBtn = document.getElementById('refreshRuntimePermsBtn');
+            const grantAllBtn = document.getElementById('grantAllRuntimePermsBtn');
+            const revokeAllBtn = document.getElementById('revokeAllRuntimePermsBtn');
+            const statusText = document.getElementById('runtimePermissionsStatusText');
+            const pkgInput = document.getElementById('runtimePackageIdInput');
+            const deviceBadge = document.getElementById('runtimeDeviceBadge');
+            const countBadge = document.getElementById('runtimePermCountBadge');
+            const list = document.getElementById('runtimePermissionsList');
+
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-rotate"></i> Query';
+            }
+
+            if (message.packageId && pkgInput && !pkgInput.value) {
+                pkgInput.value = message.packageId;
+            }
+            if (message.packageId) {
+                this.runtimePackageId = message.packageId;
+            }
+            if (message.serial && deviceBadge) {
+                deviceBadge.textContent = message.serial;
+            }
+
+            if (message.status === 'error') {
+                if (statusText) statusText.textContent = `❌ ${message.error || 'Failed to query permissions'}`;
+                if (list) {
+                    list.innerHTML = `<p class="empty"><i class="fas fa-triangle-exclamation"></i><span>${this.escapeHtml(message.error || 'Unable to inspect runtime permissions.')}</span></p>`;
+                }
+                if (grantAllBtn) grantAllBtn.disabled = true;
+                if (revokeAllBtn) revokeAllBtn.disabled = true;
+                if (countBadge) countBadge.textContent = '0 found';
+                return;
+            }
+
+            if (message.status === 'success') {
+                this.runtimePermissions = Array.isArray(message.permissions) ? message.permissions : [];
+                if (statusText) {
+                    statusText.textContent = `Found ${this.runtimePermissions.length} permissions for ${message.packageId}.`;
+                }
+                if (countBadge) {
+                    countBadge.textContent = `${this.runtimePermissions.length} permissions`;
+                }
+                if (grantAllBtn) grantAllBtn.disabled = this.runtimePermissions.length === 0;
+                if (revokeAllBtn) revokeAllBtn.disabled = this.runtimePermissions.length === 0;
+
+                this.filterAndRenderRuntimePermissions();
+            }
+        }
+
+        filterAndRenderRuntimePermissions() {
+            const list = document.getElementById('runtimePermissionsList');
+            if (!list) return;
+
+            const query = this.runtimeSearchQuery;
+            const filtered = this.runtimePermissions.filter(p => {
+                if (!query) return true;
+                return (p.name || '').toLowerCase().includes(query) || (p.label || '').toLowerCase().includes(query);
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<p class="empty"><i class="fas fa-shield-halved"></i><span>${this.runtimePermissions.length === 0 ? 'No runtime permissions declared or app not running.' : 'No matching permissions found.'}</span></p>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(p => {
+                const safeName = this.escapeHtml(p.name);
+                const safeLabel = this.escapeHtml(p.label || p.name);
+                const isGranted = Boolean(p.granted);
+
+                return `
+                    <div class="runtime-perm-card" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-radius: 6px; margin-bottom: 6px;">
+                        <div style="flex: 1; padding-right: 12px;">
+                            <div style="font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas ${isGranted ? 'fa-circle-check' : 'fa-circle-xmark'}" style="color: ${isGranted ? '#22c55e' : '#ef4444'}; font-size: 11px;"></i>
+                                <span>${safeLabel}</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono, monospace); margin-top: 2px;">
+                                ${safeName}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="status-badge ${isGranted ? 'is-enabled' : 'is-disabled'}" style="font-size: 10px;">
+                                ${isGranted ? 'Granted' : 'Revoked'}
+                            </span>
+                            <button class="btn ${isGranted ? 'btn-danger' : 'btn-primary'} btn-sm runtime-toggle-btn" type="button" data-perm-name="${safeName}" data-granted="${isGranted}">
+                                ${isGranted ? '<i class="fas fa-ban"></i> Revoke' : '<i class="fas fa-check"></i> Grant'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Bind toggle buttons
+            list.querySelectorAll('.runtime-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const permName = btn.dataset.permName;
+                    const currentlyGranted = btn.dataset.granted === 'true';
+                    const pkg = document.getElementById('runtimePackageIdInput')?.value?.trim() || this.runtimePackageId;
+
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
+
+                    if (currentlyGranted) {
+                        this.sendMessage('revokeRuntimePermission', { packageId: pkg, permission: permName });
+                    } else {
+                        this.sendMessage('grantRuntimePermission', { packageId: pkg, permission: permName });
+                    }
+                });
+            });
+        }
+
+        grantAllRuntimePermissions() {
+            const pkg = document.getElementById('runtimePackageIdInput')?.value?.trim() || this.runtimePackageId;
+            if (!pkg || !this.runtimePermissions.length) return;
+
+            const allNames = this.runtimePermissions.map(p => p.name);
+            const btn = document.getElementById('grantAllRuntimePermsBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Granting…';
+            }
+
+            this.sendMessage('grantAllRuntimePermissions', { packageId: pkg, permissions: allNames });
+        }
+
+        revokeAllRuntimePermissions() {
+            const pkg = document.getElementById('runtimePackageIdInput')?.value?.trim() || this.runtimePackageId;
+            if (!pkg || !this.runtimePermissions.length) return;
+
+            const allNames = this.runtimePermissions.map(p => p.name);
+            const btn = document.getElementById('revokeAllRuntimePermsBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Revoking…';
+            }
+
+            this.sendMessage('revokeAllRuntimePermissions', { packageId: pkg, permissions: allNames });
         }
 
         switchPlatform(platform) {
@@ -261,22 +489,25 @@
 
         handlePermissionsAdded(message) {
             this.declaredPermissions = new Set(message.declaredPermissions || []);
-            this.filterAndRender();
             const target = this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml';
             this.showToast(message.message || `Permissions added to ${target}.`, 'success');
+            this.filterAndRender();
+            this.setPermissionLoading(false);
         }
 
         handlePermissionsUnchanged(message) {
             this.declaredPermissions = new Set(message.declaredPermissions || []);
+            this.showToast(message.message || 'No new permissions were added.', 'info');
             this.filterAndRender();
-            this.showToast(message.message, 'success');
+            this.setPermissionLoading(false);
         }
 
         setPermissionLoading(loading) {
             const button = document.getElementById('addPermissionsBtn');
-            if (button && loading) button.disabled = true;
             const status = document.getElementById('permissionStatus');
             const target = this.currentPlatform === 'ios' ? 'Info.plist' : 'AndroidManifest.xml';
+
+            if (button && loading) button.disabled = true;
             if (status && loading) status.innerHTML = `<span class="af-spinner af-spinner-sm"></span> Checking ${target}…`;
             if (!loading) this.updatePermissionActionState();
         }

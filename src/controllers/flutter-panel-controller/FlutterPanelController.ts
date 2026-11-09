@@ -42,6 +42,11 @@ import { PanelDebugOverlaysHandler } from './handlers/panelDebugOverlaysHandler'
 import { PanelMockGpsHandler } from './handlers/panelMockGpsHandler';
 import { PanelApkSizeHandler } from './handlers/panelApkSizeHandler';
 import { PanelPubHealthHandler } from './handlers/panelPubHealthHandler';
+import { PanelBuildRunnerHandler } from './handlers/panelBuildRunnerHandler';
+import { PanelIconSplashHandler } from './handlers/panelIconSplashHandler';
+import { PanelDeviceEnvironmentHandler } from './handlers/panelDeviceEnvironmentHandler';
+import { PanelLocalizationHandler } from './handlers/panelLocalizationHandler';
+import { PanelSslDoctorHandler } from './handlers/panelSslDoctorHandler';
 import { SigningKeyOptions } from '../../domain/signing-key-generator';
 import { AppStateWiper, WipeOperation } from '../../domain/app-state-wiper';
 import { DeepLinkIntentStudio } from '../../domain/deep-link-intent-studio';
@@ -100,6 +105,11 @@ export class FlutterPanelController extends ADBBaseController {
   private readonly mockGpsHandler: PanelMockGpsHandler;
   private readonly apkSizeHandler: PanelApkSizeHandler;
   private readonly pubHealthHandler: PanelPubHealthHandler;
+  private readonly buildRunnerHandler: PanelBuildRunnerHandler;
+  private readonly iconSplashHandler: PanelIconSplashHandler;
+  private readonly deviceEnvironmentHandler: PanelDeviceEnvironmentHandler;
+  private readonly localizationHandler: PanelLocalizationHandler;
+  private readonly sslDoctorHandler: PanelSslDoctorHandler;
   private operationSequence = 0;
   private initialLoadPending = false;
 
@@ -159,6 +169,11 @@ export class FlutterPanelController extends ADBBaseController {
     this.mockGpsHandler = new PanelMockGpsHandler(handlerCtx);
     this.apkSizeHandler = new PanelApkSizeHandler(handlerCtx);
     this.pubHealthHandler = new PanelPubHealthHandler(handlerCtx);
+    this.buildRunnerHandler = new PanelBuildRunnerHandler(handlerCtx);
+    this.iconSplashHandler = new PanelIconSplashHandler(handlerCtx);
+    this.deviceEnvironmentHandler = new PanelDeviceEnvironmentHandler(handlerCtx);
+    this.localizationHandler = new PanelLocalizationHandler(handlerCtx);
+    this.sslDoctorHandler = new PanelSslDoctorHandler(handlerCtx);
   }
 
   async onInit() {
@@ -190,6 +205,8 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.openSigningKeyModal', () => this.openSigningKeyModal())
       .registerCommand('airFlutter.openFlavorsModal', () => this.withNativeProgress('Detecting Flutter flavors…', () => this.openFlavorsModal()))
       .registerCommand('airFlutter.openProxyModal', () => this.withNativeProgress('Reading network settings…', () => this.openProxyModal()))
+      .registerCommand('airFlutter.toggleOfflineMode', () => this.withNativeProgress('Toggling offline mode…', () => this.networkHandler.handleToggleOffline()))
+      .registerCommand('airFlutter.toggleSlowNetwork', () => this.withNativeProgress('Toggling network throttle…', () => this.networkHandler.handleSetNetworkThrottle('delay3s')))
       .registerCommand('airFlutter.toggleScreenRecording', () => this.withNativeProgress('Updating screen recording…', () => this.toggleScreenRecording()))
       .registerCommand('airFlutter.openAgentScaffoldingModal', () => this.openAgentScaffoldModal())
       .registerCommand('airFlutter.openCompatDoctorModal', () => this.withNativeProgress('Scanning Flutter compatibility…', () => this.openCompatDoctorModal()))
@@ -208,6 +225,26 @@ export class FlutterPanelController extends ADBBaseController {
       .registerCommand('airFlutter.openApkSizeModal', () => this.apkSizeHandler.openModal())
       .registerCommand('airFlutter.openPubHealthModal', () => this.pubHealthHandler.openModal())
       .registerCommand('airFlutter.cleanCommentedCode', () => this.withNativeProgress('Scanning for commented-out Dart code…', () => this.codeCleanupHandler.runInteractiveCleanupQuickPick()))
+      .registerCommand('airFlutter.openBuildRunner', async () => {
+        await this.openFlutterPanel();
+        this.currentPanel?.webview.postMessage({ command: 'selectTab', tab: 'build-runner' });
+      })
+      .registerCommand('airFlutter.openIconSplashStudio', async () => {
+        await this.openFlutterPanel();
+        this.currentPanel?.webview.postMessage({ command: 'selectTab', tab: 'icon-splash' });
+      })
+      .registerCommand('airFlutter.openDeviceEnvironment', async () => {
+        await this.openFlutterPanel();
+        this.currentPanel?.webview.postMessage({ command: 'selectTab', tab: 'device-env' });
+      })
+      .registerCommand('airFlutter.openLocalizationStudio', async () => {
+        await this.openFlutterPanel();
+        this.currentPanel?.webview.postMessage({ command: 'selectTab', tab: 'localization' });
+      })
+      .registerCommand('airFlutter.openSslDoctor', async () => {
+        await this.openFlutterPanel();
+        this.currentPanel?.webview.postMessage({ command: 'selectTab', tab: 'ssl-proxy' });
+      })
     
     console.log('✅ FlutterPanelController: Essential commands registered successfully')
   }
@@ -419,6 +456,18 @@ export class FlutterPanelController extends ADBBaseController {
             case 'clearPrivateDns':
               await this.handleClearPrivateDns();
               break;
+            case 'toggleOfflineMode':
+              await this.networkHandler.handleToggleOffline(message.forceHardware);
+              break;
+            case 'setNetworkThrottle':
+              await this.networkHandler.handleSetNetworkThrottle(message.preset);
+              break;
+            case 'simulateNetworkError':
+              await this.networkHandler.handleSimulateError(message.errorType);
+              break;
+            case 'resetNetworkSimulation':
+              await this.networkHandler.handleResetNetworkSimulation();
+              break;
             case 'toggleScreenRecording':
               await this.toggleScreenRecording();
               break;
@@ -595,6 +644,12 @@ export class FlutterPanelController extends ADBBaseController {
             case 'revokeRuntimePermission':
               await this.permissionHandler.handleRevokePermission(message.packageId, message.permission);
               break;
+            case 'grantAllRuntimePermissions':
+              await this.permissionHandler.handleGrantAllPermissions(message.packageId, message.permissions);
+              break;
+            case 'revokeAllRuntimePermissions':
+              await this.permissionHandler.handleRevokeAllPermissions(message.packageId, message.permissions);
+              break;
             case 'openStorageInspectorModal':
               await this.storageInspectorHandler.openModal(message.packageId);
               break;
@@ -692,6 +747,81 @@ export class FlutterPanelController extends ADBBaseController {
               console.log('🔧 FlutterPanelController: Showing troubleshooting guide...')
               await this.showTroubleshootingGuide();
               break;
+            case 'startBuildRunner':
+              await this.buildRunnerHandler.startBuildRunner(message);
+              break;
+            case 'stopBuildRunner':
+              this.buildRunnerHandler.stopBuildRunner();
+              break;
+            case 'clearBuildRunnerCache':
+              this.buildRunnerHandler.clearBuildRunnerCache();
+              break;
+            case 'openBuildRunnerTerminal':
+              await this.buildRunnerHandler.openInTerminal(Boolean(message.watch), message.buildFilter);
+              break;
+            case 'saveNativeAppIcons':
+              await this.iconSplashHandler.saveNativeIcons(message);
+              break;
+            case 'configureLauncherIconsYaml':
+              await this.iconSplashHandler.configureLauncherIconsYaml(message);
+              break;
+            case 'runLauncherIconsCli':
+              await this.iconSplashHandler.runLauncherIconsCli();
+              break;
+            case 'configureNativeSplashYaml':
+              await this.iconSplashHandler.configureNativeSplashYaml(message);
+              break;
+            case 'runNativeSplashCli':
+              await this.iconSplashHandler.runNativeSplashCli();
+              break;
+            case 'getDeviceEnvironmentState':
+              await this.deviceEnvironmentHandler.fetchState();
+              break;
+            case 'setDeviceFontScale':
+              await this.deviceEnvironmentHandler.setFontScale(Number(message.scale));
+              break;
+            case 'setDeviceDarkMode':
+              await this.deviceEnvironmentHandler.setDarkMode(Boolean(message.enabled));
+              break;
+            case 'setDeviceBatteryLevel':
+              await this.deviceEnvironmentHandler.setBatteryLevel(Number(message.level), Boolean(message.charging));
+              break;
+            case 'resetDeviceBattery':
+              await this.deviceEnvironmentHandler.resetBattery();
+              break;
+            case 'setDeviceLocale':
+              await this.deviceEnvironmentHandler.setLocale(String(message.localeTag));
+              break;
+            case 'setDeviceDensity':
+              await this.deviceEnvironmentHandler.setDensity(message.dpi === 'reset' ? 'reset' : Number(message.dpi));
+              break;
+            case 'setDeviceRotation':
+              await this.deviceEnvironmentHandler.setRotation(message.rotation);
+              break;
+            case 'loadLocalizationMatrix':
+              await this.localizationHandler.fetchMatrix();
+              break;
+            case 'saveLocalizationEntry':
+              await this.localizationHandler.saveKey(message);
+              break;
+            case 'initLocalizationWorkspace':
+              await this.localizationHandler.initWorkspace();
+              break;
+            case 'runGenL10n':
+              await this.localizationHandler.runGenL10n();
+              break;
+            case 'generateAiTranslatePrompt':
+              this.localizationHandler.generateAiPrompt(String(message.targetLocale));
+              break;
+            case 'checkNetworkSecurityStatus':
+              await this.sslDoctorHandler.fetchStatus();
+              break;
+            case 'applyNetworkSecurityConfig':
+              await this.sslDoctorHandler.applyNetworkSecurityConfig();
+              break;
+            case 'generateDevHttpOverridesFile':
+              await this.sslDoctorHandler.generateDevHttpOverrides();
+              break;
             default:
               console.warn('⚠️ FlutterPanelController: Unknown message command:', message.command)
               break;
@@ -720,6 +850,7 @@ export class FlutterPanelController extends ADBBaseController {
     this.currentPanel.onDidDispose(() => {
       console.log('🗑️ FlutterPanelController: Panel disposed')
       this.mockGpsHandler.dispose();
+      this.buildRunnerHandler.dispose();
       this.currentPanel = undefined;
     });
 

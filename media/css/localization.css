@@ -1,0 +1,137 @@
+/* ARB Localization Studio Styles */
+.loc-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 0;
+}
+
+.loc-kicker {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--font-mono, monospace);
+    margin: 2px 0 0;
+}
+
+.loc-actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.loc-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.loc-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--paper, #14150F);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+    border-radius: 4px;
+    padding: 4px 8px;
+    flex: 1;
+    max-width: 320px;
+}
+
+.loc-search-box input {
+    background: transparent;
+    border: none;
+    color: var(--ink, #E9E5D8);
+    font-size: 12px;
+    width: 100%;
+    outline: none;
+}
+
+.loc-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.loc-table-container {
+    overflow-x: auto;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    background: var(--surface, rgba(255, 255, 255, 0.02));
+}
+
+.loc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.loc-table th, .loc-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    vertical-align: middle;
+}
+
+.loc-table th {
+    background: rgba(0, 0, 0, 0.2);
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.loc-key-cell {
+    font-family: var(--font-mono, monospace);
+    font-weight: 500;
+    color: var(--accent, #E2552B);
+    white-space: nowrap;
+}
+
+.loc-input {
+    width: 100%;
+    background: var(--paper, #14150F);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+    border-radius: 4px;
+    color: var(--ink, #E9E5D8);
+    padding: 4px 6px;
+    font-size: 12px;
+}
+
+.loc-input.is-missing {
+    border-color: #F59E0B;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.loc-prompt-box {
+    width: 100%;
+    background: #0A0B08;
+    color: #4AF626;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 12px;
+    resize: vertical;
+}
+
+.loc-field-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+
+.loc-field-label input {
+    background: var(--paper, #14150F);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+    border-radius: 4px;
+    color: var(--ink, #E9E5D8);
+    padding: 5px 8px;
+    font-size: 12px;
+}
+

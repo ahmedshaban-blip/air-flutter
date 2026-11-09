@@ -9,6 +9,7 @@ import {
   AndroidRuntimePermissionService,
   getPermissionCategories
 } from '../../../domain/android-permission-manager';
+import { AppStateWiper } from '../../../domain/app-state-wiper';
 import { PanelDeviceContext } from './panelNetworkHandler';
 
 const NO_CHANGES_MESSAGE = 'Selected permissions already exist in AndroidManifest.xml. No changes made.';
@@ -21,14 +22,34 @@ export class PanelPermissionHandler {
     this.runtimeService = new AndroidRuntimePermissionService(() => this.ctx.getADBExecutable());
   }
 
-  public async handleLoadRuntimePermissions(packageId: string): Promise<void> {
+  public async handleLoadRuntimePermissions(packageId?: string): Promise<void> {
     const serial = this.ctx.getActiveDeviceSerial();
     const panel = this.ctx.getPanel();
+
+    let effectivePackageId = packageId?.trim();
+    if (!effectivePackageId) {
+      const projectPath = this.ctx.getInitialProjectPath();
+      if (projectPath) {
+        effectivePackageId = AppStateWiper.readApplicationId(projectPath) || '';
+      }
+    }
+
     if (!serial) {
       panel?.webview.postMessage({
         command: 'runtimePermissionsState',
         status: 'error',
-        error: 'No active device connected to query runtime permissions.'
+        error: 'No active device connected to query runtime permissions.',
+        packageId: effectivePackageId || ''
+      });
+      return;
+    }
+
+    if (!effectivePackageId) {
+      panel?.webview.postMessage({
+        command: 'runtimePermissionsState',
+        status: 'error',
+        error: 'Unable to detect application ID. Please run the app or specify package ID.',
+        packageId: ''
       });
       return;
     }
@@ -37,16 +58,17 @@ export class PanelPermissionHandler {
       panel?.webview.postMessage({
         command: 'runtimePermissionsState',
         status: 'loading',
-        message: `Querying runtime permissions for ${packageId}…`
+        message: `Querying runtime permissions for ${effectivePackageId}…`,
+        packageId: effectivePackageId
       });
 
-      const permissions = await this.runtimeService.getPermissions(serial, packageId);
+      const permissions = await this.runtimeService.getPermissions(serial, effectivePackageId);
 
       panel?.webview.postMessage({
         command: 'runtimePermissionsState',
         status: 'success',
         permissions,
-        packageId,
+        packageId: effectivePackageId,
         serial
       });
     } catch (error) {
@@ -54,7 +76,8 @@ export class PanelPermissionHandler {
       panel?.webview.postMessage({
         command: 'runtimePermissionsState',
         status: 'error',
-        error: msg
+        error: msg,
+        packageId: effectivePackageId
       });
     }
   }
@@ -90,6 +113,32 @@ export class PanelPermissionHandler {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.ctx.showErrorMessage(`Error revoking permission: ${msg}`);
+    }
+  }
+
+  public async handleGrantAllPermissions(packageId: string, permissions: string[]): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial || !packageId || !permissions.length) return;
+    try {
+      await this.runtimeService.grantAllPermissions(serial, packageId, permissions);
+      this.ctx.showSuccessMessage(`Granted ${permissions.length} permission(s)`);
+      await this.handleLoadRuntimePermissions(packageId);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Error granting permissions: ${msg}`);
+    }
+  }
+
+  public async handleRevokeAllPermissions(packageId: string, permissions: string[]): Promise<void> {
+    const serial = this.ctx.getActiveDeviceSerial();
+    if (!serial || !packageId || !permissions.length) return;
+    try {
+      await this.runtimeService.revokeAllPermissions(serial, packageId, permissions);
+      this.ctx.showSuccessMessage(`Revoked ${permissions.length} permission(s)`);
+      await this.handleLoadRuntimePermissions(packageId);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.ctx.showErrorMessage(`Error revoking permissions: ${msg}`);
     }
   }
 

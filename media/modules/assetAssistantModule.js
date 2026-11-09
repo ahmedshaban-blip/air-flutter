@@ -656,6 +656,12 @@
             });
             if (tabName === 'assets' && !this.assetAssistantScanned) this.scanAssets();
             if (tabName === 'permissions') this.loadPermissionCatalog();
+            if (tabName === 'device-env') this.sendMessage('getDeviceEnvironmentState', {});
+            if (tabName === 'localization') this.sendMessage('loadLocalizationMatrix', {});
+            if (tabName === 'ssl-proxy') {
+                this.sendMessage('checkNetworkSecurityStatus', {});
+                this.sendMessage('getNetworkState', {});
+            }
         }
 
         scanAssets() {

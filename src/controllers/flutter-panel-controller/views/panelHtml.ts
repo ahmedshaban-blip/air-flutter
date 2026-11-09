@@ -14,6 +14,11 @@ import { getDebugOverlaysModalHtml } from './modals/debugOverlaysModalHtml';
 import { getMockGpsModalHtml } from './modals/mockGpsModalHtml';
 import { getApkSizeModalHtml } from './modals/apkSizeModalHtml';
 import { getPubHealthModalHtml } from './modals/pubHealthModalHtml';
+import { getBuildRunnerViewHtml } from './tabs/buildRunnerViewHtml';
+import { getIconSplashViewHtml } from './tabs/iconSplashViewHtml';
+import { getDeviceEnvironmentViewHtml } from './tabs/deviceEnvironmentViewHtml';
+import { getLocalizationViewHtml } from './tabs/localizationViewHtml';
+import { getSslDoctorViewHtml } from './tabs/sslDoctorViewHtml';
 import { LOCALHOST_BRIDGE_PRESETS } from '../../../domain/localhost-bridge';
 
 /**
@@ -43,6 +48,11 @@ export function getPanelWebviewContent(
   const mockGpsCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'mock-gps.css')));
   const apkSizeCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'apk-size.css')));
   const pubHealthCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'pub-health.css')));
+  const buildRunnerCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'build-runner.css')));
+  const iconSplashCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'icon-splash.css')));
+  const deviceEnvironmentCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'device-environment.css')));
+  const localizationCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'localization.css')));
+  const sslDoctorCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'ssl-doctor.css')));
   const airFlutterCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
@@ -66,6 +76,11 @@ export function getPanelWebviewContent(
   const mockGpsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'mockGpsModule.js')));
   const apkSizeModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'apkSizeModule.js')));
   const pubHealthModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'pubHealthModule.js')));
+  const buildRunnerModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'buildRunnerModule.js')));
+  const iconSplashModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'iconSplashModule.js')));
+  const deviceEnvironmentModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'deviceEnvironmentModule.js')));
+  const localizationModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'localizationModule.js')));
+  const sslDoctorModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'sslDoctorModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
   const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
     .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
@@ -89,7 +104,12 @@ export function getPanelWebviewContent(
     'debug-overlays.css',
     'mock-gps.css',
     'apk-size.css',
-    'pub-health.css'
+    'pub-health.css',
+    'build-runner.css',
+    'icon-splash.css',
+    'device-environment.css',
+    'localization.css',
+    'ssl-doctor.css'
   ];
 
   let embeddedPanelCss = '';
@@ -155,6 +175,11 @@ export function getPanelWebviewContent(
         <link href="${mockGpsCssUri}" rel="stylesheet">
         <link href="${apkSizeCssUri}" rel="stylesheet">
         <link href="${pubHealthCssUri}" rel="stylesheet">
+        <link href="${buildRunnerCssUri}" rel="stylesheet">
+        <link href="${iconSplashCssUri}" rel="stylesheet">
+        <link href="${deviceEnvironmentCssUri}" rel="stylesheet">
+        <link href="${localizationCssUri}" rel="stylesheet">
+        <link href="${sslDoctorCssUri}" rel="stylesheet">
         <link href="${airFlutterCssUri}" rel="stylesheet">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -193,6 +218,11 @@ export function getPanelWebviewContent(
                 <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="cleanup">Code Cleanup</button>
                 <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="permissions">Permissions</button>
                 <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="deep-links">Deep Links</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="build-runner">Build Runner</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="icon-splash">Icon &amp; Splash</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="device-env">Device Sandbox</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="localization">Localization</button>
+                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="ssl-proxy">SSL &amp; Proxy</button>
             </nav>
 
             <div data-panel-view="workspace">
@@ -418,6 +448,31 @@ export function getPanelWebviewContent(
                                 <span><span class="cmd-label">Pub Health</span><span class="cmd-run">dependencies &amp; outdated check</span></span>
                                 <i class="cmd-go fas fa-arrow-right"></i>
                             </button>
+                            <button class="cmd" type="button" data-command="buildRunnerTab" onclick="airFlutter.selectTab('build-runner')">
+                                <i class="cmd-icon fas fa-gears"></i>
+                                <span><span class="cmd-label">Build Runner</span><span class="cmd-run">code-gen cockpit</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="iconSplashTab" onclick="airFlutter.selectTab('icon-splash')">
+                                <i class="cmd-icon fas fa-icons"></i>
+                                <span><span class="cmd-label">Icon &amp; Splash</span><span class="cmd-run">adaptive icons &amp; assets</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="deviceEnvTab" onclick="airFlutter.selectTab('device-env')">
+                                <i class="cmd-icon fas fa-sliders"></i>
+                                <span><span class="cmd-label">Device Sandbox</span><span class="cmd-run">font, night, battery &amp; locale</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="localizationTab" onclick="airFlutter.selectTab('localization')">
+                                <i class="cmd-icon fas fa-language"></i>
+                                <span><span class="cmd-label">Localization</span><span class="cmd-run">ARB matrix &amp; translations</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
+                            <button class="cmd" type="button" data-command="sslDoctorTab" onclick="airFlutter.selectTab('ssl-proxy')">
+                                <i class="cmd-icon fas fa-shield-virus"></i>
+                                <span><span class="cmd-label">SSL &amp; Proxy</span><span class="cmd-run">network security &amp; overrides</span></span>
+                                <i class="cmd-go fas fa-arrow-right"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -477,6 +532,21 @@ export function getPanelWebviewContent(
                             </button>
                             <button class="rail-item" type="button" onclick="airFlutter.openCompatDoctorModal()">
                                 <i class="fas fa-stethoscope"></i> Compat Doctor
+                            </button>
+                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('build-runner')">
+                                <i class="fas fa-gears"></i> Build Runner
+                            </button>
+                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('icon-splash')">
+                                <i class="fas fa-icons"></i> Icon &amp; Splash
+                            </button>
+                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('device-env')">
+                                <i class="fas fa-sliders"></i> Device Sandbox
+                            </button>
+                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('localization')">
+                                <i class="fas fa-language"></i> Localization
+                            </button>
+                            <button class="rail-item" type="button" onclick="airFlutter.selectTab('ssl-proxy')">
+                                <i class="fas fa-shield-virus"></i> SSL &amp; Proxy
                             </button>
                         </div>
                     </div>
@@ -722,7 +792,18 @@ export function getPanelWebviewContent(
             </section>
 
             <section data-panel-view="permissions" hidden aria-label="Permissions">
-                <div class="permission-manager-layout">
+                <!-- Mode Switcher: Manifest vs Live Runtime -->
+                <div class="permission-mode-nav" role="tablist" style="display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom: 10px;">
+                    <button class="permission-mode-tab is-active" id="permModeManifestTab" type="button" role="tab" aria-selected="true">
+                        <i class="fas fa-file-code"></i> Project Declarations (Manifest / Plist)
+                    </button>
+                    <button class="permission-mode-tab" id="permModeRuntimeTab" type="button" role="tab" aria-selected="false">
+                        <i class="fas fa-toggle-on"></i> Live App (Runtime Permissions)
+                    </button>
+                </div>
+
+                <!-- 1. Manifest / Plist Declarations View -->
+                <div id="permissionManifestView" class="permission-manager-layout">
                     <div class="ff-section">
                         <div class="ff-section-head">
                             <h2 id="permissionHeading">Android Permissions</h2>
@@ -760,7 +841,56 @@ export function getPanelWebviewContent(
                         </div>
                     </div>
                 </div>
+
+                <!-- 2. Live App Runtime Permissions View -->
+                <div id="permissionRuntimeView" class="permission-runtime-layout" hidden>
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Live App Target</h2>
+                            <span class="ff-section-note" id="runtimeDeviceBadge">Device connected</span>
+                        </div>
+                        <p style="font-size: 11px; color: var(--muted); margin: 0 0 8px 0;">
+                            Inspect, grant, or revoke permissions on the running application in real-time via ADB.
+                        </p>
+                        <div class="path-picker-row" style="margin-bottom: 8px;">
+                            <input type="text" id="runtimePackageIdInput" placeholder="Application Package ID (e.g. com.example.app)" style="flex: 1;" />
+                            <button class="btn btn-primary" id="refreshRuntimePermsBtn" type="button">
+                                <i class="fas fa-rotate"></i> Query
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between;">
+                            <span id="runtimePermissionsStatusText" style="font-size: 11px; color: var(--muted);">Click Query to read live permissions.</span>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-quiet btn-sm" id="grantAllRuntimePermsBtn" type="button" disabled title="Grant all runtime permissions">
+                                    <i class="fas fa-check-double"></i> Grant All
+                                </button>
+                                <button class="btn btn-quiet btn-sm" id="revokeAllRuntimePermsBtn" type="button" disabled title="Revoke all runtime permissions">
+                                    <i class="fas fa-ban"></i> Revoke All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ff-section">
+                        <div class="ff-section-head">
+                            <h2>Runtime Permissions</h2>
+                            <span class="ff-section-note" id="runtimePermCountBadge">0 found</span>
+                        </div>
+                        <div class="permission-search-wrapper" style="margin-bottom: 8px;">
+                            <i class="fas fa-search permission-search-icon"></i>
+                            <input type="search" class="permission-search-input" id="runtimePermSearchInput" placeholder="Filter runtime permissions (e.g. camera, location)..." autocomplete="off" spellcheck="false" />
+                        </div>
+                        <div class="runtime-permissions-list" id="runtimePermissionsList" style="max-height: 400px; overflow-y: auto;">
+                            <p class="empty"><i class="fas fa-toggle-on"></i><span>Enter or query package ID to inspect permissions</span></p>
+                        </div>
+                    </div>
+                </div>
             </section>
+${getBuildRunnerViewHtml()}
+${getIconSplashViewHtml()}
+${getDeviceEnvironmentViewHtml()}
+${getLocalizationViewHtml()}
+${getSslDoctorViewHtml()}
 
             <footer class="ff-footer">
                 <span>Built by <a href="https://www.linkedin.com/in/ahmed-shaban-front-cross" target="_blank" rel="noreferrer">Ahmed Shaban</a></span>
@@ -891,6 +1021,12 @@ ${getPubHealthModalHtml()}
                 toggleRepaintRainbow: function () {
                     if (window.vscode) window.vscode.postMessage({ command: 'toggleDebugOverlay', overlay: 'repaintRainbow' });
                 },
+                selectTab: function (tabName) {
+                    const app = window.airFlutterApp;
+                    if (app && typeof app.selectPanelTab === 'function') {
+                        app.selectPanelTab(tabName);
+                    }
+                },
                 closeImportModal: function () {
                     const app = window.airFlutterApp;
                     if (app && typeof app.closeImportModal === 'function') {
@@ -982,6 +1118,11 @@ ${getPubHealthModalHtml()}
         <script src="${mockGpsModuleUri}"></script>
         <script src="${apkSizeModuleUri}"></script>
         <script src="${pubHealthModuleUri}"></script>
+        <script src="${buildRunnerModuleUri}"></script>
+        <script src="${iconSplashModuleUri}"></script>
+        <script src="${deviceEnvironmentModuleUri}"></script>
+        <script src="${localizationModuleUri}"></script>
+        <script src="${sslDoctorModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>
     </html>`;

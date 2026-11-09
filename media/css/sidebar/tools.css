@@ -147,6 +147,17 @@
     font-weight: 700;
 }
 
+.sf-tool.is-offline-active {
+    border-color: var(--err, #e03131);
+    background: rgba(224, 49, 49, 0.08);
+    color: var(--err, #e03131);
+}
+
+.sf-tool.is-offline-active .sf-tool-name {
+    color: #e03131;
+    font-weight: 600;
+}
+
 .sf-tool[disabled] {
     cursor: progress;
     opacity: 0.55;

@@ -290,7 +290,17 @@
       },
       {
         "command": "airFlutter.openProxyModal",
-        "title": "Configure Network Proxy & Private DNS",
+        "title": "Network & Screen State Lab",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.toggleOfflineMode",
+        "title": "Toggle Offline Mode (Safe Isolated)",
+        "category": "Air Flutter"
+      },
+      {
+        "command": "airFlutter.toggleSlowNetwork",
+        "title": "Toggle Slow Network (3s Delay)",
         "category": "Air Flutter"
       },
       {
@@ -366,6 +376,36 @@
         "title": "Clean Commented-Out Dart Code (Detect, Remove, Uncomment)",
         "category": "Air Flutter",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "airFlutter.openBuildRunner",
+        "title": "Build Runner Cockpit (Code Generation)",
+        "category": "Air Flutter",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "airFlutter.openIconSplashStudio",
+        "title": "App Icon & Splash Studio",
+        "category": "Air Flutter",
+        "icon": "$(file-media)"
+      },
+      {
+        "command": "airFlutter.openDeviceEnvironment",
+        "title": "Device Environment Sandbox (Font, Dark, Battery, Locale)",
+        "category": "Air Flutter",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "airFlutter.openLocalizationStudio",
+        "title": "ARB & Localization Studio",
+        "category": "Air Flutter",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "airFlutter.openSslDoctor",
+        "title": "SSL & Proxy Doctor",
+        "category": "Air Flutter",
+        "icon": "$(shield)"
       }
     ],
     "menus": {
@@ -424,6 +464,26 @@
         },
         {
           "command": "airFlutter.openMcpHub",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openBuildRunner",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openIconSplashStudio",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openDeviceEnvironment",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openLocalizationStudio",
+          "when": "workspaceHasAirFlutter"
+        },
+        {
+          "command": "airFlutter.openSslDoctor",
           "when": "workspaceHasAirFlutter"
         }
       ],

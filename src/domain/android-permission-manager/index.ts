@@ -367,5 +367,21 @@ export class AndroidRuntimePermissionService {
     const res = await this.runProcess(adb, ['-s', serial, 'shell', 'pm', 'revoke', packageId.trim(), permission.trim()], 10000);
     return !res.errorMessage && !res.stderr.includes('Exception');
   }
+
+  public async grantAllPermissions(serial: string, packageId: string, permissions: string[]): Promise<boolean[]> {
+    const results: boolean[] = [];
+    for (const p of permissions) {
+      results.push(await this.grantPermission(serial, packageId, p));
+    }
+    return results;
+  }
+
+  public async revokeAllPermissions(serial: string, packageId: string, permissions: string[]): Promise<boolean[]> {
+    const results: boolean[] = [];
+    for (const p of permissions) {
+      results.push(await this.revokePermission(serial, packageId, p));
+    }
+    return results;
+  }
 }
 

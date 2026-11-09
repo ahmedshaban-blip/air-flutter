@@ -282,6 +282,12 @@ export class SidebarController {
       case 'proxy':
         await vscode.commands.executeCommand('airFlutter.openProxyModal')
         break
+      case 'toggleOffline':
+        await vscode.commands.executeCommand('airFlutter.toggleOfflineMode')
+        break
+      case 'toggleSlowNetwork':
+        await vscode.commands.executeCommand('airFlutter.toggleSlowNetwork')
+        break
       case 'agentEngine':
         await vscode.commands.executeCommand('airFlutter.openAgentScaffoldingModal')
         break
