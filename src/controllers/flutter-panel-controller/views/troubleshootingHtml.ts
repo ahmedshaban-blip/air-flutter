@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 /**
  * HTML Template for Device Setup & Troubleshooting Guide
@@ -8,6 +9,14 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
   const mediaPath = path.join(context.extensionPath, 'media');
   const themeUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'theme.css')));
   const componentsUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'components.css')));
+
+  let embeddedTroubleCss = '';
+  try {
+    const themePath = path.join(mediaPath, 'css', 'theme.css');
+    if (fs.existsSync(themePath)) embeddedTroubleCss += fs.readFileSync(themePath, 'utf8') + '\n';
+    const compPath = path.join(mediaPath, 'css', 'components.css');
+    if (fs.existsSync(compPath)) embeddedTroubleCss += fs.readFileSync(compPath, 'utf8') + '\n';
+  } catch {}
 
   return `<!DOCTYPE html>
     <html lang="en">
@@ -22,16 +31,9 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
                         document.documentElement.classList.add('dark-mode');
                     }
                 } catch (e) {}
-                setTimeout(function () {
-                    var shell = document.querySelector('.ff-shell');
-                    if (shell) {
-                        shell.style.visibility = 'visible';
-                        shell.style.opacity = '1';
-                    }
-                }, 800);
             })();
         </script>
-        <style>
+        <style id="troubleshooting-critical-css">
             /* Anti-FOUC critical styling: match editor theme before external stylesheets resolve */
             html {
                 background: var(--vscode-editor-background, #0F110E);
@@ -42,10 +44,7 @@ export function getTroubleshootingContent(context: vscode.ExtensionContext, pane
                 color: var(--ink, var(--vscode-editor-foreground, #E9E5D8));
                 font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
             }
-            .ff-shell {
-                visibility: hidden;
-                opacity: 0;
-            }
+            ${embeddedTroubleCss}
         </style>
         <link rel="preload" as="style" href="${themeUri}">
         <link href="${themeUri}" rel="stylesheet">

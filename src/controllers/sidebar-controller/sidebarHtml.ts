@@ -1,17 +1,30 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import * as path from 'path';
+import * as fs from 'fs';
 import { LOCALHOST_BRIDGE_PRESETS } from '../../domain/localhost-bridge';
 
 export function getSidebarWebviewHtml(
   webview: vscode.Webview,
   styleUri: vscode.Uri,
   scriptUri: vscode.Uri,
-  version: string
+  version: string,
+  extensionPath?: string
 ): string {
   const nonce = crypto.randomBytes(16).toString('base64');
   const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
     .map(port => `<button type="button" data-bridge-port="${port}">${port}</button>`)
     .join('');
+
+  let embeddedSidebarCss = '';
+  if (extensionPath) {
+    try {
+      const cssPath = path.join(extensionPath, 'media', 'sidebar.css');
+      if (fs.existsSync(cssPath)) {
+        embeddedSidebarCss = fs.readFileSync(cssPath, 'utf8');
+      }
+    } catch {}
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -19,7 +32,7 @@ export function getSidebarWebviewHtml(
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com; font-src ${webview.cspSource} https://fonts.gstatic.com; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-inline';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
+    <style id="air-flutter-sidebar-critical-styles">
         /* Anti-FOUC critical styling: match editor theme before external stylesheets resolve */
         html {
             background: var(--vscode-sideBar-background, #0F110E);
@@ -30,6 +43,7 @@ export function getSidebarWebviewHtml(
             color: var(--ink, var(--vscode-sideBar-foreground, #E9E5D8));
             font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
+        ${embeddedSidebarCss}
     </style>
     <link href="${styleUri}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">

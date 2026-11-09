@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { getWorkflowModalHtml } from './modals/workflowModalHtml';
 import { getFlavorsModalHtml } from './modals/flavorsModalHtml';
 import { getProxyModalHtml } from './modals/proxyModalHtml';
@@ -70,6 +71,43 @@ export function getPanelWebviewContent(
     .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
     .join('');
 
+  const panelCssFiles = [
+    'theme.css',
+    'components.css',
+    'modals.css',
+    'stepper.css',
+    'compat.css',
+    'signing-key.css',
+    'asset-assistant.css',
+    'code-cleanup.css',
+    'permission-manager.css',
+    'app-state.css',
+    'deep-link-studio.css',
+    'localhost-bridge.css',
+    'mcp-hub.css',
+    'storage-inspector.css',
+    'debug-overlays.css',
+    'mock-gps.css',
+    'apk-size.css',
+    'pub-health.css'
+  ];
+
+  let embeddedPanelCss = '';
+  for (const fileName of panelCssFiles) {
+    try {
+      const fullPath = path.join(mediaPath, 'css', fileName);
+      if (fs.existsSync(fullPath)) {
+        embeddedPanelCss += `/* --- ${fileName} --- */\n` + fs.readFileSync(fullPath, 'utf8') + '\n';
+      }
+    } catch {}
+  }
+  try {
+    const airCssPath = path.join(mediaPath, 'air-flutter.css');
+    if (fs.existsSync(airCssPath)) {
+      embeddedPanelCss += `/* --- air-flutter.css --- */\n` + fs.readFileSync(airCssPath, 'utf8') + '\n';
+    }
+  } catch {}
+
   return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -83,18 +121,10 @@ export function getPanelWebviewContent(
                         document.documentElement.classList.add('dark-mode');
                     }
                 } catch (e) {}
-                // Anti-FOUC fallback: reveal shell if stylesheet evaluation is unexpectedly delayed
-                setTimeout(function () {
-                    var shell = document.querySelector('.ff-shell');
-                    if (shell) {
-                        shell.style.visibility = 'visible';
-                        shell.style.opacity = '1';
-                    }
-                }, 800);
             })();
         </script>
-        <style>
-            /* Anti-FOUC critical styling: match editor theme and conceal unstyled shell */
+        <style id="air-flutter-bundled-css">
+            /* Anti-FOUC critical styling: match editor theme immediately */
             html {
                 background: var(--vscode-editor-background, #0F110E);
                 color: var(--vscode-editor-foreground, #E9E5D8);
@@ -104,10 +134,7 @@ export function getPanelWebviewContent(
                 color: var(--ink, var(--vscode-editor-foreground, #E9E5D8));
                 font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
             }
-            .ff-shell {
-                visibility: hidden;
-                opacity: 0;
-            }
+            ${embeddedPanelCss}
         </style>
         <link rel="preload" as="style" href="${themeUri}">
         <link href="${themeUri}" rel="stylesheet">

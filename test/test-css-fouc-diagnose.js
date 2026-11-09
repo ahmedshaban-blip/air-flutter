@@ -33,7 +33,7 @@ console.log(`Panel: remote fonts link pos = ${panelRemoteFontsPos}, remote cdnjs
 const isPanelLocalBeforeRemote = panelLocalThemePos < panelRemoteFontsPos && panelLocalThemePos < panelRemoteCdnjsPos;
 
 // Check 3: Sidebar has anti-FOUC inline critical styling in <head>
-const hasSidebarFoucGuard = /<style>[\s\S]*?Anti-FOUC[\s\S]*?html\s*\{[\s\S]*?background:[\s\S]*?<\/style>/i.test(sidebarHtmlSource);
+const hasSidebarFoucGuard = /<style[^>]*>[\s\S]*?Anti-FOUC[\s\S]*?html\s*\{[\s\S]*?background:[\s\S]*?<\/style>/i.test(sidebarHtmlSource);
 
 console.log(`Sidebar FOUC guard present: ${hasSidebarFoucGuard}`);
 console.log(`Sidebar local before remote: ${isSidebarLocalBeforeRemote}`);

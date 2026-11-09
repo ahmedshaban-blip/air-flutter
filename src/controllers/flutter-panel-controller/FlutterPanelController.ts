@@ -719,6 +719,7 @@ export class FlutterPanelController extends ADBBaseController {
 
     this.currentPanel.onDidDispose(() => {
       console.log('🗑️ FlutterPanelController: Panel disposed')
+      this.mockGpsHandler.dispose();
       this.currentPanel = undefined;
     });
 

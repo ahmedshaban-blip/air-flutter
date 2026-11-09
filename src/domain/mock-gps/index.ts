@@ -35,6 +35,8 @@ export interface GpsDispatchResult {
 }
 
 export class MockGpsService {
+  private readonly heartbeats = new Map<string, NodeJS.Timeout>();
+
   constructor(
     private readonly getADBExecutable: () => Promise<string>,
     private readonly runProcess: (
@@ -69,6 +71,21 @@ export class MockGpsService {
     }
   }
 
+  public stopHeartbeat(serial: string): void {
+    const existing = this.heartbeats.get(serial);
+    if (existing) {
+      clearInterval(existing);
+      this.heartbeats.delete(serial);
+    }
+  }
+
+  public dispose(): void {
+    for (const [, timer] of this.heartbeats) {
+      clearInterval(timer);
+    }
+    this.heartbeats.clear();
+  }
+
   public async getConnectedDeviceSerial(): Promise<string | undefined> {
     try {
       const adb = await this.getADBExecutable();
@@ -96,6 +113,9 @@ export class MockGpsService {
     const adb = await this.getADBExecutable();
     const isEmulator = serial.startsWith('emulator-');
 
+    // Stop any existing heartbeat for this device before updating
+    this.stopHeartbeat(serial);
+
     if (isEmulator) {
       // Use adb emu geo fix <lon> <lat> [alt]
       const emuArgs = ['-s', serial, 'emu', 'geo', 'fix', lon.toFixed(6), lat.toFixed(6), altitude.toFixed(1)];
@@ -118,15 +138,18 @@ export class MockGpsService {
       // 2. Ensure master location is enabled
       await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'set-location-enabled', 'true'], 5000);
 
-      // 3. Register test providers and inject coordinates for both gps and fused
-      const providers = ['gps', 'fused'];
+      // 3. Register test providers and inject coordinates for gps, fused, and network
+      const providers = ['gps', 'fused', 'network'];
+      const timestamp = Date.now();
+
       for (const provider of providers) {
         await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'providers', 'add-test-provider', provider], 5000);
         await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'providers', 'set-test-provider-enabled', provider, 'true'], 5000);
         await this.runProcess(adb, [
           '-s', serial, 'shell', 'cmd', 'location', 'providers', 'set-test-provider-location', provider,
           '--location', `${lat.toFixed(6)},${lon.toFixed(6)}`,
-          '--accuracy', '5.0'
+          '--accuracy', '1.0',
+          '--time', String(timestamp)
         ], 5000);
       }
 
@@ -140,6 +163,26 @@ export class MockGpsService {
       ];
       await this.runProcess(adb, broadcastArgs, 5000);
 
+      // 5. Start continuous heartbeat pulse (every 2s) so streaming listeners (e.g. Google Maps, Flutter Geolocator)
+      // receive fresh timestamps and do not drop the GPS lock
+      const timer = setInterval(async () => {
+        try {
+          const exe = await this.getADBExecutable();
+          const now = Date.now();
+          for (const p of providers) {
+            await this.runProcess(exe, [
+              '-s', serial, 'shell', 'cmd', 'location', 'providers', 'set-test-provider-location', p,
+              '--location', `${lat.toFixed(6)},${lon.toFixed(6)}`,
+              '--accuracy', '1.0',
+              '--time', String(now)
+            ], 3000);
+          }
+        } catch {
+          // heartbeat pulse non-blocking
+        }
+      }, 2000);
+      this.heartbeats.set(serial, timer);
+
       return {
         ok: true,
         latitude: lat,
@@ -152,6 +195,7 @@ export class MockGpsService {
   }
 
   public async resetLocation(serial: string): Promise<GpsDispatchResult> {
+    this.stopHeartbeat(serial);
     const adb = await this.getADBExecutable();
     const isEmulator = serial.startsWith('emulator-');
 
@@ -167,7 +211,7 @@ export class MockGpsService {
       };
     } else {
       // Physical device: remove test providers
-      for (const provider of ['gps', 'fused']) {
+      for (const provider of ['gps', 'fused', 'network']) {
         await this.runProcess(adb, ['-s', serial, 'shell', 'cmd', 'location', 'providers', 'remove-test-provider', provider], 5000);
       }
       await this.runProcess(adb, [

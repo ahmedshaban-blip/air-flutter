@@ -1014,6 +1014,6 @@ export class SidebarController {
 
   private html(webview: vscode.Webview, styleUri: vscode.Uri, scriptUri: vscode.Uri): string {
     const version = this.context.extension.packageJSON.version as string;
-    return getSidebarWebviewHtml(webview, styleUri, scriptUri, version);
+    return getSidebarWebviewHtml(webview, styleUri, scriptUri, version, this.context.extensionPath);
   }
 }

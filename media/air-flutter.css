@@ -1,13 +1,8 @@
 /* ==========================================================================
    Air Flutter — Master Stylesheet
-   Imports modular stylesheets from media/css/
+   Global utilities and feedback indicators
    ========================================================================== */
 
-@import './css/theme.css';
-@import './css/components.css';
-@import './css/modals.css';
-@import './css/stepper.css';
-@import './css/compat.css';
 /* Shared host-operation feedback. It stays visible until the extension host
    confirms the matching async operation has actually settled. */
 .global-operation-indicator {

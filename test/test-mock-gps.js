@@ -43,13 +43,16 @@ const { MockGpsService, GPS_PRESETS } = require('../out/domain/mock-gps');
   const devRes = await service.setLocation('physical_device_serial', 25.2048, 55.2708);
   assert.strictEqual(devRes.ok, true);
   assert.strictEqual(devRes.mode, 'broadcast');
-  // Must configure test providers (gps & fused) and broadcast fallback
+  // Must configure test providers (gps, fused, network) with timestamps and broadcast fallback
   const adbArgStrings = adbCalls.map(c => c.args.join(' '));
   assert.ok(adbArgStrings.some(s => s.includes('appops set com.android.shell android:mock_location allow')), 'Must grant mock_location to shell');
   assert.ok(adbArgStrings.some(s => s.includes('providers add-test-provider gps')), 'Must add gps test provider');
   assert.ok(adbArgStrings.some(s => s.includes('providers set-test-provider-location gps --location 25.204800,55.270800')), 'Must set gps test location');
   assert.ok(adbArgStrings.some(s => s.includes('providers add-test-provider fused')), 'Must add fused test provider');
   assert.ok(adbArgStrings.some(s => s.includes('providers set-test-provider-location fused --location 25.204800,55.270800')), 'Must set fused test location');
+  assert.ok(adbArgStrings.some(s => s.includes('providers add-test-provider network')), 'Must add network test provider');
+  assert.ok(adbArgStrings.some(s => s.includes('providers set-test-provider-location network --location 25.204800,55.270800')), 'Must set network test location');
+  assert.ok(adbArgStrings.some(s => s.includes('--time')), 'Must include timestamp for streaming clients');
   assert.ok(adbArgStrings.some(s => s.includes('am broadcast -a com.airflutter.MOCK_LOCATION')), 'Must broadcast fallback intent');
 
   // Reset Location - Emulator
@@ -67,7 +70,10 @@ const { MockGpsService, GPS_PRESETS } = require('../out/domain/mock-gps');
   const resetArgStrings = adbCalls.map(c => c.args.join(' '));
   assert.ok(resetArgStrings.some(s => s.includes('remove-test-provider gps')), 'Must remove gps test provider');
   assert.ok(resetArgStrings.some(s => s.includes('remove-test-provider fused')), 'Must remove fused test provider');
+  assert.ok(resetArgStrings.some(s => s.includes('remove-test-provider network')), 'Must remove network test provider');
   assert.ok(resetArgStrings.some(s => s.includes('com.airflutter.MOCK_LOCATION_RESET')), 'Must broadcast reset intent');
+
+  service.dispose();
 
   console.log('✅ MockGpsService tests passed!');
 })();

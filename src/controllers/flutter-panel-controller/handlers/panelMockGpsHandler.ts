@@ -122,5 +122,9 @@ export class PanelMockGpsHandler {
       });
     }
   }
+
+  public dispose(): void {
+    this.service.dispose();
+  }
 }
 
