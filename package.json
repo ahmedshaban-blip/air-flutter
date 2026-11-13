@@ -2,7 +2,7 @@
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
   "description": "The complete Flutter & Android engineering suite: Build Runner cockpit, App Icon & Splash studio, Device Environment sandbox, ARB & Localization studio, SSL & Proxy doctor, Storage Inspector (SharedPreferences & SQLite), Debug Overlays, Mock GPS, APK Size Analyzer, Pub Health, compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording, Flutter Flavors, MCP & AI Agent Hub, and GitHub Actions CI/CD workflows.",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",
