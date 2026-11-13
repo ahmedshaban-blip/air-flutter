@@ -783,6 +783,21 @@ export class FlutterPanelController extends ADBBaseController {
             case 'saveNativeAppIcons':
               await this.iconSplashHandler.saveNativeIcons(message);
               break;
+            case 'getIconStudioProjectInfo':
+              this.iconSplashHandler.sendProjectInfo();
+              break;
+            case 'validateIconAsset':
+              this.iconSplashHandler.validateIconAsset(message);
+              break;
+            case 'applyIconStudio':
+              await this.iconSplashHandler.applyIconStudio(message);
+              break;
+            case 'restoreLatestIcons':
+              this.iconSplashHandler.restoreLatestIcons();
+              break;
+            case 'deleteIconSplashAsset':
+              await this.iconSplashHandler.deleteAsset(message);
+              break;
             case 'configureLauncherIconsYaml':
               await this.iconSplashHandler.configureLauncherIconsYaml(message);
               break;
@@ -794,6 +809,9 @@ export class FlutterPanelController extends ADBBaseController {
               break;
             case 'runNativeSplashCli':
               await this.iconSplashHandler.runNativeSplashCli();
+              break;
+            case 'applySplashStudio':
+              await this.iconSplashHandler.applySplashStudio(message);
               break;
             case 'getDeviceEnvironmentState':
               await this.deviceEnvironmentHandler.fetchState();

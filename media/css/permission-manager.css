@@ -4,6 +4,54 @@
     gap: 28px;
 }
 
+/* Visually hidden but available to assistive tech. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.permission-mode-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 10px;
+}
+
+.runtime-intro {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0 0 8px 0;
+}
+
+.runtime-query-row {
+    margin-bottom: 8px;
+}
+
+.runtime-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.runtime-status-text {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.runtime-bulk-actions {
+    display: flex;
+    gap: 6px;
+}
+
 .permission-platform-tabs {
     display: flex;
     gap: 6px;
@@ -40,7 +88,7 @@
     background: var(--surface, #ffffff);
     color: var(--fg);
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--rule-strong);
 }
 
 .permission-search-wrapper {
@@ -121,7 +169,7 @@
 .permission-chip-count {
     padding: 0 4px;
     background: rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 9.5px;
     font-family: var(--font-mono);
 }
@@ -300,8 +348,7 @@
     background: var(--surface, #ffffff);
     color: var(--fg);
     font-weight: 600;
-    border-color: var(--rule);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border-color: var(--rule-strong);
 }
 
 .permission-runtime-layout {

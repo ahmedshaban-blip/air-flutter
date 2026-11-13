@@ -69,6 +69,8 @@ class AirFlutterWebview {
             this.initDeviceEnvironment?.();
             this.initLocalization?.();
             this.initSslDoctor?.();
+            this.initPanelNav?.();
+            this.initModalController?.();
 
             const setupGuideBtn = document.querySelector('button[onclick*="showTroubleshootingGuide"]');
             if (setupGuideBtn) {
@@ -162,6 +164,7 @@ class AirFlutterWebview {
             const displayAction = controlsActiveMirror ? 'toggle-display' : 'wake';
             const displayTitle = shouldTurnDisplayOff ? 'Turn display off' : 'Wake screen';
             const displayDescription = shouldTurnDisplayOff ? 'Keep mirror running' : 'Turn this display on';
+            const isArmed = this.isDisconnectArmed(device.id);
             return `
             <div class="device">
                 <div class="device-row">
@@ -172,7 +175,7 @@ class AirFlutterWebview {
                         <span class="device-state ${device.status}">${device.status}</span>
                     </div>
                     <div class="device-actions">
-                        <button class="icon-btn icon-btn-danger" data-device-action="disconnect" data-device-id="${this.escapeHtml(device.id)}" title="Disconnect" aria-label="Disconnect" ${device.transport !== 'wireless' ? 'disabled' : ''}>
+                        <button class="icon-btn icon-btn-danger${isArmed ? ' is-armed' : ''}" data-device-action="disconnect" data-device-id="${this.escapeHtml(device.id)}" data-device-name="${this.escapeHtml(device.name)}" title="${isArmed ? 'Click again to confirm — you will need USB to reconnect' : 'Disconnect'}" aria-label="${isArmed ? 'Confirm disconnect' : 'Disconnect'}" ${device.transport !== 'wireless' ? 'disabled' : ''}>
                             <i class="fas fa-unlink"></i>
                         </button>
                     </div>
@@ -292,6 +295,21 @@ class AirFlutterWebview {
             } else if (action === 'mirror-virtual') {
                 this.sendMessage('mirrorDevice', { deviceId, mode: 'virtual-display' });
             } else if (action === 'disconnect') {
+                // Losing wireless ADB is the failure this product exists to
+                // prevent, so make it a two-click action rather than one. The
+                // armed state is keyed by device id and survives the list
+                // re-render that device polling performs.
+                const deviceName = button.dataset.deviceName || deviceId;
+                if (!this.isDisconnectArmed(deviceId)) {
+                    this.armDisconnect(deviceId, deviceName);
+                    button.innerHTML = '<span class="mirror-btn-title">Confirm</span>';
+                    button.classList.add('is-armed');
+                    button.setAttribute('aria-label', 'Confirm disconnect');
+                    button.setAttribute('title', 'Click again to confirm — you will need USB to reconnect');
+                    this.addStatusMessage(`Click again to disconnect ${deviceName} — you'll need USB to reconnect.`, 'warn');
+                    return;
+                }
+                this.disarmDisconnect(deviceId);
                 button.disabled = true;
                 button.innerHTML = '<span class="af-spinner af-spinner-sm"></span>';
                 this.sendMessage('disconnectDevice', { deviceId });
@@ -454,6 +472,70 @@ class AirFlutterWebview {
 
         clearTimeout(this.toastTimer);
         this.toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 4200);
+    }
+
+    // Two-click confirmation for a destructive action. The first click arms the
+    // button (relabelled with the consequence), the second performs it; the arm
+    // expires after a few seconds. Returns true when the action should run now.
+    armDestructiveAction(button, armedHtml, idleHtml, windowMs = 4000) {
+        if (!button) return false;
+        if (button.dataset.armed === 'true') {
+            clearTimeout(Number(button.dataset.armTimer));
+            delete button.dataset.armed;
+            return true;
+        }
+        button.dataset.armed = 'true';
+        const idle = idleHtml || button.innerHTML;
+        if (!button.dataset.armIdleLabel) {
+            button.dataset.armIdleLabel = button.getAttribute('aria-label') || '';
+            button.dataset.armIdleTitle = button.getAttribute('title') || '';
+        }
+        button.innerHTML = armedHtml;
+        button.classList.add('is-armed');
+        // The accessible name must carry the consequence at the confirm step,
+        // not just the visible label.
+        button.setAttribute('aria-label', 'Confirm action');
+        button.setAttribute('title', 'Click again to confirm');
+        const timer = setTimeout(() => {
+            if (button.dataset.armed === 'true') {
+                delete button.dataset.armed;
+                button.innerHTML = idle;
+                button.classList.remove('is-armed');
+                if (button.dataset.armIdleLabel) button.setAttribute('aria-label', button.dataset.armIdleLabel);
+                if (button.dataset.armIdleTitle) button.setAttribute('title', button.dataset.armIdleTitle);
+            }
+        }, windowMs);
+        button.dataset.armTimer = String(timer);
+        return false;
+    }
+
+    // Device-keyed arm state for the disconnect control. Keying by device id
+    // (not by DOM node) means the arm survives the full list re-render that
+    // device polling performs every few seconds.
+    isDisconnectArmed(deviceId) {
+        return this.armedDisconnect && this.armedDisconnect.id === deviceId && Date.now() < this.armedDisconnect.until;
+    }
+
+    armDisconnect(deviceId, deviceName) {
+        this.armedDisconnect = { id: deviceId, name: deviceName, until: Date.now() + 5000 };
+        clearTimeout(this.armedDisconnectTimer);
+        this.armedDisconnectTimer = setTimeout(() => {
+            this.armedDisconnect = null;
+            // Re-render so the button returns to its idle look if still visible.
+            const list = document.getElementById('devicesList');
+            const button = list && list.querySelector(`[data-device-action="disconnect"][data-device-id="${deviceId}"]`);
+            if (button) {
+                button.classList.remove('is-armed');
+                button.setAttribute('aria-label', 'Disconnect');
+                button.setAttribute('title', 'Disconnect');
+            }
+        }, 5000);
+    }
+
+    disarmDisconnect(deviceId) {
+        if (deviceId && this.armedDisconnect && this.armedDisconnect.id !== deviceId) return;
+        this.armedDisconnect = null;
+        clearTimeout(this.armedDisconnectTimer);
     }
 
     handleMessage(message) {
@@ -659,7 +741,10 @@ class AirFlutterWebview {
                     this.setAppStateStatus(`Target package set to ${message.packageId}.`, 'done');
                     break;
                 case 'appStateCancelled':
-                    this.setAppStateStatus('Reset cancelled — nothing was erased.');
+                    this.setAppStateStatus('Reset cancelled - nothing was erased.');
+                    // Return the wipe buttons to idle; the destructive action
+                    // was never confirmed, so no control should stay disabled.
+                    this.resetWipeButtons?.();
                     break;
                 case 'deepLinkStudioState':
                     this.renderDeepLinkStudio(message);
@@ -723,6 +808,33 @@ class AirFlutterWebview {
                     break;
                 case 'buildRunnerStatus':
                     this.handleBuildRunnerStatus?.(message.status);
+                    break;
+                case 'iconStudioProjectInfo':
+                    this.handleIconStudioProjectInfo?.(message);
+                    break;
+                case 'iconStudioApplied':
+                    this.handleIconStudioApplied?.(message);
+                    break;
+                case 'iconStudioApplyCancelled':
+                    this.handleIconStudioApplyCancelled?.();
+                    break;
+                case 'iconStudioRestoreResult':
+                    this.handleIconStudioRestoreResult?.(message);
+                    break;
+                case 'iconAssetValidated':
+                    this.handleIconAssetValidated?.(message);
+                    break;
+                case 'splashStudioApplied':
+                    this.handleSplashStudioApplied?.(message);
+                    break;
+                case 'splashStudioApplyCancelled':
+                    this.handleSplashStudioApplyCancelled?.();
+                    break;
+                case 'iconSplashDeleted':
+                    this.handleIconSplashDeleted?.(message);
+                    break;
+                case 'iconSplashDeleteCancelled':
+                    this.handleIconSplashDeleteCancelled?.();
                     break;
                 case 'deviceEnvironmentState':
                     this.handleDeviceEnvironmentState?.(message.data, message.error);
@@ -916,6 +1028,8 @@ mixinModule(AirFlutterWebview, window.AirFlutterIconSplashModule);
 mixinModule(AirFlutterWebview, window.AirFlutterDeviceEnvironmentModule);
 mixinModule(AirFlutterWebview, window.AirFlutterLocalizationModule);
 mixinModule(AirFlutterWebview, window.AirFlutterSslDoctorModule);
+mixinModule(AirFlutterWebview, window.AirFlutterPanelNavModule);
+mixinModule(AirFlutterWebview, window.AirFlutterModalController);
 
 // Initialize the webview
 const airFlutter = new AirFlutterWebview();

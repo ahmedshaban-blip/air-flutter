@@ -1,32 +1,4 @@
-.ff-tabs {
-    display: flex;
-    gap: 0;
-    margin: 22px 0 20px;
-    border-bottom: 1px solid var(--ink);
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: thin;
-}
-
-.ff-tab {
-    padding: 9px 14px;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: transparent;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.ff-tab:hover,
-.ff-tab.is-active {
-    color: var(--ink);
-    border-bottom-color: var(--accent);
-}
+/* Tab strip styling lives in panel-nav.css (grouped tabs + quick jump). */
 
 .asset-assistant-layout {
     display: grid;
@@ -50,7 +22,7 @@
     padding: 18px 12px;
     margin-bottom: 14px;
     border: 1px dashed var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     background: rgba(255, 255, 255, 0.02);
     text-align: center;
     transition: all 0.2s ease;
@@ -149,7 +121,7 @@
     outline: none;
 }
 
-.asset-search-input:focus {
+.asset-search-input:focus:not(:focus-visible) {
     border-color: var(--accent);
 }
 
@@ -174,7 +146,7 @@
     cursor: pointer;
 }
 
-.asset-sort-select:focus {
+.asset-sort-select:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--accent);
 }
@@ -208,9 +180,44 @@
 
 .asset-filter-pill.is-active {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-ink);
     border-color: var(--accent);
     font-weight: 600;
+}
+
+/* Type filters collapsed behind a "Type" disclosure to keep the pill row short. */
+.asset-filter-more {
+    position: relative;
+}
+
+.asset-filter-more-summary {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+}
+
+.asset-filter-more-summary::-webkit-details-marker {
+    display: none;
+}
+
+.asset-filter-more[open] > .asset-filter-more-summary i {
+    transform: rotate(180deg);
+}
+
+.asset-filter-more-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
 }
 
 /* Bulk Bar */
@@ -374,7 +381,7 @@
 }
 
 .asset-copy-btn.is-copied {
-    color: #4caf50 !important;
+    color: var(--ok) !important;
 }
 
 /* Hover Popover */
@@ -384,9 +391,9 @@
     pointer-events: none;
     background: var(--bg, #1a1a1a);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
     max-width: 240px;
 }
 
@@ -451,9 +458,9 @@
     max-width: 480px;
     background: var(--bg, #1c1d18);
     border: 1px solid var(--rule);
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 16px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
 .asset-modal-head {

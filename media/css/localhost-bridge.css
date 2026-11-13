@@ -88,6 +88,6 @@
 }
 
 .localhost-rule strong { font-size: 11px; }
-.localhost-rule small { color: var(--muted); font-size: 9px; overflow-wrap: anywhere; }
+.localhost-rule small { color: var(--muted); font-size: 9.5px; overflow-wrap: anywhere; }
 .link-danger { color: var(--err); }
 .link-btn[disabled] { opacity: 0.4; cursor: not-allowed; }

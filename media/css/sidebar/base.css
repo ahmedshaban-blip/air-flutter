@@ -100,7 +100,7 @@ button {
     height: 26px;
     flex: none;
     color: var(--ink);
-    border-radius: 6px;
+    border-radius: 3px;
     transition: transform 180ms var(--ease);
 }
 
@@ -122,7 +122,7 @@ button {
 
 .sf-brand p {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 9.5px;
     letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--muted);
@@ -411,7 +411,7 @@ section h2 {
     flex: 0 0 22px;
     border-width: 2.5px;
     border-color: rgba(127, 127, 127, 0.2);
-    border-top-color: var(--accent, #b8332a);
+    border-top-color: var(--accent, #B23B16);
 }
 
 @media (prefers-reduced-motion: reduce) {

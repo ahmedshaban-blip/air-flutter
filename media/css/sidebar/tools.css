@@ -8,9 +8,69 @@
 
 .sf-tools-hint {
     font-family: var(--font-mono);
-    font-size: 8.5px;
+    font-size: 9.5px;
     letter-spacing: 0.04em;
     color: var(--muted);
+}
+
+/* Filter field: the sidebar's one reachability aid for 28 tools. */
+.sf-tools-filter {
+    position: relative;
+    margin-top: 9px;
+}
+
+.sf-tools-filter-input {
+    width: 100%;
+    min-height: 30px;
+    padding: 6px 26px 6px 9px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+}
+
+.sf-tools-filter-input::placeholder {
+    color: var(--muted);
+}
+
+.sf-tools-filter-input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.sf-tools-filter-clear {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10.5px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.sf-tools-filter-clear:hover {
+    color: var(--accent);
+}
+
+.sf-tool[hidden] {
+    display: none;
+}
+
+.sf-tool-group[hidden] {
+    display: none;
 }
 
 .sf-tool-groups {
@@ -55,7 +115,7 @@
     gap: 9px;
     flex: none;
     font-family: var(--font-mono);
-    font-size: 8.5px;
+    font-size: 9.5px;
     letter-spacing: 0.04em;
     color: var(--muted);
 }
@@ -138,12 +198,12 @@
 }
 
 .sf-tool.is-recording .sf-tool-name {
-    color: #e03131;
+    color: var(--err);
     font-weight: 600;
 }
 
 .sf-tool.is-recording .sf-tool-note {
-    color: #e03131;
+    color: var(--err);
     font-weight: 700;
 }
 
@@ -154,7 +214,7 @@
 }
 
 .sf-tool.is-offline-active .sf-tool-name {
-    color: #e03131;
+    color: var(--err);
     font-weight: 600;
 }
 
@@ -189,7 +249,7 @@
 
 .sf-tool-note {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 9.5px;
     letter-spacing: 0.04em;
     color: var(--muted);
 }
@@ -237,7 +297,7 @@
 .sf-mirror-setup-head span {
     margin-top: 2px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 10.5px;
 }
 
 .sf-mirror-setup-head button {
@@ -245,7 +305,7 @@
     border: 0;
     background: transparent;
     color: var(--muted);
-    font: 9px var(--font-mono);
+    font: 9.5px var(--font-mono);
     cursor: pointer;
 }
 
@@ -266,7 +326,7 @@
     grid-column: 1 / -1;
     margin-bottom: 5px;
     color: var(--muted);
-    font: 500 8.5px var(--font-mono);
+    font: 500 9.5px var(--font-mono);
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -322,7 +382,7 @@
 .sf-mirror-choice small {
     margin-top: 3px;
     color: var(--muted);
-    font: 8.5px/1.35 var(--font-mono);
+    font: 9.5px/1.35 var(--font-mono);
 }
 
 .sf-mirror-profiles {

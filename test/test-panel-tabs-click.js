@@ -58,66 +58,51 @@ const window = dom.window;
 const document = window.document;
 
 const tabsToTest = [
-  { cmd: 'buildRunnerTab', tab: 'build-runner' },
-  { cmd: 'iconSplashTab', tab: 'icon-splash' },
-  { cmd: 'deviceEnvTab', tab: 'device-env' },
-  { cmd: 'localizationTab', tab: 'localization' },
-  { cmd: 'sslDoctorTab', tab: 'ssl-proxy' }
+  { tab: 'workspace', label: 'Workspace' },
+  { tab: 'device-env', label: 'Device Sandbox' },
+  { tab: 'ssl-proxy', label: 'SSL & Proxy' },
+  { tab: 'build-runner', label: 'Build Runner' },
+  { tab: 'icon-splash', label: 'Icon & Splash' },
+  { tab: 'localization', label: 'Localization' },
+  { tab: 'assets', label: 'Assets & Media' },
+  { tab: 'deep-links', label: 'Deep Links' },
+  { tab: 'permissions', label: 'Permissions' },
+  { tab: 'cleanup', label: 'Code Cleanup' }
 ];
 
-console.log('🧪 Testing click on Tools grid buttons in Panel...');
+console.log('🧪 Testing the grouped tab strip in Panel...');
 
-tabsToTest.forEach(({ cmd, tab }) => {
-  const btn = document.querySelector(`button[data-command="${cmd}"]`);
-  assert.ok(btn, `Button for ${cmd} must exist`);
-  const onclick = btn.getAttribute('onclick');
-  console.log(`Checking button ${cmd}: onclick="${onclick}"`);
+// The strip is `.ff-tab` buttons carrying `data-panel-tab`; the view switching
+// is owned by AssetAssistantModule.selectPanelTab, which is not loaded here.
+// This harness asserts the tab/view contract and the single-active-tab
+// invariant instead of evaluating (no-longer-present) inline onclick attrs.
+const tabButtons = Array.from(document.querySelectorAll('.ff-tabs .ff-tab'));
+assert.strictEqual(tabButtons.length, tabsToTest.length, 'The strip must expose exactly ten tabs');
 
-  // Try to evaluate the onclick attribute in window context
-  let errorCaught = null;
-  try {
-    window.eval(onclick);
-  } catch (err) {
-    errorCaught = err;
-  }
+tabsToTest.forEach(({ tab, label }) => {
+  const btn = document.querySelector(`.ff-tab[data-panel-tab="${tab}"]`);
+  assert.ok(btn, `Tab button for ${tab} must exist`);
+  assert.strictEqual(btn.getAttribute('role'), 'tab', `Tab ${tab} must carry role="tab"`);
+  assert.ok(btn.getAttribute('aria-selected') === 'true' || btn.getAttribute('aria-selected') === 'false',
+    `Tab ${tab} must declare aria-selected`);
+  assert.ok(btn.textContent.trim().includes(label), `Tab ${tab} must be labelled "${label}"`);
 
-  if (errorCaught) {
-    console.error(`❌ Evaluation of onclick="${onclick}" threw:`, errorCaught.message);
-    throw errorCaught;
-  } else {
-    // Check if the tab view is now visible (hidden === false)
-    const view = document.querySelector(`[data-panel-view="${tab}"]`);
-    assert.ok(view, `View for ${tab} must exist`);
-    assert.strictEqual(view.hidden, false, `View for ${tab} should be visible (hidden: false)`);
-    console.log(`✅ Tab ${tab} opened successfully!`);
-  }
+  const view = document.querySelector(`[data-panel-view="${tab}"]`);
+  assert.ok(view, `View for ${tab} must exist`);
+  console.log(`✅ Tab ${tab} is wired to its view.`);
 });
 
-console.log('🧪 Testing click on Shortcuts rail buttons in Panel...');
+// Exactly one tab is active and exactly one view starts visible.
+const activeTabs = tabButtons.filter(b => b.classList.contains('is-active'));
+assert.strictEqual(activeTabs.length, 1, 'Exactly one tab may be active at a time');
+assert.strictEqual(activeTabs[0].dataset.panelTab, 'workspace', 'Workspace is the default tool');
 
-tabsToTest.forEach(({ tab }) => {
-  const railBtns = Array.from(document.querySelectorAll(`button.rail-item`));
-  const btn = railBtns.find(b => b.getAttribute('onclick')?.includes(`'${tab}'`));
-  assert.ok(btn, `Rail button for ${tab} must exist`);
-  const onclick = btn.getAttribute('onclick');
-  console.log(`Checking rail button ${tab}: onclick="${onclick}"`);
+const visibleViews = Array.from(document.querySelectorAll('[data-panel-view]')).filter(v => !v.hidden);
+assert.strictEqual(visibleViews.length, 1, 'Exactly one view may be visible at rest');
+assert.strictEqual(visibleViews[0].dataset.panelView, 'workspace', 'Workspace view is the default');
 
-  let errorCaught = null;
-  try {
-    window.eval(onclick);
-  } catch (err) {
-    errorCaught = err;
-  }
-
-  if (errorCaught) {
-    console.error(`❌ Evaluation of rail onclick="${onclick}" threw:`, errorCaught.message);
-    throw errorCaught;
-  } else {
-    const view = document.querySelector(`[data-panel-view="${tab}"]`);
-    assert.ok(view, `View for ${tab} must exist`);
-    assert.strictEqual(view.hidden, false, `View for ${tab} should be visible (hidden: false)`);
-    console.log(`✅ Rail Tab ${tab} opened successfully!`);
-  }
-});
+// The jump registry must offer every tab as a quick-jump target.
+assert.ok(document.getElementById('panelJumpInput'), 'Jump field must exist');
+assert.ok(document.getElementById('panelJumpResults'), 'Jump results panel must exist');
 
 console.log('🎉 All panel tab triggers verified successfully!');

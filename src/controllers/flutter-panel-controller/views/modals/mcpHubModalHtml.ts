@@ -11,9 +11,9 @@ export function getMcpHubModalHtml(): string {
   return `
         <!-- MCP & AI Agent Hub Stepper Modal -->
         <div class="modal-backdrop" id="mcpHubModal" hidden>
-            <div class="modal-card" style="max-width: 860px;">
+            <div class="modal-card modal-card-hub" role="dialog" aria-modal="true" aria-labelledby="mcpHubModalTitle">
                 <div class="modal-head">
-                    <h2><i class="fas fa-plug"></i> MCP &amp; AI Agent Hub</h2>
+                    <h2 id="mcpHubModalTitle"><i class="fas fa-plug"></i> MCP &amp; AI Agent Hub</h2>
                     <button class="modal-close" id="closeMcpHubModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
 
@@ -137,7 +137,7 @@ export function getMcpHubModalHtml(): string {
 
         <!-- Companion package setup guide (nested modal) -->
         <div class="modal-backdrop mcp-guide-backdrop" id="mcpCompanionGuide" hidden>
-            <div class="modal-card" style="max-width: 720px;">
+            <div class="modal-card modal-card-hub-guide" role="dialog" aria-modal="true" aria-labelledby="mcpGuideTitle">
                 <div class="modal-head">
                     <h2><i class="fas fa-book"></i> <span id="mcpGuideTitle">Setup guide</span></h2>
                     <button class="modal-close" id="closeMcpGuideBtn" type="button" aria-label="Close">&times;</button>

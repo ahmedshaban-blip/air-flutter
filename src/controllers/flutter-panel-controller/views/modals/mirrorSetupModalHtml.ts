@@ -2,7 +2,7 @@ export function getMirrorSetupModalHtml(): string {
   return `
         <!-- Mirroring Setup Modal -->
         <div class="modal-backdrop" id="mirrorSetupModal" hidden>
-            <div class="modal-card">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mirrorSetupModalTitle">
                 <div class="modal-head">
                     <h2><i class="fas fa-display"></i> <span id="mirrorSetupModalTitle">Start Mirroring</span></h2>
                     <button class="modal-close" id="closeMirrorSetupModalBtn" type="button" aria-label="Close">&times;</button>

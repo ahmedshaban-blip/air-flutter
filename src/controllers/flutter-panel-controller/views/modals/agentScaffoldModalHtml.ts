@@ -2,9 +2,9 @@ export function getAgentScaffoldModalHtml(): string {
   return `
         <!-- AI Agent Architect & Scaffolding Stepper Modal -->
         <div class="modal-backdrop" id="agentScaffoldModal" hidden>
-            <div class="modal-card" style="max-width: 760px;">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="agentScaffoldModalTitle" style="max-width: 760px;">
                 <div class="modal-head">
-                    <h2><i class="fas fa-robot"></i> AI Agent Architect &amp; Scaffolding Engine</h2>
+                    <h2 id="agentScaffoldModalTitle"><i class="fas fa-robot"></i> AI Agent Architect &amp; Scaffolding Engine</h2>
                     <button class="modal-close" id="closeAgentScaffoldModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
 

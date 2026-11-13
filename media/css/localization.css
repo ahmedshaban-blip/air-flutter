@@ -60,7 +60,7 @@
 .loc-table-container {
     overflow-x: auto;
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    border-radius: 6px;
+    border-radius: 3px;
     background: var(--surface, rgba(255, 255, 255, 0.02));
 }
 
@@ -88,7 +88,7 @@
 .loc-key-cell {
     font-family: var(--font-mono, monospace);
     font-weight: 500;
-    color: var(--accent, #E2552B);
+    color: var(--accent, var(--err));
     white-space: nowrap;
 }
 
@@ -103,16 +103,16 @@
 }
 
 .loc-input.is-missing {
-    border-color: #F59E0B;
-    background: rgba(245, 158, 11, 0.05);
+    border-color: var(--warn);
+    background: var(--surface-2);
 }
 
 .loc-prompt-box {
     width: 100%;
-    background: #0A0B08;
-    color: #4AF626;
+    background: var(--well);
+    color: var(--well-success);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 10px;
     font-size: 12px;
     resize: vertical;

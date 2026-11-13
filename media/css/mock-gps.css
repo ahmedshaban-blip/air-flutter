@@ -80,7 +80,7 @@
     gap: 8px;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .gps-save-prompt-title i {
@@ -98,7 +98,7 @@
 }
 
 .gps-save-prompt-close:hover {
-    color: var(--text);
+    color: var(--ink);
 }
 
 .gps-save-prompt-body {
@@ -113,7 +113,7 @@
     border-radius: 3px;
     padding: 6px 10px;
     font-size: 12px;
-    color: var(--text);
+    color: var(--ink);
     width: 100%;
     box-sizing: border-box;
 }
@@ -169,8 +169,8 @@
 }
 
 .gps-status-card.is-success {
-    border-color: #38A169;
-    color: #38A169;
+    border-color: var(--ok);
+    color: var(--ok);
 }
 
 .gps-status-card.is-error {
@@ -180,6 +180,6 @@
 
 .gps-status-card.is-loading {
     border-color: var(--muted);
-    color: var(--text);
+    color: var(--ink);
 }
 

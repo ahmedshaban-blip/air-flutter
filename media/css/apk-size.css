@@ -40,7 +40,7 @@
 
 .apk-selector-hint code {
     font-family: var(--font-mono);
-    color: var(--text);
+    color: var(--ink);
     background: rgba(255, 255, 255, 0.06);
     padding: 1px 4px;
     border-radius: 3px;
@@ -152,7 +152,7 @@
 
 .apk-legend-label {
     flex: 1;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .apk-legend-value {

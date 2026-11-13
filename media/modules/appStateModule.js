@@ -41,15 +41,17 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
         const targetBtn = btnMap[operation];
         if (targetBtn) {
             targetBtn.disabled = true;
-            targetBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Resetting…';
+            // Neutral until the host confirms; the "Resetting…" spinner only
+            // appears once the host reports the wipe actually started.
+            targetBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Confirming…';
         }
 
-        // The host shows a native modal confirmation. Here we only give instant
-        // visual feedback so the click never feels ignored.
+        // The host shows a native modal confirmation. Until it answers, the work
+        // has not started — say so honestly instead of implying it is underway.
         this.setAppStateStatus(
             operation === 'factory'
-                ? `Waiting for confirmation to factory reset ${this.appStatePackage}…`
-                : `Waiting for confirmation to reset ${operation} of ${this.appStatePackage}…`,
+                ? `Waiting for your confirmation before erasing ${this.appStatePackage}…`
+                : `Waiting for your confirmation before resetting ${operation} of ${this.appStatePackage}…`,
             'busy'
         );
         this.sendMessage(operation === 'factory' ? 'factoryResetApp' : operation === 'cache' ? 'clearAppCache' : 'resetAppDatabases', {
@@ -103,19 +105,19 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
         const factoryBtn = document.getElementById('factoryResetAppBtn');
         if (pickBtn) {
             pickBtn.disabled = false;
-            pickBtn.innerHTML = '<i class="fas fa-cube"></i> Package';
+            pickBtn.innerHTML = 'Package';
         }
         if (cacheBtn) {
             cacheBtn.disabled = false;
-            cacheBtn.innerHTML = '<i class="fas fa-broom"></i> Clear Cache Only';
+            cacheBtn.innerHTML = '<i class="fas fa-broom"></i> Clear cache';
         }
         if (dbBtn) {
             dbBtn.disabled = false;
-            dbBtn.innerHTML = '<i class="fas fa-database"></i> Reset Databases';
+            dbBtn.innerHTML = '<i class="fas fa-database"></i> Reset database';
         }
         if (factoryBtn) {
             factoryBtn.disabled = false;
-            factoryBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Factory Reset (pm clear)';
+            factoryBtn.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Factory reset (pm clear)';
         }
     }
 
@@ -132,6 +134,16 @@ window.AirFlutterAppStateModule = class AirFlutterAppStateModule {
                 `${label} ${message.packageId || this.appStatePackage || 'the app'}…`,
                 'busy'
             );
+            // The host has now confirmed: the wipe is genuinely underway.
+            const activeBtn = {
+                factory: document.getElementById('factoryResetAppBtn'),
+                cache: document.getElementById('clearAppCacheBtn'),
+                databases: document.getElementById('resetAppDatabasesBtn')
+            }[message.operation];
+            if (activeBtn) {
+                activeBtn.disabled = true;
+                activeBtn.innerHTML = '<span class="af-spinner af-spinner-sm"></span> Resetting…';
+            }
             return;
         }
 

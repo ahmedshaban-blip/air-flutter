@@ -2,9 +2,9 @@ export function getFlavorsModalHtml(): string {
   return `
         <!-- Flutter Flavors Modal -->
         <div class="modal-backdrop" id="flavorsModal" hidden>
-            <div class="modal-card">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="flavorsModalTitle">
                 <div class="modal-head">
-                    <h2><i class="fas fa-layer-group"></i> Flutter Flavors Manager</h2>
+                    <h2 id="flavorsModalTitle"><i class="fas fa-layer-group"></i> Flutter Flavors Manager</h2>
                     <button class="modal-close" id="closeFlavorsModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">

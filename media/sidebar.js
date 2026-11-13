@@ -160,7 +160,9 @@ const vscode = acquireVsCodeApi();
             tab.addEventListener('click', function () {
                 activeFilter = tab.getAttribute('data-filter');
                 document.querySelectorAll('.sf-tab').forEach(function (other) {
-                    other.classList.toggle('is-active', other === tab);
+                    const isActive = other === tab;
+                    other.classList.toggle('is-active', isActive);
+                    other.setAttribute('aria-selected', isActive ? 'true' : 'false');
                 });
                 if (paused) {
                     // Changing the filter is a read action: resume so the result
@@ -270,6 +272,87 @@ const vscode = acquireVsCodeApi();
                 vscode.setState(viewState);
             });
         });
+
+        // --- tool filter ----------------------------------------------------
+        // One field narrows every sidebar tool by name, note and category. Matches
+        // auto-expand; a group with no match hides entirely, so a filtered list
+        // is never longer than the query deserves.
+        const toolFilterInput = document.getElementById('toolFilterInput');
+        const toolFilterClearBtn = document.getElementById('toolFilterClearBtn');
+        const toolsCountHint = document.getElementById('toolsCountHint');
+        const toolGroups = Array.from(document.querySelectorAll('[data-tool-group]'));
+
+        // Counts are derived from the DOM so adding or removing a tool can never
+        // leave a stale "27 tools" or "6 tools" behind.
+        const sidebarToolTotal = document.querySelectorAll('#sidebarToolsList .sf-tool').length;
+        const defaultToolCountLabel = sidebarToolTotal + (sidebarToolTotal === 1 ? ' tool' : ' tools');
+        if (toolsCountHint) toolsCountHint.textContent = defaultToolCountLabel;
+        toolGroups.forEach(function (group) {
+            const meta = group.querySelector('.sf-tool-group-count');
+            if (meta) {
+                const count = group.querySelectorAll('.sf-tool').length;
+                meta.textContent = count + (count === 1 ? ' tool' : ' tools');
+            }
+        });
+
+        function toolSearchText(button) {
+            const name = button.querySelector('.sf-tool-name');
+            const note = button.querySelector('.sf-tool-note');
+            const group = button.closest('[data-tool-group]');
+            const groupTitle = group ? group.querySelector('.sf-tool-group-title') : null;
+            return ((name ? name.textContent : '') + ' ' +
+                (note ? note.textContent : '') + ' ' +
+                (groupTitle ? groupTitle.textContent : '')).toLowerCase();
+        }
+
+        function applyToolFilter() {
+            const query = (toolFilterInput.value || '').trim().toLowerCase();
+            const terms = query.split(/\s+/).filter(Boolean);
+            let visibleTotal = 0;
+
+            toolGroups.forEach(function (group) {
+                const buttons = Array.from(group.querySelectorAll('.sf-tool'));
+                let visibleInGroup = 0;
+                buttons.forEach(function (button) {
+                    const haystack = toolSearchText(button);
+                    const match = terms.length === 0 || terms.every(function (term) { return haystack.indexOf(term) !== -1; });
+                    button.hidden = !match;
+                    if (match) visibleInGroup += 1;
+                });
+                group.hidden = terms.length > 0 && visibleInGroup === 0;
+                if (terms.length > 0 && visibleInGroup > 0) {
+                    group.open = true;
+                }
+                visibleTotal += visibleInGroup;
+            });
+
+            if (toolFilterClearBtn) {
+                toolFilterClearBtn.hidden = !query;
+            }
+            if (toolsCountHint) {
+                toolsCountHint.textContent = query
+                    ? visibleTotal + (visibleTotal === 1 ? ' match' : ' matches')
+                    : defaultToolCountLabel;
+            }
+        }
+
+        if (toolFilterInput) {
+            toolFilterInput.addEventListener('input', applyToolFilter);
+            toolFilterInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    toolFilterInput.value = '';
+                    applyToolFilter();
+                    toolFilterInput.blur();
+                }
+            });
+        }
+        if (toolFilterClearBtn) {
+            toolFilterClearBtn.addEventListener('click', function () {
+                toolFilterInput.value = '';
+                applyToolFilter();
+                toolFilterInput.focus();
+            });
+        }
 
         function findToolButtons(tool) {
             if (tool === 'wipe') {

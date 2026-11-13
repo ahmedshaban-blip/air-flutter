@@ -435,6 +435,194 @@
     margin-top: 4px;
 }
 
+/* --- Network & Screen State Lab (proxyModal) ---------------------------- */
+.modal-card-wide {
+    max-width: 700px;
+}
+
+.modal-card-hub {
+    max-width: 860px;
+}
+
+.modal-card-compat {
+    max-width: 740px;
+}
+
+.modal-card-compat-diff {
+    max-width: 640px;
+}
+
+.modal-card-hub-guide {
+    max-width: 720px;
+}
+
+.state-lab-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    background: var(--surface-2);
+    padding: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+    margin-bottom: 14px;
+}
+
+.state-lab-k {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.state-lab-refresh-cell {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.state-lab-notice {
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+}
+
+.state-lab-notice-head {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.state-lab-notice-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.state-lab-card {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 14px;
+    margin-bottom: 18px;
+    background: var(--surface);
+}
+
+.state-lab-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.state-lab-card-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+}
+
+.state-lab-card-title i {
+    color: var(--accent);
+}
+
+.state-lab-block {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--rule);
+}
+
+.state-lab-block-last {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.state-lab-block-title {
+    font-size: 12px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+    color: var(--ink);
+}
+
+.state-lab-help {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0 0 10px 0;
+}
+
+.state-lab-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.state-lab-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+}
+
+.state-lab-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.state-lab-section {
+    margin-top: 14px;
+}
+
+.state-lab-section-dns {
+    margin-top: 18px;
+}
+
+.state-lab-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.state-lab-current {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin: 4px 0 8px 0;
+}
+
+.state-lab-current-k {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.state-lab-preset-row {
+    margin-top: 6px;
+}
+
+.state-lab-preset-k {
+    font-size: 11px;
+    color: var(--muted);
+    margin-right: 4px;
+}
+
+.state-lab-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 .preset-pill {
     background: var(--surface-2);
     border: 1px solid var(--rule);
@@ -521,7 +709,7 @@
     display: flex;
     background: var(--surface-2);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 3px;
     gap: 4px;
 }
@@ -552,14 +740,14 @@
     background: var(--surface);
     color: var(--accent);
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-color: var(--rule-strong);
 }
 
 /* Pipeline Ordering Container */
 .pipeline-order-container {
     background: var(--surface-2);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 12px 14px;
 }
 
@@ -598,7 +786,7 @@
     justify-content: space-between;
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 5px;
+    border-radius: 3px;
     padding: 6px 10px;
     transition: border-color 0.15s ease;
 }
@@ -694,7 +882,7 @@
     margin-top: 12px;
     background: var(--surface-2);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 12px 14px;
 }
 
@@ -718,7 +906,7 @@
 
 .accordion-item {
     border: 1px solid var(--rule);
-    border-radius: 5px;
+    border-radius: 3px;
     background: var(--surface);
     margin-bottom: 8px;
     overflow: hidden;
@@ -848,7 +1036,6 @@
     background: var(--surface);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .tool-groups-container {
@@ -863,7 +1050,7 @@
 .tool-group-card {
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 5px;
+    border-radius: 3px;
     padding: 10px 12px;
 }
 
@@ -941,7 +1128,7 @@
 .mirror-setup-option {
     align-items: flex-start;
     border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
-    border-radius: 8px;
+    border-radius: 4px;
     cursor: pointer;
     display: flex;
     gap: 10px;

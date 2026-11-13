@@ -129,13 +129,19 @@ export function getSidebarWebviewHtml(
     <section class="sf-tools" aria-labelledby="toolsHeading">
         <div class="sf-tools-head">
             <h2 class="sf-label" id="toolsHeading">Tools</h2>
-            <span class="sf-tools-hint">Select a category</span>
+            <span class="sf-tools-hint" id="toolsCountHint"></span>
         </div>
-        <div class="sf-tool-groups">
+        <div class="sf-tools-filter">
+            <input id="toolFilterInput" class="sf-tools-filter-input" type="text" autocomplete="off" spellcheck="false"
+                placeholder="Filter tools — mirror, ssl, apk, perms…" aria-label="Filter sidebar tools"
+                aria-controls="sidebarToolsList">
+            <button type="button" class="sf-tools-filter-clear" id="toolFilterClearBtn" hidden aria-label="Clear tool filter">&#10005;</button>
+        </div>
+        <div class="sf-tool-groups" id="sidebarToolsList">
         <details class="sf-tool-group" data-tool-group="device" open>
             <summary>
                 <span class="sf-tool-group-title">Device controls</span>
-                <span class="sf-tool-group-meta"><span>5 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span class="sf-tool-group-count"></span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolScreenshot" data-tool="screenshot" title="Capture device screenshot to workspace">
@@ -168,7 +174,7 @@ export function getSidebarWebviewHtml(
         <details class="sf-tool-group" data-tool-group="overlays">
             <summary>
                 <span class="sf-tool-group-title">Flutter Overlays</span>
-                <span class="sf-tool-group-meta"><span>5 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span class="sf-tool-group-count"></span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolDebugPaint" data-tool="toggleDebugPaint" title="Toggle Flutter Debug Paint (borders &amp; bounds)">
@@ -197,7 +203,7 @@ export function getSidebarWebviewHtml(
         <details class="sf-tool-group" data-tool-group="mirror">
             <summary>
                 <span class="sf-tool-group-title">Mirror &amp; capture</span>
-                <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span class="sf-tool-group-count"></span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolMirror" data-tool="mirror" title="Standard mirroring: Display on PC &amp; phone">
@@ -262,7 +268,7 @@ export function getSidebarWebviewHtml(
         <details class="sf-tool-group" data-tool-group="build">
             <summary>
                 <span class="sf-tool-group-title">Build &amp; release</span>
-                <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span class="sf-tool-group-count"></span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolFlavors" data-tool="flavors" title="Manage, run, and build Flutter flavors">
@@ -295,7 +301,7 @@ export function getSidebarWebviewHtml(
         <details class="sf-tool-group" data-tool-group="advanced">
             <summary>
                 <span class="sf-tool-group-title">Network &amp; automation</span>
-                <span class="sf-tool-group-meta"><span>4 tools</span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
+                <span class="sf-tool-group-meta"><span class="sf-tool-group-count"></span><span class="sf-tool-chevron" aria-hidden="true"></span></span>
             </summary>
             <div class="sf-tool-grid">
             <button class="sf-tool" type="button" id="toolToggleOffline" data-tool="toggleOffline" title="Toggle smart isolated offline mode (Wireless-safe)">
@@ -368,10 +374,10 @@ export function getSidebarWebviewHtml(
         </div>
 
         <div class="sf-tabs" role="tablist">
-            <button class="sf-tab is-active" type="button" data-filter="all" role="tab">All</button>
-            <button class="sf-tab" type="button" data-filter="flutter" role="tab">Flutter</button>
-            <button class="sf-tab" type="button" data-filter="errors" role="tab">Crashes</button>
-            <button class="sf-tab" type="button" data-filter="warn" role="tab">Warnings</button>
+            <button class="sf-tab is-active" type="button" data-filter="all" role="tab" aria-selected="true">All</button>
+            <button class="sf-tab" type="button" data-filter="flutter" role="tab" aria-selected="false">Flutter</button>
+            <button class="sf-tab" type="button" data-filter="errors" role="tab" aria-selected="false">Crashes</button>
+            <button class="sf-tab" type="button" data-filter="warn" role="tab" aria-selected="false">Warnings</button>
         </div>
 
         <div class="sf-log-controls">

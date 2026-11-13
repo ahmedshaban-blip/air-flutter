@@ -22,7 +22,7 @@
 .de-card {
     background: var(--surface, rgba(255, 255, 255, 0.03));
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 14px;
     display: flex;
     flex-direction: column;

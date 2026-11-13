@@ -2,7 +2,7 @@
 .compat-status-card {
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 12px 14px;
     display: flex;
     flex-direction: column;
@@ -54,7 +54,7 @@
 .compat-issue-item {
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
@@ -62,11 +62,11 @@
 }
 
 .compat-issue-item.is-error {
-    border-left: 3px solid #d32f2f;
+    border-left: 3px solid var(--err);
 }
 
 .compat-issue-item.is-warning {
-    border-left: 3px solid #f57c00;
+    border-left: 3px solid var(--warn);
 }
 
 .compat-issue-header {
@@ -86,12 +86,12 @@
 
 .compat-issue-badge.is-error {
     background: rgba(211, 47, 47, 0.15);
-    color: #e57373;
+    color: var(--err);
 }
 
 .compat-issue-badge.is-warning {
     background: rgba(245, 124, 0, 0.15);
-    color: #ffb74d;
+    color: var(--warn);
 }
 
 .compat-issue-msg {
@@ -156,7 +156,7 @@
 .compat-diff-card {
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 10px 12px;
     display: flex;
     align-items: flex-start;
@@ -169,7 +169,7 @@
 
 .compat-diff-badge-old {
     background: rgba(211, 47, 47, 0.15);
-    color: #e57373;
+    color: var(--err);
     padding: 2px 6px;
     border-radius: 3px;
     font-family: var(--font-mono, monospace);
@@ -178,7 +178,7 @@
 
 .compat-diff-badge-new {
     background: rgba(46, 125, 50, 0.15);
-    color: #81c784;
+    color: var(--ok);
     padding: 2px 6px;
     border-radius: 3px;
     font-family: var(--font-mono, monospace);

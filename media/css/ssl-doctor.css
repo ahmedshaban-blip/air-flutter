@@ -22,7 +22,7 @@
 .ssl-card {
     background: var(--surface, rgba(255, 255, 255, 0.03));
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 14px;
     display: flex;
     flex-direction: column;
@@ -55,16 +55,16 @@
 }
 
 .status-icon-ok {
-    color: #10B981;
+    color: var(--ok);
 }
 
 .status-icon-no {
-    color: #EF4444;
+    color: var(--err);
 }
 
 .ssl-code-preview {
     position: relative;
-    background: #0A0B08;
+    background: var(--well);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
     border-radius: 4px;
     padding: 8px;

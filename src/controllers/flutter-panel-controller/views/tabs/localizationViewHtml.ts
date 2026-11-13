@@ -50,11 +50,11 @@ export function getLocalizationViewHtml(): string {
             </div>
 
             <!-- Add Key Sub-Modal -->
-            <div id="locAddKeyModal" class="asset-modal-overlay" hidden>
+            <div id="locAddKeyModal" class="asset-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="locAddKeyTitle">
                 <div class="asset-modal-content">
                     <div class="asset-modal-head">
-                        <h3><i class="fas fa-plus"></i> Add Localization Key</h3>
-                        <button type="button" class="asset-modal-close" id="locAddKeyCloseBtn">&times;</button>
+                        <h3 id="locAddKeyTitle"><i class="fas fa-plus"></i> Add Localization Key</h3>
+                        <button type="button" class="asset-modal-close" id="locAddKeyCloseBtn" aria-label="Close add-key dialog">&times;</button>
                     </div>
                     <div class="asset-modal-body">
                         <label class="loc-field-label">
@@ -75,11 +75,11 @@ export function getLocalizationViewHtml(): string {
             </div>
 
             <!-- AI Prompt Modal -->
-            <div id="locAiPromptModal" class="asset-modal-overlay" hidden>
+            <div id="locAiPromptModal" class="asset-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="locAiPromptTitle">
                 <div class="asset-modal-content" style="max-width: 600px;">
                     <div class="asset-modal-head">
-                        <h3><i class="fas fa-robot"></i> AI Translation Prompt</h3>
-                        <button type="button" class="asset-modal-close" id="locAiPromptCloseBtn">&times;</button>
+                        <h3 id="locAiPromptTitle"><i class="fas fa-robot"></i> AI Translation Prompt</h3>
+                        <button type="button" class="asset-modal-close" id="locAiPromptCloseBtn" aria-label="Close AI prompt dialog">&times;</button>
                     </div>
                     <div class="asset-modal-body">
                         <p class="asset-help">Copy this prompt into Claude, Gemini, or ChatGPT to generate translations for your missing keys:</p>

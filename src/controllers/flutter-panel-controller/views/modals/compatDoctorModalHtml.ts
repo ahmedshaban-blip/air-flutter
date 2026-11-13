@@ -6,9 +6,9 @@ export function getCompatDoctorModalHtml(): string {
   return `
         <!-- Flutter Compatibility Doctor & Auto-Fixer Modal -->
         <div class="modal-backdrop" id="compatDoctorModal" hidden>
-            <div class="modal-card" style="max-width: 740px;">
+            <div class="modal-card modal-card-compat" role="dialog" aria-modal="true" aria-labelledby="compatDoctorModalTitle">
                 <div class="modal-head">
-                    <h2><i class="fas fa-stethoscope"></i> Flutter Compatibility Doctor &amp; Auto-Fixer</h2>
+                    <h2 id="compatDoctorModalTitle"><i class="fas fa-stethoscope"></i> Flutter Compatibility Doctor &amp; Auto-Fixer</h2>
                     <button class="modal-close" id="closeCompatDoctorModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
 
@@ -138,7 +138,7 @@ export function getCompatDoctorModalHtml(): string {
                         <!-- Live Compatibility Notification -->
                         <div id="configStatusBanner" class="compat-status-card is-success" style="padding: 10px 14px; margin-top: 10px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-check-circle" style="color: #4caf50;"></i>
+                                <i class="fas fa-check-circle" style="color: var(--ok);"></i>
                                 <span id="configStatusText" style="font-size: 12px; font-weight: 600;">Selected combination is fully compatible and verified.</span>
                             </div>
                         </div>
@@ -156,9 +156,9 @@ export function getCompatDoctorModalHtml(): string {
 
         <!-- Compatibility Stack Diff Preview Modal -->
         <div class="modal-backdrop" id="compatDiffModal" hidden style="z-index: 10001;">
-            <div class="modal-card" style="max-width: 640px;">
+            <div class="modal-card modal-card-compat-diff" role="dialog" aria-modal="true" aria-labelledby="compatDiffModalTitle">
                 <div class="modal-head">
-                    <h2><i class="fas fa-code-branch"></i> Review Target Stack Modifications</h2>
+                    <h2 id="compatDiffModalTitle"><i class="fas fa-code-branch"></i> Review Target Stack Modifications</h2>
                     <button class="modal-close" id="closeCompatDiffModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body" style="padding-top: 8px;">

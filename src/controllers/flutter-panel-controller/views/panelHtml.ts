@@ -53,6 +53,7 @@ export function getPanelWebviewContent(
   const deviceEnvironmentCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'device-environment.css')));
   const localizationCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'localization.css')));
   const sslDoctorCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'ssl-doctor.css')));
+  const panelNavCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'css', 'panel-nav.css')));
   const airFlutterCssUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.css')));
   const workflowModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'workflowModule.js')));
   const flavorsModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'flavorsModule.js')));
@@ -81,6 +82,8 @@ export function getPanelWebviewContent(
   const deviceEnvironmentModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'deviceEnvironmentModule.js')));
   const localizationModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'localizationModule.js')));
   const sslDoctorModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'sslDoctorModule.js')));
+  const panelNavModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'panelNavModule.js')));
+  const modalControllerModuleUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'modules', 'modalControllerModule.js')));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'air-flutter.js')));
   const localhostPresetButtons = LOCALHOST_BRIDGE_PRESETS
     .map(port => `<button type="button" data-localhost-port="${port}">${port}</button>`)
@@ -109,7 +112,8 @@ export function getPanelWebviewContent(
     'icon-splash.css',
     'device-environment.css',
     'localization.css',
-    'ssl-doctor.css'
+    'ssl-doctor.css',
+    'panel-nav.css'
   ];
 
   let embeddedPanelCss = '';
@@ -180,6 +184,7 @@ export function getPanelWebviewContent(
         <link href="${deviceEnvironmentCssUri}" rel="stylesheet">
         <link href="${localizationCssUri}" rel="stylesheet">
         <link href="${sslDoctorCssUri}" rel="stylesheet">
+        <link href="${panelNavCssUri}" rel="stylesheet">
         <link href="${airFlutterCssUri}" rel="stylesheet">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -212,17 +217,40 @@ export function getPanelWebviewContent(
                 </div>
             </header>
 
-            <nav class="ff-tabs" role="tablist" aria-label="Air Flutter tools">
-                <button class="ff-tab is-active" type="button" role="tab" aria-selected="true" data-panel-tab="workspace">Workspace</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="assets">Assets &amp; Media</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="cleanup">Code Cleanup</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="permissions">Permissions</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="deep-links">Deep Links</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="build-runner">Build Runner</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="icon-splash">Icon &amp; Splash</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="device-env">Device Sandbox</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="localization">Localization</button>
-                <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="ssl-proxy">SSL &amp; Proxy</button>
+            <nav class="ff-nav" aria-label="Air Flutter tools">
+                <div class="ff-nav-bar">
+                    <div class="ff-jump">
+                        <i class="fas fa-magnifying-glass ff-jump-icon" aria-hidden="true"></i>
+                        <input id="panelJumpInput" class="ff-jump-input" type="text" autocomplete="off" spellcheck="false"
+                            placeholder="Jump to a tool — devices, icon, localization, ssl…" aria-label="Jump to a tool"
+                            aria-expanded="false" aria-controls="panelJumpResults" role="combobox"
+                            aria-autocomplete="list" aria-activedescendant="">
+                        <kbd class="ff-jump-kbd" aria-hidden="true">/</kbd>
+                    </div>
+                    <div id="panelJumpResults" class="ff-jump-results" role="listbox" aria-label="Matching tools" hidden></div>
+                </div>
+
+                <div class="ff-tabs" role="tablist" aria-label="Air Flutter tools">
+                    <div class="ff-tab-group" role="presentation">
+                        <span class="ff-tab-group-label" aria-hidden="true">Device</span>
+                        <button class="ff-tab is-active" type="button" role="tab" aria-selected="true" data-panel-tab="workspace">Workspace</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="device-env">Device Sandbox</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="ssl-proxy">SSL &amp; Proxy</button>
+                    </div>
+                    <div class="ff-tab-group" role="presentation">
+                        <span class="ff-tab-group-label" aria-hidden="true">Build</span>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="build-runner">Build Runner</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="icon-splash">Icon &amp; Splash</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="localization">Localization</button>
+                    </div>
+                    <div class="ff-tab-group" role="presentation">
+                        <span class="ff-tab-group-label" aria-hidden="true">Ship</span>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="assets">Assets &amp; Media</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="deep-links">Deep Links</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="permissions">Permissions</button>
+                        <button class="ff-tab" type="button" role="tab" aria-selected="false" data-panel-tab="cleanup">Code Cleanup</button>
+                    </div>
+                </div>
             </nav>
 
             <div data-panel-view="workspace">
@@ -243,7 +271,7 @@ export function getPanelWebviewContent(
                                 </button>
                             </div>
                             <div class="devices-list" id="usbDevicesList">
-                                <p class="empty"><i class="fas fa-usb"></i><span>No USB device attached</span></p>
+                                <p class="empty"><i class="fas fa-usb"></i><span>Connect a phone by USB to enable wireless ADB (first time only)</span></p>
                             </div>
                         </div>
 
@@ -252,7 +280,7 @@ export function getPanelWebviewContent(
                                 <h3>On this network</h3>
                             </div>
                             <div class="devices-list" id="networkDevicesList">
-                                <p class="empty"><i class="fas fa-wifi"></i><span>No device answered on port 5555</span></p>
+                                <p class="empty"><i class="fas fa-wifi"></i><span>No phone found on this network yet — pair it once over USB first</span></p>
                             </div>
                         </div>
 
@@ -261,7 +289,7 @@ export function getPanelWebviewContent(
                                 <h3>Connected</h3>
                             </div>
                             <div class="devices-list" id="devicesList">
-                                <p class="empty"><i class="fas fa-mobile-screen"></i><span>No device connected</span></p>
+                                <p class="empty"><i class="fas fa-mobile-screen"></i><span>No phone connected — connect one above to start</span></p>
                             </div>
                         </div>
 
@@ -286,7 +314,7 @@ export function getPanelWebviewContent(
                             <h2>Localhost Bridge</h2>
                             <button class="link-btn" id="refreshLocalhostBridgeBtn" type="button">Refresh</button>
                         </div>
-                        <p class="localhost-bridge-help">Expose a computer localhost port to a selected Android device via <span class="mono">adb reverse</span>.</p>
+                        <p class="localhost-bridge-help">Give a selected phone access to a port running on this computer — no cable, no manual commands.</p>
                         <label class="localhost-bridge-field" for="localhostBridgeDevice">
                             <span>Target device</span>
                             <select id="localhostBridgeDevice"><option value="">No online device</option></select>
@@ -337,142 +365,153 @@ export function getPanelWebviewContent(
                             <h2>Flutter commands</h2>
                             <span class="ff-section-note">workspace</span>
                         </div>
-                        <div class="cmd-list" id="flutterCommandsGrid">
-                            <button class="cmd" type="button" data-command="runApp" onclick="airFlutter.executeFlutterCommand('runApp')">
-                                <i class="cmd-icon fas fa-play"></i>
-                                <span><span class="cmd-label">Run app</span><span class="cmd-run">flutter run</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="runFlutterDoctor" onclick="airFlutter.executeFlutterCommand('runFlutterDoctor')">
-                                <i class="cmd-icon fas fa-stethoscope"></i>
-                                <span><span class="cmd-label">Flutter doctor</span><span class="cmd-run">flutter doctor</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="getPackages" onclick="airFlutter.executeFlutterCommand('getPackages')">
-                                <i class="cmd-icon fas fa-download"></i>
-                                <span><span class="cmd-label">Get packages</span><span class="cmd-run">flutter pub get</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="upgradePackages" onclick="airFlutter.executeFlutterCommand('upgradePackages')">
-                                <i class="cmd-icon fas fa-arrow-up"></i>
-                                <span><span class="cmd-label">Upgrade packages</span><span class="cmd-run">flutter pub upgrade</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="buildAPK" onclick="airFlutter.executeFlutterCommand('buildAPK')">
-                                <i class="cmd-icon fas fa-box"></i>
-                                <span><span class="cmd-label">Build APK</span><span class="cmd-run">flutter build apk</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="buildAAB" onclick="airFlutter.executeFlutterCommand('buildAAB')">
-                                <i class="cmd-icon fas fa-cubes"></i>
-                                <span><span class="cmd-label">Build app bundle</span><span class="cmd-run">flutter build appbundle</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="cleanProject" onclick="airFlutter.executeFlutterCommand('cleanProject')">
-                                <i class="cmd-icon fas fa-broom"></i>
-                                <span><span class="cmd-label">Clean project</span><span class="cmd-run">flutter clean</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="installApk" onclick="airFlutter.executeFlutterCommand('installApk')">
-                                <i class="cmd-icon fas fa-file-arrow-up"></i>
-                                <span><span class="cmd-label">Install APK</span><span class="cmd-run">adb install -r</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="sendText" onclick="airFlutter.executeFlutterCommand('sendText')">
-                                <i class="cmd-icon fas fa-keyboard"></i>
-                                <span><span class="cmd-label">Send text</span><span class="cmd-run">paste to phone</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="generateWorkflow" onclick="airFlutter.openWorkflowModal()">
-                                <i class="cmd-icon fab fa-github"></i>
-                                <span><span class="cmd-label">GitHub Workflow</span><span class="cmd-run">CI/CD APK Builder</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="signingKey" onclick="airFlutter.openSigningKeyModal()">
-                                <i class="cmd-icon fas fa-key"></i>
-                                <span><span class="cmd-label">Signing Key Studio</span><span class="cmd-run">create Android upload key</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" id="screenRecordBtn" type="button" data-command="toggleRecording" onclick="airFlutter.toggleRecording()">
-                                <i class="cmd-icon fas fa-video"></i>
-                                <span><span class="cmd-label">Record Screen</span><span class="cmd-run">record phone MP4</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="flavorsModal" onclick="airFlutter.openFlavorsModal()">
-                                <i class="cmd-icon fas fa-layer-group"></i>
-                                <span><span class="cmd-label">Flutter Flavors</span><span class="cmd-run">manage, run &amp; build</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="proxyModal" onclick="airFlutter.openProxyModal()">
-                                <i class="cmd-icon fas fa-network-wired"></i>
-                                <span><span class="cmd-label">Proxy &amp; DNS</span><span class="cmd-run">network inspector</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="agentScaffoldModal" onclick="airFlutter.openAgentScaffoldModal()">
-                                <i class="cmd-icon fas fa-robot"></i>
-                                <span><span class="cmd-label">Agent Engine</span><span class="cmd-run">AI sub-agents &amp; teams</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="compatDoctorModal" onclick="airFlutter.openCompatDoctorModal()">
-                                <i class="cmd-icon fas fa-stethoscope"></i>
-                                <span><span class="cmd-label">Compat Doctor</span><span class="cmd-run">Gradle, AGP, Java &amp; iOS</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="mcpHubModal" onclick="window.airFlutter.openMcpHubModal()">
-                                <i class="cmd-icon fas fa-plug"></i>
-                                <span><span class="cmd-label">MCP Hub</span><span class="cmd-run">AI agent MCP servers</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="storageInspectorModal" onclick="airFlutter.openStorageInspectorModal()">
-                                <i class="cmd-icon fas fa-database"></i>
-                                <span><span class="cmd-label">Storage Inspector</span><span class="cmd-run">SharedPreferences &amp; SQLite</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="debugOverlaysModal" onclick="airFlutter.openDebugOverlaysModal()">
-                                <i class="cmd-icon fas fa-layer-group"></i>
-                                <span><span class="cmd-label">Debug Overlays</span><span class="cmd-run">Debug Paint, Perf &amp; Slow-mo</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="mockGpsModal" onclick="airFlutter.openMockGpsModal()">
-                                <i class="cmd-icon fas fa-location-dot"></i>
-                                <span><span class="cmd-label">Mock GPS Studio</span><span class="cmd-run">mock coordinates &amp; routes</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="apkSizeModal" onclick="airFlutter.openApkSizeModal()">
-                                <i class="cmd-icon fas fa-boxes-packing"></i>
-                                <span><span class="cmd-label">Size Analyzer</span><span class="cmd-run">APK/AAB binary composition</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="pubHealthModal" onclick="airFlutter.openPubHealthModal()">
-                                <i class="cmd-icon fas fa-stethoscope"></i>
-                                <span><span class="cmd-label">Pub Health</span><span class="cmd-run">dependencies &amp; outdated check</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="buildRunnerTab" onclick="window.airFlutter.selectTab('build-runner')">
-                                <i class="cmd-icon fas fa-gears"></i>
-                                <span><span class="cmd-label">Build Runner</span><span class="cmd-run">code-gen cockpit</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="iconSplashTab" onclick="window.airFlutter.selectTab('icon-splash')">
-                                <i class="cmd-icon fas fa-icons"></i>
-                                <span><span class="cmd-label">Icon &amp; Splash</span><span class="cmd-run">adaptive icons &amp; assets</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="deviceEnvTab" onclick="window.airFlutter.selectTab('device-env')">
-                                <i class="cmd-icon fas fa-sliders"></i>
-                                <span><span class="cmd-label">Device Sandbox</span><span class="cmd-run">font, night, battery &amp; locale</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="localizationTab" onclick="window.airFlutter.selectTab('localization')">
-                                <i class="cmd-icon fas fa-language"></i>
-                                <span><span class="cmd-label">Localization</span><span class="cmd-run">ARB matrix &amp; translations</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
-                            <button class="cmd" type="button" data-command="sslDoctorTab" onclick="window.airFlutter.selectTab('ssl-proxy')">
-                                <i class="cmd-icon fas fa-shield-virus"></i>
-                                <span><span class="cmd-label">SSL &amp; Proxy</span><span class="cmd-run">network security &amp; overrides</span></span>
-                                <i class="cmd-go fas fa-arrow-right"></i>
-                            </button>
+
+                        <div class="cmd-groups" id="flutterCommandsGrid">
+                            <details class="ff-group cmd-group-disclosure" open>
+                                <summary class="ff-subhead">
+                                    <h3>Run &amp; build</h3>
+                                    <i class="fas fa-chevron-down cmd-group-caret"></i>
+                                </summary>
+                                <div class="cmd-list">
+                                    <button class="cmd" type="button" data-command="runApp" onclick="airFlutter.executeFlutterCommand('runApp')">
+                                        <i class="cmd-icon fas fa-play"></i>
+                                        <span><span class="cmd-label">Run app</span><span class="cmd-run">flutter run</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="runFlutterDoctor" onclick="airFlutter.executeFlutterCommand('runFlutterDoctor')">
+                                        <i class="cmd-icon fas fa-stethoscope"></i>
+                                        <span><span class="cmd-label">Flutter doctor</span><span class="cmd-run">flutter doctor</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="getPackages" onclick="airFlutter.executeFlutterCommand('getPackages')">
+                                        <i class="cmd-icon fas fa-download"></i>
+                                        <span><span class="cmd-label">Get packages</span><span class="cmd-run">flutter pub get</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="upgradePackages" onclick="airFlutter.executeFlutterCommand('upgradePackages')">
+                                        <i class="cmd-icon fas fa-arrow-up"></i>
+                                        <span><span class="cmd-label">Upgrade packages</span><span class="cmd-run">flutter pub upgrade</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="buildAPK" onclick="airFlutter.executeFlutterCommand('buildAPK')">
+                                        <i class="cmd-icon fas fa-box"></i>
+                                        <span><span class="cmd-label">Build APK</span><span class="cmd-run">flutter build apk</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="buildAAB" onclick="airFlutter.executeFlutterCommand('buildAAB')">
+                                        <i class="cmd-icon fas fa-cubes"></i>
+                                        <span><span class="cmd-label">Build app bundle</span><span class="cmd-run">flutter build appbundle</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="cleanProject" onclick="airFlutter.executeFlutterCommand('cleanProject')">
+                                        <i class="cmd-icon fas fa-broom"></i>
+                                        <span><span class="cmd-label">Clean project</span><span class="cmd-run">flutter clean</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="installApk" onclick="airFlutter.executeFlutterCommand('installApk')">
+                                        <i class="cmd-icon fas fa-file-arrow-up"></i>
+                                        <span><span class="cmd-label">Install APK</span><span class="cmd-run">adb install -r</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </details>
+
+                            <details class="ff-group cmd-group-disclosure">
+                                <summary class="ff-subhead">
+                                    <h3>Release</h3>
+                                    <i class="fas fa-chevron-down cmd-group-caret"></i>
+                                </summary>
+                                <div class="cmd-list">
+                                    <button class="cmd" type="button" data-command="generateWorkflow" onclick="airFlutter.openWorkflowModal()">
+                                        <i class="cmd-icon fab fa-github"></i>
+                                        <span><span class="cmd-label">GitHub Workflow</span><span class="cmd-run">CI/CD APK Builder</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="signingKey" onclick="airFlutter.openSigningKeyModal()">
+                                        <i class="cmd-icon fas fa-key"></i>
+                                        <span><span class="cmd-label">Signing Key Studio</span><span class="cmd-run">create Android upload key</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="flavorsModal" onclick="airFlutter.openFlavorsModal()">
+                                        <i class="cmd-icon fas fa-layer-group"></i>
+                                        <span><span class="cmd-label">Flutter Flavors</span><span class="cmd-run">manage, run &amp; build</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="apkSizeModal" onclick="airFlutter.openApkSizeModal()">
+                                        <i class="cmd-icon fas fa-boxes-packing"></i>
+                                        <span><span class="cmd-label">Size Analyzer</span><span class="cmd-run">APK/AAB binary composition</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="pubHealthModal" onclick="airFlutter.openPubHealthModal()">
+                                        <i class="cmd-icon fas fa-stethoscope"></i>
+                                        <span><span class="cmd-label">Pub Health</span><span class="cmd-run">dependencies &amp; outdated check</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </details>
+
+                            <details class="ff-group cmd-group-disclosure">
+                                <summary class="ff-subhead">
+                                    <h3>On device</h3>
+                                    <i class="fas fa-chevron-down cmd-group-caret"></i>
+                                </summary>
+                                <div class="cmd-list">
+                                    <button class="cmd" type="button" data-command="sendText" onclick="airFlutter.executeFlutterCommand('sendText')">
+                                        <i class="cmd-icon fas fa-keyboard"></i>
+                                        <span><span class="cmd-label">Send text</span><span class="cmd-run">paste to phone</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" id="screenRecordBtn" type="button" data-command="toggleRecording" onclick="airFlutter.toggleRecording()">
+                                        <i class="cmd-icon fas fa-video"></i>
+                                        <span><span class="cmd-label">Record Screen</span><span class="cmd-run">record phone MP4</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="mockGpsModal" onclick="airFlutter.openMockGpsModal()">
+                                        <i class="cmd-icon fas fa-location-dot"></i>
+                                        <span><span class="cmd-label">Mock GPS Studio</span><span class="cmd-run">mock coordinates &amp; routes</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="debugOverlaysModal" onclick="airFlutter.openDebugOverlaysModal()">
+                                        <i class="cmd-icon fas fa-layer-group"></i>
+                                        <span><span class="cmd-label">Debug Overlays</span><span class="cmd-run">Debug Paint, Perf &amp; Slow-mo</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </details>
+
+                            <details class="ff-group cmd-group-disclosure">
+                                <summary class="ff-subhead">
+                                    <h3>Inspect &amp; automate</h3>
+                                    <i class="fas fa-chevron-down cmd-group-caret"></i>
+                                </summary>
+                                <div class="cmd-list">
+                                    <button class="cmd" type="button" data-command="compatDoctorModal" onclick="airFlutter.openCompatDoctorModal()">
+                                        <i class="cmd-icon fas fa-stethoscope"></i>
+                                        <span><span class="cmd-label">Compat Doctor</span><span class="cmd-run">Gradle, AGP, Java &amp; iOS</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="proxyModal" onclick="airFlutter.openProxyModal()">
+                                        <i class="cmd-icon fas fa-network-wired"></i>
+                                        <span><span class="cmd-label">Proxy &amp; DNS</span><span class="cmd-run">network inspector</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="storageInspectorModal" onclick="airFlutter.openStorageInspectorModal()">
+                                        <i class="cmd-icon fas fa-database"></i>
+                                        <span><span class="cmd-label">Storage Inspector</span><span class="cmd-run">SharedPreferences &amp; SQLite</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="mcpHubModal" onclick="window.airFlutter.openMcpHubModal()">
+                                        <i class="cmd-icon fas fa-plug"></i>
+                                        <span><span class="cmd-label">MCP Hub</span><span class="cmd-run">AI agent MCP servers</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                    <button class="cmd" type="button" data-command="agentScaffoldModal" onclick="airFlutter.openAgentScaffoldModal()">
+                                        <i class="cmd-icon fas fa-robot"></i>
+                                        <span><span class="cmd-label">Agent Engine</span><span class="cmd-run">AI sub-agents &amp; teams</span></span>
+                                        <i class="cmd-go fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </details>
                         </div>
                     </div>
 
@@ -486,91 +525,6 @@ export function getPanelWebviewContent(
                         </div>
                     </div>
                 </section>
-
-                <!-- Quick actions -->
-                <aside class="ff-col" aria-label="Quick actions">
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Shortcuts</h2>
-                        </div>
-                        <div class="rail-list">
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('runFlutterDoctor')">
-                                <i class="fas fa-stethoscope"></i> Flutter doctor
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('getPackages')">
-                                <i class="fas fa-download"></i> Get packages
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('upgradePackages')">
-                                <i class="fas fa-arrow-up"></i> Upgrade packages
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('cleanProject')">
-                                <i class="fas fa-broom"></i> Clean project
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('installApk')">
-                                <i class="fas fa-file-arrow-up"></i> Install APK
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.executeFlutterCommand('sendText')">
-                                <i class="fas fa-keyboard"></i> Send text to phone
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openWorkflowModal()">
-                                <i class="fab fa-github"></i> GitHub CI/CD Workflow
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openSigningKeyModal()">
-                                <i class="fas fa-key"></i> Android Signing Key
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.toggleRecording()">
-                                <i class="fas fa-video"></i> Record Screen (MP4)
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openFlavorsModal()">
-                                <i class="fas fa-layer-group"></i> Manage Flavors
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openProxyModal()">
-                                <i class="fas fa-network-wired"></i> Network Proxy &amp; DNS
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openAgentScaffoldModal()">
-                                <i class="fas fa-robot"></i> AI Agent Architect
-                            </button>
-                            <button class="rail-item" type="button" onclick="airFlutter.openCompatDoctorModal()">
-                                <i class="fas fa-stethoscope"></i> Compat Doctor
-                            </button>
-                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('build-runner')">
-                                <i class="fas fa-gears"></i> Build Runner
-                            </button>
-                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('icon-splash')">
-                                <i class="fas fa-icons"></i> Icon &amp; Splash
-                            </button>
-                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('device-env')">
-                                <i class="fas fa-sliders"></i> Device Sandbox
-                            </button>
-                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('localization')">
-                                <i class="fas fa-language"></i> Localization
-                            </button>
-                            <button class="rail-item" type="button" onclick="window.airFlutter.selectTab('ssl-proxy')">
-                                <i class="fas fa-shield-virus"></i> SSL &amp; Proxy
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Keys</h2>
-                        </div>
-                        <div class="shortcut-row">
-                            <span>Refresh devices</span>
-                            <span><kbd>Ctrl</kbd> <kbd>R</kbd></span>
-                        </div>
-                    </div>
-
-                    <div class="ff-section">
-                        <div class="ff-section-head">
-                            <h2>Mirroring</h2>
-                        </div>
-                        <p class="rail-note">
-                            scrcpy ships with the extension. Streams start at H.264, 60 fps,
-                            1600 px, 6 Mbps, audio off — all configurable from Air Flutter settings.
-                        </p>
-                    </div>
-                </aside>
             </div>
             </div>
 
@@ -683,7 +637,7 @@ export function getPanelWebviewContent(
                                 <div class="asset-search-wrapper">
                                     <i class="fas fa-magnifying-glass"></i>
                                     <input type="text" id="assetSearchInput" class="asset-search-input" placeholder="Search by name or path...">
-                                    <button type="button" id="assetSearchClearBtn" class="asset-search-clear" hidden>&times;</button>
+                                    <button type="button" id="assetSearchClearBtn" class="asset-search-clear" aria-label="Clear asset search" hidden>&times;</button>
                                 </div>
                                 <div class="asset-sort-wrapper">
                                     <select id="assetSortSelect" class="asset-sort-select" title="Sort assets">
@@ -701,9 +655,14 @@ export function getPanelWebviewContent(
                                 <button type="button" class="asset-filter-pill" data-asset-filter="unused">Unused</button>
                                 <button type="button" class="asset-filter-pill" data-asset-filter="warnings">Warnings</button>
                                 <button type="button" class="asset-filter-pill" data-asset-filter="undeclared">Undeclared</button>
-                                <button type="button" class="asset-filter-pill" data-asset-filter="image">Images</button>
-                                <button type="button" class="asset-filter-pill" data-asset-filter="svg">SVGs</button>
-                                <button type="button" class="asset-filter-pill" data-asset-filter="font">Fonts</button>
+                                <details class="asset-filter-more">
+                                    <summary class="asset-filter-pill asset-filter-more-summary">Type <i class="fas fa-chevron-down"></i></summary>
+                                    <div class="asset-filter-more-menu">
+                                        <button type="button" class="asset-filter-pill" data-asset-filter="image">Images</button>
+                                        <button type="button" class="asset-filter-pill" data-asset-filter="svg">SVGs</button>
+                                        <button type="button" class="asset-filter-pill" data-asset-filter="font">Fonts</button>
+                                    </div>
+                                </details>
                             </div>
                         </div>
 
@@ -736,11 +695,11 @@ export function getPanelWebviewContent(
 
                 <div id="assetHoverPopover" class="asset-hover-popover" hidden></div>
 
-                <div id="assetImportModal" class="asset-modal-overlay" hidden>
+                <div id="assetImportModal" class="asset-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="assetImportTitle">
                     <div class="asset-modal-content">
                         <div class="asset-modal-head">
-                            <h3><i class="fas fa-file-import"></i> Import Assets</h3>
-                            <button type="button" class="asset-modal-close" id="assetImportCloseBtn" onclick="window.airFlutter.closeImportModal()">&times;</button>
+                            <h3 id="assetImportTitle"><i class="fas fa-file-import"></i> Import Assets</h3>
+                            <button type="button" class="asset-modal-close" id="assetImportCloseBtn" aria-label="Close import dialog" onclick="window.airFlutter.closeImportModal()">&times;</button>
                         </div>
                         <div class="asset-modal-body">
                             <label class="asset-modal-label">
@@ -793,7 +752,7 @@ export function getPanelWebviewContent(
 
             <section data-panel-view="permissions" hidden aria-label="Permissions">
                 <!-- Mode Switcher: Manifest vs Live Runtime -->
-                <div class="permission-mode-nav" role="tablist" style="display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom: 10px;">
+                <div class="permission-mode-nav" role="tablist">
                     <button class="permission-mode-tab is-active" id="permModeManifestTab" type="button" role="tab" aria-selected="true">
                         <i class="fas fa-file-code"></i> Project Declarations (Manifest / Plist)
                     </button>
@@ -849,22 +808,23 @@ export function getPanelWebviewContent(
                             <h2>Live App Target</h2>
                             <span class="ff-section-note" id="runtimeDeviceBadge">Device connected</span>
                         </div>
-                        <p style="font-size: 11px; color: var(--muted); margin: 0 0 8px 0;">
+                        <p class="runtime-intro">
                             Inspect, grant, or revoke permissions on the running application in real-time via ADB.
                         </p>
-                        <div class="path-picker-row" style="margin-bottom: 8px;">
+                        <div class="path-picker-row runtime-query-row">
+                            <label class="sr-only" for="runtimePackageIdInput">Application package ID</label>
                             <input type="text" id="runtimePackageIdInput" placeholder="Application Package ID (e.g. com.example.app)" style="flex: 1;" />
                             <button class="btn btn-primary" id="refreshRuntimePermsBtn" type="button">
                                 <i class="fas fa-rotate"></i> Query
                             </button>
                         </div>
-                        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between;">
-                            <span id="runtimePermissionsStatusText" style="font-size: 11px; color: var(--muted);">Click Query to read live permissions.</span>
-                            <div style="display: flex; gap: 6px;">
-                                <button class="btn btn-quiet btn-sm" id="grantAllRuntimePermsBtn" type="button" disabled title="Grant all runtime permissions">
+                        <div class="runtime-toolbar">
+                            <span id="runtimePermissionsStatusText" class="runtime-status-text">Click Query to read live permissions.</span>
+                            <div class="runtime-bulk-actions">
+                                <button class="btn btn-quiet btn-sm" id="grantAllRuntimePermsBtn" type="button" disabled aria-label="Grant all runtime permissions on the target package" title="Grant all runtime permissions">
                                     <i class="fas fa-check-double"></i> Grant All
                                 </button>
-                                <button class="btn btn-quiet btn-sm" id="revokeAllRuntimePermsBtn" type="button" disabled title="Revoke all runtime permissions">
+                                <button class="btn btn-quiet btn-sm" id="revokeAllRuntimePermsBtn" type="button" disabled aria-label="Revoke all runtime permissions on the target package" title="Revoke all runtime permissions">
                                     <i class="fas fa-ban"></i> Revoke All
                                 </button>
                             </div>
@@ -1090,14 +1050,20 @@ ${getPubHealthModalHtml()}
                 }
 
                 if (darkModeToggle) {
+                    const syncToggleLabel = function (isDark) {
+                        // The label names the action, which never changes; the
+                        // pressed state carries whether dark mode is currently on.
+                        darkModeToggle.innerHTML = '<i class="fas fa-moon"></i> Dark mode';
+                        darkModeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                        darkModeToggle.title = isDark ? 'Dark mode on — click to switch to light' : 'Dark mode off — click to switch to dark';
+                    };
+                    syncToggleLabel(document.documentElement.classList.contains('dark-mode'));
                     darkModeToggle.addEventListener('click', function () {
                         document.documentElement.classList.toggle('dark-mode');
                         document.body.classList.toggle('dark-mode');
                         const isDark = document.documentElement.classList.contains('dark-mode');
                         localStorage.setItem('airFlutterDarkMode', isDark);
-                        this.innerHTML = isDark
-                            ? '<i class="fas fa-sun"></i> Light'
-                            : '<i class="fas fa-moon"></i> Dark';
+                        syncToggleLabel(isDark);
                     });
                 }
             });
@@ -1130,6 +1096,8 @@ ${getPubHealthModalHtml()}
         <script src="${deviceEnvironmentModuleUri}"></script>
         <script src="${localizationModuleUri}"></script>
         <script src="${sslDoctorModuleUri}"></script>
+        <script src="${panelNavModuleUri}"></script>
+        <script src="${modalControllerModuleUri}"></script>
         <script src="${scriptUri}" onerror="document.body.classList.add('script-error')"></script>
     </body>
     </html>`;

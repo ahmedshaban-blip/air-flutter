@@ -2,7 +2,7 @@
   "name": "air-flutter",
   "displayName": "Air Flutter: Wireless ADB, Screen Mirror & Logcat for Flutter",
   "description": "The complete Flutter & Android engineering suite: Build Runner cockpit, App Icon & Splash studio, Device Environment sandbox, ARB & Localization studio, SSL & Proxy doctor, Storage Inspector (SharedPreferences & SQLite), Debug Overlays, Mock GPS, APK Size Analyzer, Pub Health, compatibility doctor & auto-fixer (Gradle, AGP, Java, iOS), wireless ADB, scrcpy screen mirroring, live logcat, screen recording, Flutter Flavors, MCP & AI Agent Hub, and GitHub Actions CI/CD workflows.",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "publisher": "ahmedshaban",
   "author": {
     "name": "Ahmed Shaban",
@@ -122,6 +122,7 @@
     "test:mcp": "tsc -p ./ && tsc -p tsconfig.test-mcp.json && node test-build/test/test-mcp-hub.js && node test/test-mcp-companion.js && node test/test-mcp-dom.js && node test/test-mcp-panel-button.js && node test/test-mcp-loadorder.js",
     "test:workflow": "tsc -p ./ && node test/test-workflow-generator.js && node test/test-workflow-dom.js",
     "test:pub-health": "tsc -p ./ && node test/test-pub-health.js && node test/test-pub-health-dom.js",
+    "test:icon-splash": "tsc -p ./ && node test/test-icon-splash-preview-dom.js && node test/test-icon-splash-stop-drag.js && node test/test-icon-splash-current-assets-dom.js && node test/test-icon-splash-options-dom.js && node test/test-icon-splash-launcher-options-dom.js && node test/test-icon-splash-launcher-config.js && node test/test-icon-splash-state.js && node test/test-icon-splash-config.js && node test/test-icon-splash-pubspec.js && node test/test-icon-splash-convert-modal-inert.js && node test/test-panel-tabs-click.js",
     "test:vsix": "node test/test-mcp-vsix.js && node test/test-mcp-loadorder-vsix.js"
   },
   "dependencies": {

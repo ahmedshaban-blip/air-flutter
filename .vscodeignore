@@ -18,6 +18,8 @@ package-lock.json
 # Authoring notes, not part of the shipped extension
 AGENTS.md
 PRODUCT.md
+DESIGN.md
+.impeccable/**
 docs/**
 
 # Docs assets live on GitHub; README points at raw.githubusercontent.com URLs

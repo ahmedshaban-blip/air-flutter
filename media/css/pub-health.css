@@ -88,7 +88,7 @@
     font-size: 14px;
     display: block;
     margin-bottom: 4px;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .pub-health-error-text p {
@@ -104,7 +104,7 @@
     gap: 12px;
     background: var(--panel);
     border: 1px solid var(--border);
-    border-left: 3px solid #D69E2E;
+    border-left: 3px solid var(--warn);
     border-radius: 4px;
     padding: 14px 16px;
     text-align: left;
@@ -126,7 +126,7 @@
 
 .pub-diagnostic-badge {
     background: rgba(214, 158, 46, 0.15);
-    color: #D69E2E;
+    color: var(--warn);
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 11px;
@@ -137,7 +137,7 @@
 .pub-diagnostic-detail {
     font-size: 12px;
     font-family: var(--font-mono);
-    color: var(--text);
+    color: var(--ink);
     margin: 0;
 }
 
@@ -153,7 +153,7 @@
 }
 
 .pub-diagnostic-suggestion-card i {
-    color: #D69E2E;
+    color: var(--warn);
     margin-top: 2px;
 }
 
@@ -212,19 +212,19 @@
 
 .pub-summary-card strong {
     font-size: 18px;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .pub-summary-card.is-success strong {
-    color: #38A169;
+    color: var(--ok);
 }
 
 .pub-summary-card.is-warning strong {
-    color: #D69E2E;
+    color: var(--warn);
 }
 
 .pub-summary-card.is-danger strong {
-    color: #E2552B;
+    color: var(--err);
 }
 
 .pub-table-wrapper {
@@ -264,17 +264,17 @@
 
 .pub-status-pill.is-ok {
     background: rgba(56, 161, 105, 0.15);
-    color: #38A169;
+    color: var(--ok);
 }
 
 .pub-status-pill.is-warn {
     background: rgba(214, 158, 46, 0.15);
-    color: #D69E2E;
+    color: var(--warn);
 }
 
 .pub-status-pill.is-danger {
     background: rgba(226, 85, 43, 0.15);
-    color: #E2552B;
+    color: var(--err);
 }
 
 /* Tabs Bar */
@@ -302,7 +302,7 @@
 }
 
 .pub-tab:hover {
-    color: var(--text);
+    color: var(--ink);
     background: var(--panel);
 }
 
@@ -320,7 +320,7 @@
     background: var(--panel);
     border: 1px solid var(--border);
     font-size: 10px;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .pub-tab.is-active .pub-tab-badge {
@@ -334,18 +334,18 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: rgba(49, 130, 206, 0.08);
-    border: 1px solid rgba(49, 130, 206, 0.3);
-    border-left: 3px solid #3182ce;
-    border-radius: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
     padding: 10px 14px;
     font-size: 12px;
-    color: var(--text);
+    color: var(--ink-soft);
     line-height: 1.4;
 }
 
 .pub-transitive-banner i {
-    color: #3182ce;
+    color: var(--accent);
     font-size: 16px;
     margin-top: 2px;
 }
@@ -383,7 +383,7 @@
     display: block;
     font-family: var(--font-mono);
     font-size: 12px;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .pub-parent-tags {
@@ -423,12 +423,12 @@
 
 .pub-kind-badge.is-direct {
     background: rgba(56, 161, 105, 0.12);
-    color: #38A169;
+    color: var(--ok);
 }
 
 .pub-kind-badge.is-dev {
     background: rgba(128, 90, 213, 0.12);
-    color: #9F7AEA;
+    color: var(--accent);
 }
 
 .pub-kind-badge.is-transitive {
@@ -455,7 +455,7 @@
 }
 
 .pub-no-action i {
-    color: #38A169;
+    color: var(--ok);
     font-size: 10px;
 }
 
@@ -469,19 +469,19 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 16px;
 }
 
 .pub-confirm-card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-top: 3px solid #E2552B;
-    border-radius: 6px;
+    border-top: 3px solid var(--err);
+    border-radius: 3px;
     max-width: 500px;
     width: 100%;
     padding: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -501,13 +501,13 @@
 
 .pub-confirm-head i {
     font-size: 20px;
-    color: #E2552B;
+    color: var(--err);
 }
 
 .pub-confirm-head h3 {
     margin: 0;
     font-size: 15px;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .pub-confirm-body p {
@@ -530,7 +530,7 @@
     margin: 0;
     padding-left: 18px;
     font-size: 12px;
-    color: var(--text);
+    color: var(--ink);
 }
 
 .pub-confirm-list li {
@@ -542,7 +542,7 @@
     display: inline-block;
     padding: 1px 5px;
     background: rgba(226, 85, 43, 0.15);
-    color: #E2552B;
+    color: var(--err);
     border-radius: 3px;
     font-size: 10px;
     font-weight: 600;

@@ -2,9 +2,9 @@ export function getWorkflowModalHtml(): string {
   return `
         <!-- GitHub Actions Workflow Builder Modal -->
         <div class="modal-backdrop" id="workflowModal" hidden>
-            <div class="modal-card">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="workflowModalTitle">
                 <div class="modal-head">
-                    <h2><i class="fab fa-github"></i> GitHub Actions Workflow Builder</h2>
+                    <h2 id="workflowModalTitle"><i class="fab fa-github"></i> GitHub Actions Workflow Builder</h2>
                     <button class="modal-close" id="closeWorkflowModalBtn" type="button" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">

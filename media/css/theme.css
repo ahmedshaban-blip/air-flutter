@@ -29,6 +29,11 @@
     --well-ink: #E7E3D6;
     --well-muted: #8F9184;
     --well-rule: #2C2F27;
+    --well-info: #8FB6C9;
+    --well-success: #7FC08F;
+    --well-warn: #D6B36A;
+    --well-err: #E08575;
+    --level-debug: #6E93B8;
 
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -56,6 +61,11 @@ body.dark-mode {
     --well-ink: #E7E3D6;
     --well-muted: #83857A;
     --well-rule: #262A21;
+    --well-info: #8FB6C9;
+    --well-success: #7FC08F;
+    --well-warn: #D6B36A;
+    --well-err: #E08575;
+    --level-debug: #6E93B8;
 }
 
 /* --- Base --------------------------------------------------------------- */
@@ -332,6 +342,48 @@ samp {
     margin-top: 22px;
 }
 
+/* Command groups became disclosures so 26 rows do not all sit open at once.
+   The summary reuses .ff-subhead, with a caret that rotates on open. */
+.cmd-group-disclosure {
+    display: block;
+}
+
+.cmd-group-disclosure > summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.cmd-group-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+.cmd-group-disclosure > summary:hover h3 {
+    color: var(--accent);
+}
+
+.cmd-group-caret {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 130ms linear;
+}
+
+.cmd-group-disclosure[open] > summary .cmd-group-caret {
+    transform: rotate(180deg);
+}
+
+.cmd-group-disclosure[open] > summary {
+    margin-bottom: 2px;
+}
+
+.cmd-group-disclosure + .cmd-group-disclosure {
+    margin-top: 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cmd-group-caret { transition: none; }
+}
+
 /* --- Controls ----------------------------------------------------------- */
 .btn {
     display: inline-flex;
@@ -533,16 +585,6 @@ samp {
         margin-top: 8px;
         padding: 22px 0 8px;
     }
-
-    .rail-list {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0 28px;
-    }
-
-    .rail-item:nth-child(2) {
-        border-top: 0;
-    }
 }
 
 @media (max-width: 860px) {
@@ -571,14 +613,6 @@ samp {
 
     .devices-list {
         max-height: none;
-    }
-
-    .rail-list {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .rail-item:nth-child(2) {
-        border-top: 1px solid var(--rule);
     }
 
     .log {
@@ -611,7 +645,7 @@ samp {
     flex: 0 0 28px;
     border-width: 3px;
     border-color: rgba(127, 127, 127, 0.2);
-    border-top-color: var(--accent, #b8332a);
+    border-top-color: var(--accent, #B23B16);
 }
 
 .af-spinner-sm {

@@ -24,7 +24,7 @@
 .br-options-card {
     background: var(--surface, rgba(255, 255, 255, 0.03));
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 12px 14px;
     display: flex;
     flex-direction: column;
@@ -71,9 +71,9 @@
 }
 
 .br-terminal-container {
-    background: #0A0B08;
+    background: var(--well);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    border-radius: 6px;
+    border-radius: 3px;
     overflow: hidden;
     position: relative;
 }
@@ -84,7 +84,7 @@
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11.5px;
     line-height: 1.5;
-    color: #4AF626;
+    color: var(--well-success);
     max-height: 380px;
     min-height: 220px;
     overflow-y: auto;
