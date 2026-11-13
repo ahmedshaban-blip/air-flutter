@@ -75,3 +75,6 @@ adb-interface-vscode-0.2.1.vsix
 
 # Verification scratch directories
 /vsix-*/
+
+# Impeccable skill authoring artifacts (PRODUCT/DESIGN context, snapshots, local harnesses)
+/.impeccable/
